@@ -58,19 +58,15 @@
                 </radialGradient>
               </defs>
               <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(5,8,15,0.65)" />
-              <!-- Concentric orbit rings -->
               <circle cx="166" cy="140" r="76" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.8" />
               <circle cx="166" cy="140" r="52" fill="none" stroke="url(#heroPulse)" stroke-width="1"   opacity="0.5" />
               <circle cx="166" cy="140" r="28" fill="none" stroke="#00e5ff"         stroke-width="0.8" opacity="0.3" />
-              <!-- Connection curves -->
               <path d="M252 94 C300 78 364 84 402 128 C432 164 430 210 402 230"  fill="none" stroke="#00e5ff" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
               <path d="M252 122 C294 114 338 120 366 148 C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
-              <!-- Destination node glow -->
               <circle cx="430" cy="88" r="54" fill="url(#heroGlow2)" />
               <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.5" />
               <circle cx="430" cy="88" r="20" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.2" />
               <circle cx="430" cy="88" r="7"  fill="#00e5ff" />
-              <!-- Source node -->
               <circle cx="166" cy="140" r="10" fill="rgba(124,58,237,0.2)" stroke="#a855f7" stroke-width="1.2" />
               <circle cx="166" cy="140" r="4"  fill="#a855f7" />
             </svg>
@@ -106,7 +102,7 @@
       <section id="chatLayout" class="chat-layout hidden" aria-label="Chat">
 
         <!-- Sidebar -->
-        <aside class="sidebar card" aria-label="Friends &amp; requests">
+        <aside class="sidebar card" id="mobileSidebar" aria-label="Friends &amp; requests">
 
           <!-- Who am I -->
           <div class="me-row">
@@ -146,10 +142,14 @@
         </aside>
 
         <!-- Chat area -->
-        <section class="chat card" aria-label="Conversation">
+        <section class="chat card" id="mobileChat" aria-label="Conversation">
 
           <header class="chat-header">
-            <div>
+            <!-- Mobile back button (hidden on desktop) -->
+            <button class="mob-back-btn" id="mobBackBtn" aria-label="Back to friends">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="chat-header-info">
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
             </div>
@@ -171,7 +171,10 @@
 
           <form id="messageForm" class="message-form">
             <input id="messageInput" type="text" placeholder="Type a message…" autocomplete="off" />
-            <button type="submit">Send</button>
+            <button type="submit">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send
+            </button>
           </form>
 
         </section>
@@ -184,5 +187,64 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
+
+    <!-- Mobile tab/panel switching — pure UI, no business logic -->
+    <script>
+      (function () {
+        var MOBILE_BP = 768;
+
+        function isMobile() { return window.innerWidth <= MOBILE_BP; }
+
+        function showPanel(panel) {
+          var sidebar = document.getElementById('mobileSidebar');
+          var chat    = document.getElementById('mobileChat');
+          var backBtn = document.getElementById('mobBackBtn');
+          if (!sidebar || !chat) return;
+
+          if (panel === 'chat') {
+            sidebar.setAttribute('data-mob-hidden', 'true');
+            chat.removeAttribute('data-mob-hidden');
+            if (backBtn) backBtn.setAttribute('data-visible', 'true');
+          } else {
+            chat.setAttribute('data-mob-hidden', 'true');
+            sidebar.removeAttribute('data-mob-hidden');
+            if (backBtn) backBtn.removeAttribute('data-visible');
+          }
+        }
+
+        // Tap a friend → switch to chat panel on mobile
+        document.addEventListener('click', function (e) {
+          if (!isMobile()) return;
+          var btn = e.target.closest('.friend-btn');
+          if (btn) { showPanel('chat'); }
+        });
+
+        // Back button → return to sidebar
+        document.getElementById('mobBackBtn') &&
+          document.getElementById('mobBackBtn').addEventListener('click', function () {
+            if (isMobile()) showPanel('friends');
+          });
+
+        // Default: show sidebar first on mobile
+        window.addEventListener('resize', function () {
+          if (!isMobile()) {
+            // reset any mobile state on desktop
+            var sidebar = document.getElementById('mobileSidebar');
+            var chat    = document.getElementById('mobileChat');
+            if (sidebar) sidebar.removeAttribute('data-mob-hidden');
+            if (chat)    chat.removeAttribute('data-mob-hidden');
+          }
+        });
+
+        // When chat layout appears, default to sidebar on mobile
+        var observer = new MutationObserver(function () {
+          var layout = document.getElementById('chatLayout');
+          if (layout && !layout.classList.contains('hidden') && isMobile()) {
+            showPanel('friends');
+          }
+        });
+        observer.observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
+      })();
+    </script>
   </body>
 </html>
