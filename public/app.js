@@ -223,11 +223,12 @@ function buildMessageMeta(message, mine) {
   return `${time} · ${getMessageStatusText(message)}`;
 }
 
-function buildMessageElement(message) {
+function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
 
   const row       = document.createElement("article");
-  row.className   = `message ${mine ? "me" : "them"}`;
+  // Add no-anim class to suppress CSS animation for history loads
+  row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
 
   const meta        = document.createElement("span");
@@ -243,16 +244,13 @@ function buildMessageElement(message) {
 }
 
 function appendMessage(message, skipAnimation = false) {
-  // Remove empty-state placeholder if present
   const emptyNode = messagesEl.querySelector(".messages-empty");
   if (emptyNode) emptyNode.remove();
 
-  const row  = buildMessageElement(message);
+  const row  = buildMessageElement(message, skipAnimation);
   const near = isNearBottom();
 
   messagesEl.appendChild(row);
-
-  // Only auto-scroll if already near the bottom (don't interrupt manual scroll)
   if (near) scrollToBottom(skipAnimation);
 }
 
@@ -294,7 +292,7 @@ function renderMessages(messages) {
 
   // Jump straight to bottom for history load (no animation needed)
   scrollToBottom(true);
-  if (window._rippleFAB) window._rippleFAB.reset();
+  if (window._novynFAB) window._novynFAB.reset();
 }
 
 // ─── Requests ────────────────────────────────────────────────────────────────
@@ -571,7 +569,10 @@ socket.on("private_message", (message) => {
   }
 
   appendMessage(message);
-  if (window._rippleFAB) window._rippleFAB.bump();
+  // Only bump the unread FAB counter for incoming messages, not our own
+  if (normalizeName(message.from) !== normalizeName(me)) {
+    if (window._novynFAB) window._novynFAB.bump();
+  }
 });
 
 socket.on("message_status", (payload) => {

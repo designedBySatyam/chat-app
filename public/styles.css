@@ -337,19 +337,15 @@ h1,h2,h3 { letter-spacing: -0.02em; font-weight: 700; }
 .hero-visual {
   position: relative; border-radius: var(--r2);
   border: 1px solid rgba(0,229,255,0.08);
-  background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,229,255,0.04), transparent 100%), rgba(0,0,0,0.30);
-  overflow: hidden; height: 180px;
+  background: rgba(5,10,22,0.82);
+  overflow: hidden; height: 235px;
 }
-:root.light .hero-visual { background: radial-gradient(ellipse 70% 60% at 50% 50%, rgba(0,180,255,0.06), transparent 100%), rgba(200,220,255,0.20); border-color: rgba(0,140,200,0.10); }
-.hero-visual::after {
-  content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 40%;
-  background: linear-gradient(to top, rgba(7,12,26,0.7) 0%, transparent 100%);
-  pointer-events: none; z-index: 1;
-}
-:root.light .hero-visual::after { background: linear-gradient(to top, rgba(230,238,255,0.8) 0%, transparent 100%); }
-.hero-svg { position: absolute; inset: 0; width: 100%; height: 100%; animation: pulseGlow 5s ease-in-out infinite; }
+:root.light .hero-visual { background: rgba(225,235,252,0.70); border-color: rgba(0,140,200,0.10); }
+.hero-visual::after { display: none; }
+/* Remove old SVG — mockup replaces it */
+.hero-svg { display: none; }
 
-.float-pill {
+.float-pill { display: none; } .float-pill-DISABLED {
   position: absolute; z-index: 2; border-radius: var(--rp);
   padding: 6px 13px; font-size: 0.72rem; font-weight: 700;
   backdrop-filter: blur(14px); white-space: nowrap; letter-spacing: 0.01em;
@@ -841,7 +837,7 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 @media (max-width: 960px) {
   .login-card { grid-template-columns: 1fr; }
   .login-hero { padding: 22px; }
-  .hero-visual { height: 160px; }
+  .hero-visual { height: 200px; }
 }
 
 /* ═══════════════════════════════════════════════
@@ -944,3 +940,160 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   #requestList { max-height: 130px; }
   .scroll-btn { bottom: 16px; right: 16px; }
 }
+
+/* ═══════════════════════════════════════════════
+   HERO CHAT MOCKUP
+   ═══════════════════════════════════════════════ */
+.hero-mock {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  padding: 14px;
+  gap: 10px;
+}
+
+.mock-header {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px;
+  border-radius: var(--r2);
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.08);
+  flex-shrink: 0;
+}
+:root.light .mock-header { background: rgba(0,0,0,0.04); border-color: rgba(0,0,0,0.06); }
+
+.mock-avatar {
+  width: 30px; height: 30px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.72rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.mock-name { font-size: 0.82rem; font-weight: 700; color: var(--t1); line-height: 1.2; }
+.mock-status {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 0.68rem; font-weight: 600; color: var(--online);
+}
+.mock-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--online); box-shadow: 0 0 6px var(--online);
+}
+
+.mock-messages {
+  display: flex; flex-direction: column; gap: 8px;
+  flex: 1; overflow: hidden;
+}
+
+.mock-msg { display: flex; flex-direction: column; gap: 2px; }
+.mock-them { align-items: flex-start; }
+.mock-me   { align-items: flex-end; }
+
+.mock-bubble {
+  padding: 8px 12px; border-radius: 12px;
+  font-size: 0.78rem; font-weight: 500; line-height: 1.45;
+  max-width: 86%;
+}
+.mock-them .mock-bubble {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
+  color: var(--t1); border-bottom-left-radius: 3px;
+}
+.mock-me .mock-bubble {
+  background: linear-gradient(145deg, rgba(0,229,255,0.14), rgba(124,58,237,0.16));
+  border: 1px solid rgba(0,229,255,0.20); color: var(--t1);
+  border-bottom-right-radius: 3px;
+}
+:root.light .mock-them .mock-bubble { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.08); }
+:root.light .mock-me   .mock-bubble { border-color: rgba(0,112,168,0.22); }
+
+.mock-time {
+  font-size: 0.62rem; font-weight: 600; color: var(--t3);
+  padding: 0 4px;
+}
+.mock-me .mock-time { text-align: right; }
+
+.mock-reaction-row {
+  display: inline-flex; align-items: center; gap: 3px;
+  background: rgba(0,229,255,0.10); border: 1px solid rgba(0,229,255,0.22);
+  border-radius: var(--rp); padding: 1px 7px;
+  font-size: 0.7rem; font-weight: 700; color: var(--cyan);
+  margin-bottom: 4px; margin-right: 4px;
+}
+:root.light .mock-reaction-row { background: rgba(0,112,168,0.10); border-color: rgba(0,112,168,0.22); color: #0070a8; }
+
+.mock-typing {
+  display: flex; align-items: center; gap: 8px; margin-top: 2px;
+}
+.mock-avatar-sm {
+  width: 22px; height: 22px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6rem; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.mock-dots {
+  display: flex; gap: 4px; align-items: center;
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--rp); padding: 7px 12px;
+}
+:root.light .mock-dots { background: rgba(255,255,255,0.85); border-color: rgba(0,0,0,0.08); }
+.mock-dots span {
+  width: 5px; height: 5px; border-radius: 50%; background: var(--cyan); opacity: 0.5;
+  animation: typingBounce 1.1s ease-in-out infinite;
+}
+.mock-dots span:nth-child(2) { animation-delay: 0.18s; }
+.mock-dots span:nth-child(3) { animation-delay: 0.36s; }
+
+/* Login panel logo */
+.login-panel-logo {
+  margin-bottom: -4px;
+}
+
+/* ═══════════════════════════════════════════════
+   LOGOUT BUTTON
+   ═══════════════════════════════════════════════ */
+.logout-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--b1);
+  background: rgba(255,77,109,0.07);
+  color: rgba(255,77,109,0.70);
+  cursor: pointer; padding: 0;
+  box-shadow: none; flex-shrink: 0;
+  transition: background 0.18s, color 0.18s, border-color 0.18s, transform 0.15s;
+}
+.logout-btn:hover {
+  background: rgba(255,77,109,0.14);
+  border-color: rgba(255,77,109,0.32);
+  color: var(--danger);
+  transform: none; filter: none;
+  box-shadow: 0 0 12px rgba(255,77,109,0.18);
+}
+:root.light .logout-btn { background: rgba(255,77,109,0.05); }
+
+/* ═══════════════════════════════════════════════
+   ANIMATION BUG FIX — suppress anim on history
+   ═══════════════════════════════════════════════ */
+.message.no-anim { animation: none !important; }
+
+/* ═══════════════════════════════════════════════
+   REACTION PICKER — fixed to body, not clipped
+   ═══════════════════════════════════════════════ */
+/* When picker is appended to body with fixed positioning */
+.reaction-picker {
+  background: var(--panel-bg);
+  border: 1px solid var(--b1); border-radius: var(--r2);
+  padding: 6px 8px; display: flex; gap: 4px;
+  box-shadow: var(--s2); backdrop-filter: blur(16px);
+  animation: fadeUp 0.15s ease;
+}
+.reaction-picker button {
+  background: none; border: none; padding: 4px 5px;
+  font-size: 1.1rem; border-radius: 6px; box-shadow: none;
+  cursor: pointer; transition: background 0.12s, transform 0.12s;
+}
+.reaction-picker button:hover {
+  background: rgba(255,255,255,0.10);
+  transform: scale(1.25); filter: none; box-shadow: none;
+}
+:root.light .reaction-picker button:hover { background: rgba(0,0,0,0.06); }
+
+/* ═══════════════════════════════════════════════
+   ME-ROW — updated for logout button
+   ═══════════════════════════════════════════════ */
+/* Override presence-pill hide — logout replaces it */
+.me-row .presence-pill { display: none; }
