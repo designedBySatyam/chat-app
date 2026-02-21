@@ -4,6 +4,7 @@ const crypto = require("crypto");
 const path = require("path");
 const http = require("http");
 const express = require("express");
+const { MongoClient } = require("mongodb");
 const { Server } = require("socket.io");
 
 const app = express();
@@ -19,6 +20,15 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "chat-state.json");
+const MONGODB_URI = toDisplayName(process.env.MONGODB_URI);
+const MONGODB_DB = toDisplayName(process.env.MONGODB_DB) || "novyn";
+const MONGODB_COLLECTION = "chat_state";
+const CHAT_RETENTION_DAYS = Math.max(
+  1,
+  Number.isFinite(Number(process.env.CHAT_RETENTION_DAYS))
+    ? Math.floor(Number(process.env.CHAT_RETENTION_DAYS))
+    : 30
+);
 const MIN_PASSWORD_LENGTH = 4;
 const PASSWORD_ITERATIONS = 120000;
 const PASSWORD_KEY_LENGTH = 64;
@@ -27,6 +37,9 @@ const PASSWORD_DIGEST = "sha512";
 const users = new Map();
 const onlineUsers = new Map();
 const conversations = new Map();
+
+let mongoClient = null;
+let mongoCollection = null;
 
 let persistTimer = null;
 let persistInFlight = Promise.resolve();
@@ -109,10 +122,38 @@ function serializeState() {
   };
 }
 
-async function persistNow() {
+async function persistFileNow() {
   const payload = JSON.stringify(serializeState(), null, 2);
   await fsp.mkdir(DATA_DIR, { recursive: true });
   await fsp.writeFile(DATA_FILE, payload, "utf8");
+}
+
+async function persistMongoNow() {
+  if (!mongoCollection) {
+    return;
+  }
+
+  await mongoCollection.updateOne(
+    { _id: "main" },
+    {
+      $set: {
+        _id: "main",
+        state: serializeState(),
+        updatedAt: new Date(),
+        retentionDays: CHAT_RETENTION_DAYS,
+      },
+    },
+    { upsert: true }
+  );
+}
+
+async function persistNow() {
+  if (mongoCollection) {
+    await persistMongoNow();
+    return;
+  }
+
+  await persistFileNow();
 }
 
 function schedulePersist() {
@@ -150,52 +191,110 @@ function hydrateMessage(rawMessage) {
   };
 }
 
-function loadState() {
+function applyLoadedState(parsed) {
+  users.clear();
+  conversations.clear();
+
+  for (const entry of parsed?.users || []) {
+    const key = normalizeName(entry?.key || entry?.username);
+    if (!key) continue;
+
+    const user = createUserRecord(entry.username || key);
+    user.friends = new Set((entry.friends || []).map(normalizeName).filter(Boolean));
+    user.requests = new Set((entry.requests || []).map(normalizeName).filter(Boolean));
+    user.isRegistered = Boolean(entry.isRegistered);
+    user.passwordSalt = toDisplayName(entry.passwordSalt);
+    user.passwordHash = toDisplayName(entry.passwordHash);
+
+    for (const unreadEntry of entry.unread || []) {
+      if (!Array.isArray(unreadEntry) || unreadEntry.length < 2) continue;
+      const friendKey = normalizeName(unreadEntry[0]);
+      if (!friendKey) continue;
+      const count = Number(unreadEntry[1]);
+      user.unread.set(friendKey, Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0);
+    }
+
+    users.set(key, user);
+  }
+
+  for (const entry of parsed?.conversations || []) {
+    const key = toDisplayName(entry?.key);
+    if (!key) continue;
+    const messages = Array.isArray(entry.messages)
+      ? entry.messages
+          .map(hydrateMessage)
+          .filter((message) => message.fromKey && message.toKey && message.text)
+      : [];
+    conversations.set(key, messages);
+  }
+}
+
+async function loadStateFromFile() {
   if (!fs.existsSync(DATA_FILE)) {
+    return false;
+  }
+
+  try {
+    const raw = await fsp.readFile(DATA_FILE, "utf8");
+    const parsed = JSON.parse(raw);
+    applyLoadedState(parsed);
+    return true;
+  } catch (err) {
+    console.error("Failed to load persisted chat state from file:", err);
+    return false;
+  }
+}
+
+async function initializeMongo() {
+  if (!MONGODB_URI) {
     return;
   }
 
   try {
-    const raw = fs.readFileSync(DATA_FILE, "utf8");
-    const parsed = JSON.parse(raw);
-
-    users.clear();
-    conversations.clear();
-
-    for (const entry of parsed.users || []) {
-      const key = normalizeName(entry?.key || entry?.username);
-      if (!key) continue;
-
-      const user = createUserRecord(entry.username || key);
-      user.friends = new Set((entry.friends || []).map(normalizeName).filter(Boolean));
-      user.requests = new Set((entry.requests || []).map(normalizeName).filter(Boolean));
-      user.isRegistered = Boolean(entry.isRegistered);
-      user.passwordSalt = toDisplayName(entry.passwordSalt);
-      user.passwordHash = toDisplayName(entry.passwordHash);
-
-      for (const unreadEntry of entry.unread || []) {
-        if (!Array.isArray(unreadEntry) || unreadEntry.length < 2) continue;
-        const friendKey = normalizeName(unreadEntry[0]);
-        if (!friendKey) continue;
-        const count = Number(unreadEntry[1]);
-        user.unread.set(friendKey, Number.isFinite(count) ? Math.max(0, Math.floor(count)) : 0);
-      }
-
-      users.set(key, user);
-    }
-
-    for (const entry of parsed.conversations || []) {
-      const key = toDisplayName(entry?.key);
-      if (!key) continue;
-      const messages = Array.isArray(entry.messages)
-        ? entry.messages
-            .map(hydrateMessage)
-            .filter((message) => message.fromKey && message.toKey && message.text)
-        : [];
-      conversations.set(key, messages);
-    }
+    mongoClient = new MongoClient(MONGODB_URI);
+    await mongoClient.connect();
+    mongoCollection = mongoClient.db(MONGODB_DB).collection(MONGODB_COLLECTION);
+    console.log(`Connected to MongoDB database: ${MONGODB_DB}`);
   } catch (err) {
-    console.error("Failed to load persisted chat state:", err);
+    mongoClient = null;
+    mongoCollection = null;
+    console.error("Failed to connect MongoDB, falling back to local file storage:", err);
+  }
+}
+
+async function loadState() {
+  await initializeMongo();
+  let loaded = false;
+
+  if (mongoCollection) {
+    try {
+      const doc = await mongoCollection.findOne({ _id: "main" });
+      if (doc?.state) {
+        applyLoadedState(doc.state);
+        loaded = true;
+      } else {
+        const loadedFromFile = await loadStateFromFile();
+        if (loadedFromFile) {
+          loaded = true;
+          await persistMongoNow();
+          console.log("Migrated local file state into MongoDB.");
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load chat state from MongoDB, trying local file:", err);
+    }
+  }
+
+  if (!loaded) {
+    loaded = await loadStateFromFile();
+  }
+
+  if (loaded) {
+    const pruned = pruneExpiredMessages();
+    if (pruned) {
+      await persistNow();
+      console.log(`Pruned expired messages older than ${CHAT_RETENTION_DAYS} day(s).`);
+    }
   }
 }
 
@@ -239,6 +338,81 @@ function getConversationKey(userA, userB) {
   const a = normalizeName(userA);
   const b = normalizeName(userB);
   return [a, b].sort().join("::");
+}
+
+function getRetentionCutoffMs() {
+  return Date.now() - CHAT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+}
+
+function getMessageTimestampMs(message) {
+  const value = Date.parse(toDisplayName(message?.timestamp));
+  return Number.isNaN(value) ? Date.now() : value;
+}
+
+function recomputeUnreadFromConversations() {
+  for (const user of users.values()) {
+    user.unread = new Map(Array.from(user.friends).map((friendKey) => [friendKey, 0]));
+  }
+
+  for (const messages of conversations.values()) {
+    for (const message of messages) {
+      if (message.seenAt) continue;
+      const recipient = users.get(message.toKey);
+      if (!recipient || !recipient.friends.has(message.fromKey)) continue;
+      const current = recipient.unread.get(message.fromKey) || 0;
+      recipient.unread.set(message.fromKey, current + 1);
+    }
+  }
+}
+
+function pruneExpiredMessages() {
+  const cutoffMs = getRetentionCutoffMs();
+  let changed = false;
+
+  for (const [key, messages] of conversations.entries()) {
+    const filtered = messages.filter((message) => getMessageTimestampMs(message) >= cutoffMs);
+    if (filtered.length !== messages.length) {
+      changed = true;
+    }
+
+    if (!filtered.length) {
+      if (messages.length) {
+        changed = true;
+      }
+      conversations.delete(key);
+      continue;
+    }
+
+    if (filtered.length !== messages.length) {
+      conversations.set(key, filtered);
+    }
+  }
+
+  if (changed) {
+    recomputeUnreadFromConversations();
+  }
+
+  return changed;
+}
+
+function runRetentionMaintenance() {
+  const pruned = pruneExpiredMessages();
+  if (!pruned) {
+    return;
+  }
+
+  schedulePersist();
+  for (const userKey of onlineUsers.keys()) {
+    emitFriendList(userKey);
+  }
+}
+
+function startRetentionMaintenanceLoop() {
+  const intervalMs = 60 * 60 * 1000;
+  const timer = setInterval(runRetentionMaintenance, intervalMs);
+  if (typeof timer.unref === "function") {
+    timer.unref();
+  }
 }
 
 function getUnreadCount(user, friendKey) {
@@ -449,8 +623,6 @@ function markConversationAsSeen(viewerKey, friendKey) {
   }
 }
 
-loadState();
-
 io.on("connection", (socket) => {
   socket.on("register", (payload) => {
     const username =
@@ -656,6 +828,7 @@ io.on("connection", (socket) => {
       return;
     }
 
+    runRetentionMaintenance();
     socket.data.activeChatWith = friendKey;
     markConversationAsSeen(userKey, friendKey);
 
@@ -708,11 +881,8 @@ io.on("connection", (socket) => {
     const conversation = conversations.get(conversationKey) || [];
     conversation.push(message);
 
-    if (conversation.length > 100) {
-      conversation.shift();
-    }
-
     conversations.set(conversationKey, conversation);
+    runRetentionMaintenance();
 
     recipientViewing ? setUnreadCount(friend, userKey, 0) : incrementUnread(friend, userKey);
 
@@ -775,23 +945,52 @@ io.on("connection", (socket) => {
   });
 });
 
-process.on("SIGTERM", () => {
+async function closeStorage() {
+  if (mongoClient) {
+    try {
+      await mongoClient.close();
+    } catch (err) {
+      console.error("Failed closing MongoDB connection:", err);
+    } finally {
+      mongoClient = null;
+      mongoCollection = null;
+    }
+  }
+}
+
+async function shutdown() {
   if (persistTimer) {
     clearTimeout(persistTimer);
     persistTimer = null;
   }
-  persistNow().finally(() => process.exit(0));
-});
 
-process.on("SIGINT", () => {
-  if (persistTimer) {
-    clearTimeout(persistTimer);
-    persistTimer = null;
+  try {
+    await persistInFlight.catch(() => {});
+    await persistNow();
+  } catch (err) {
+    console.error("Failed to persist state during shutdown:", err);
+  } finally {
+    await closeStorage();
+    process.exit(0);
   }
-  persistNow().finally(() => process.exit(0));
-});
+}
 
-const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-  console.log(`Chat app running on http://localhost:${PORT}`);
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
+
+async function bootstrap() {
+  await loadState();
+  startRetentionMaintenanceLoop();
+
+  const PORT = process.env.PORT || 3000;
+  server.listen(PORT, () => {
+    console.log(
+      `Chat app running on http://localhost:${PORT} | retention=${CHAT_RETENTION_DAYS} day(s) | storage=${mongoCollection ? "mongodb" : "file"}`
+    );
+  });
+}
+
+bootstrap().catch((err) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
 });
