@@ -6,7 +6,7 @@
     <title>RippleRoom Chat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -40,23 +40,29 @@
             <svg class="hero-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
               <defs>
                 <linearGradient id="heroPulse" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#ffd26e" />
-                  <stop offset="50%" stop-color="#59d6ff" />
-                  <stop offset="100%" stop-color="#2f76ff" />
+                  <stop offset="0%" stop-color="#00e5ff" />
+                  <stop offset="50%" stop-color="#7c3aed" />
+                  <stop offset="100%" stop-color="#f72585" />
                 </linearGradient>
                 <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
-                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                  <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.4" />
+                  <stop offset="100%" stop-color="#00e5ff" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="heroGlow2" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.35" />
+                  <stop offset="100%" stop-color="#7c3aed" stop-opacity="0" />
                 </radialGradient>
               </defs>
-              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(9,31,61,0.55)" />
-              <circle cx="166" cy="140" r="74" fill="none" stroke="url(#heroPulse)" stroke-width="6" />
-              <circle cx="166" cy="140" r="48" fill="none" stroke="url(#heroPulse)" stroke-width="3" opacity="0.75" />
-              <path d="M252 94C300 78 364 84 402 128C432 164 430 210 402 230" fill="none" stroke="#9adcf0" stroke-width="3" stroke-linecap="round" />
-              <path d="M252 122C294 114 338 120 366 148C390 172 390 204 372 222" fill="none" stroke="#ffd26e" stroke-width="3" stroke-linecap="round" />
-              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" />
-              <circle cx="430" cy="88" r="24" fill="#ffffff" fill-opacity="0.9" />
-              <circle cx="430" cy="88" r="10" fill="#2f76ff" />
+              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(6,10,20,0.7)" />
+              <circle cx="166" cy="140" r="74" fill="none" stroke="url(#heroPulse)" stroke-width="2" opacity="0.9" />
+              <circle cx="166" cy="140" r="50" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.5" />
+              <circle cx="166" cy="140" r="26" fill="none" stroke="#00e5ff" stroke-width="1" opacity="0.35" />
+              <path d="M252 94C300 78 364 84 402 128C432 164 430 210 402 230" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+              <path d="M252 122C294 114 338 120 366 148C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow2)" />
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.6" />
+              <circle cx="430" cy="88" r="22" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" stroke-width="1.5" />
+              <circle cx="430" cy="88" r="8" fill="#00e5ff" />
             </svg>
             <div class="float-pill float-pill-one">Aarav is typing...</div>
             <div class="float-pill float-pill-two">Delivered instantly</div>
