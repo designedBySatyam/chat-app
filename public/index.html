@@ -44,11 +44,14 @@
 
         <div class="login-panel">
           <h3>Join the room</h3>
-          <p>Pick a username to continue.</p>
+          <p>New username creates account. Existing username requires password.</p>
           <form id="loginForm">
             <input id="usernameInput" type="text" maxlength="24" placeholder="Your username" required />
+            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" required />
             <button type="submit">Enter Chat</button>
           </form>
+          <p id="usernameHint" class="username-hint hidden"></p>
+          <div id="usernameSuggestions" class="username-suggestions hidden"></div>
         </div>
       </section>
 
@@ -98,6 +101,14 @@
 
           <div id="messages" class="messages">
             <div class="messages-empty">Choose a friend to load your conversation.</div>
+          </div>
+          <div id="typingIndicator" class="typing-indicator hidden">
+            <span id="typingText">Someone is typing</span>
+            <span class="typing-dots" aria-hidden="true">
+              <span></span>
+              <span></span>
+              <span></span>
+            </span>
           </div>
 
           <form id="messageForm" class="message-form">
