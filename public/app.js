@@ -31,6 +31,9 @@ let me           = "";
 let activeFriend = "";
 let friends      = [];
 let requests     = [];
+let replyTo      = null;
+let myProfile    = { avatarId: "", displayName: "", age: "", gender: "" };
+window._novynProfile = myProfile;
 
 const localTyping = {
   active:    false,
@@ -201,6 +204,38 @@ function clearMessages() {
   messagesEl.innerHTML = "";
 }
 
+// ─── Reply UI ─────────────────────────────────────────────────────────────────
+
+const replyBanner = (() => {
+  const banner     = document.createElement("div");
+  banner.id        = "replyBanner";
+  banner.className = "reply-banner hidden";
+  const preview    = document.createElement("span");
+  preview.className = "reply-preview-text";
+  banner.appendChild(preview);
+  const closeBtn   = document.createElement("button");
+  closeBtn.type    = "button";
+  closeBtn.className = "reply-cancel-btn";
+  closeBtn.innerHTML = "✕";
+  closeBtn.addEventListener("click", clearReply);
+  banner.appendChild(closeBtn);
+  messageForm.parentNode.insertBefore(banner, messageForm);
+  return { banner, preview };
+})();
+
+function setReply(message) {
+  replyTo = { id: message.id, from: message.from, text: message.text };
+  replyBanner.preview.textContent = `Replying to ${message.from}: ${message.text.slice(0, 60)}${message.text.length > 60 ? "…" : ""}`;
+  replyBanner.banner.classList.remove("hidden");
+  messageInput.focus();
+}
+
+function clearReply() {
+  replyTo = null;
+  replyBanner.banner.classList.add("hidden");
+  replyBanner.preview.textContent = "";
+}
+
 function renderMessagesEmptyState(text) {
   clearMessages();
   hideTypingIndicator();
@@ -227,19 +262,43 @@ function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
 
   const row       = document.createElement("article");
-  // Add no-anim class to suppress CSS animation for history loads
   row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
+  row.dataset.messageFrom = message.from;
+  row.dataset.messageText = message.text;
 
   const meta        = document.createElement("span");
   meta.className    = "message-meta";
   meta.textContent  = buildMessageMeta(message, mine);
 
+  row.append(meta);
+
+  if (message.replyTo) {
+    const rq      = document.createElement("div");
+    rq.className  = "reply-quote";
+    const ra      = document.createElement("span");
+    ra.className  = "reply-quote-author";
+    ra.textContent = message.replyTo.from;
+    const rt      = document.createElement("span");
+    rt.className  = "reply-quote-text";
+    rt.textContent = message.replyTo.text.slice(0, 80) + (message.replyTo.text.length > 80 ? "…" : "");
+    rq.addEventListener("click", () => {
+      const orig = messagesEl.querySelector(`[data-message-id="${message.replyTo.id}"]`);
+      if (orig) {
+        orig.scrollIntoView({ behavior: "smooth", block: "center" });
+        orig.classList.add("highlight-flash");
+        setTimeout(() => orig.classList.remove("highlight-flash"), 1200);
+      }
+    });
+    rq.append(ra, rt);
+    row.append(rq);
+  }
+
   const body        = document.createElement("div");
   body.className    = "message-body";
   body.textContent  = message.text;
 
-  row.append(meta, body);
+  row.append(body);
   return row;
 }
 
@@ -342,6 +401,7 @@ function setActiveFriend(username) {
   }
 
   activeFriend = username;
+  clearReply();
   activeFriendLabel.textContent = username;
   setComposerEnabled(true);
   renderMessagesEmptyState("Loading conversation…");
@@ -373,7 +433,7 @@ function renderFriends() {
     btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
-    // Avatar with initials/emoji + online dot
+    // Avatar with initials + online dot
     const avatar        = document.createElement("div");
     avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
     if (friend.avatarId && window._novynAvatarUtils) {
@@ -448,8 +508,11 @@ messageForm.addEventListener("submit", (e) => {
   if (!text) return;
 
   stopLocalTyping();
-  socket.emit("private_message", { to: activeFriend, text });
+  const payload = { to: activeFriend, text };
+  if (replyTo) payload.replyTo = replyTo;
+  socket.emit("private_message", payload);
   messageInput.value = "";
+  clearReply();
 
   // Keep scroll pinned to bottom after sending
   scrollToBottom();
@@ -480,14 +543,12 @@ socket.on("register_success", (data) => {
   activeFriend = "";
 
   meName.textContent = `@${me}`;
-
-  // Load profile if provided
   if (data.profile) {
-    myProfile.avatarId     = data.profile.avatarId || "";
-    myProfile.displayName  = data.profile.displayName || "";
-    myProfile.age          = data.profile.age || "";
-    myProfile.gender       = data.profile.gender || "";
-    window._novynProfile   = myProfile;
+    myProfile.avatarId    = data.profile.avatarId || "";
+    myProfile.displayName = data.profile.displayName || "";
+    myProfile.age         = data.profile.age || "";
+    myProfile.gender      = data.profile.gender || "";
+    window._novynProfile  = myProfile;
   }
   applyMyAvatar();
   passwordInput.value           = "";
@@ -587,9 +648,17 @@ socket.on("private_message", (message) => {
 });
 
 socket.on("message_status", (payload) => {
-  if (!payload?.with) return;
+  if (!payload?.id || !payload?.with) return;
   if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) return;
-  socket.emit("get_history", activeFriend);
+  const msgEl = messagesEl.querySelector(`[data-message-id="${payload.id}"]`);
+  if (!msgEl || !msgEl.classList.contains("me")) return;
+  const metaEl = msgEl.querySelector(".message-meta");
+  if (!metaEl) return;
+  const timeText = metaEl.textContent.split("·")[0]?.trim() || "";
+  let statusText = "Sent";
+  if (payload.seenAt) statusText = "Seen";
+  else if (payload.deliveredAt) statusText = "Delivered";
+  metaEl.textContent = `${timeText} · ${statusText}`;
 });
 
 socket.on("typing", ({ from, isTyping }) => {
@@ -649,7 +718,6 @@ socket.on("profile_updated", (data) => {
 });
 
 socket.on("friend_profile_updated", (data) => {
-  // Update friend avatar in the friends list if they changed their avatar
   friends = friends.map((f) =>
     normalizeName(f.username) === normalizeName(data.username)
       ? { ...f, avatarId: data.avatarId, displayName: data.displayName }
@@ -658,5 +726,18 @@ socket.on("friend_profile_updated", (data) => {
   renderFriends();
 });
 
+socket.on("reaction_updated", (payload) => {
+  if (!payload?.messageId) return;
+  if (window._novynReactions) {
+    window._novynReactions.applyServerReactions(payload.messageId, payload.reactions);
+  }
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setComposerEnabled(false);
+
+window._novynReply = { setReply };
+window._novynSocket = socket;
+window._novynMe = () => me;
+window._novynActiveFriend = () => activeFriend;
+setTimeout(applyMyAvatar, 200);

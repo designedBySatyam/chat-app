@@ -186,7 +186,7 @@ function hydrateMessage(rawMessage) {
   const fromKey = normalizeName(message.fromKey || from);
   const toKey = normalizeName(message.toKey || to);
 
-  return {
+  const hydrated = {
     id: toDisplayName(message.id) || createMessageId(),
     from: from || fromKey,
     to: to || toKey,
@@ -196,7 +196,16 @@ function hydrateMessage(rawMessage) {
     timestamp: toDisplayName(message.timestamp) || nowIso(),
     deliveredAt: toDisplayName(message.deliveredAt) || null,
     seenAt: toDisplayName(message.seenAt) || null,
+    reactions: message.reactions || {},
   };
+  if (message.replyTo && message.replyTo.id) {
+    hydrated.replyTo = {
+      id: toDisplayName(message.replyTo.id),
+      from: toDisplayName(message.replyTo.from),
+      text: toDisplayName(message.replyTo.text),
+    };
+  }
+  return hydrated;
 }
 
 function applyLoadedState(parsed) {
@@ -895,7 +904,15 @@ io.on("connection", (socket) => {
       timestamp,
       deliveredAt: recipientSocketId ? timestamp : null,
       seenAt: recipientViewing ? timestamp : null,
+      reactions: {},
     };
+    if (payload?.replyTo && payload.replyTo.id) {
+      message.replyTo = {
+        id: toDisplayName(payload.replyTo.id),
+        from: toDisplayName(payload.replyTo.from),
+        text: toDisplayName(payload.replyTo.text),
+      };
+    }
 
     const conversationKey = getConversationKey(userKey, toKey);
     const conversation = conversations.get(conversationKey) || [];
@@ -938,6 +955,67 @@ io.on("connection", (socket) => {
         isTyping,
       });
     }
+  });
+
+  socket.on("update_profile", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const user = users.get(userKey);
+    if (!user) return;
+    if (payload?.avatarId !== undefined) user.avatarId = toDisplayName(payload.avatarId).slice(0, 32);
+    if (payload?.age !== undefined) user.age = toDisplayName(payload.age).slice(0, 3);
+    if (payload?.gender !== undefined) user.gender = toDisplayName(payload.gender).slice(0, 20);
+    if (payload?.displayName !== undefined) user.displayName = toDisplayName(payload.displayName).slice(0, 32);
+    socket.emit("profile_updated", {
+      avatarId: user.avatarId, age: user.age, gender: user.gender, displayName: user.displayName,
+    });
+    for (const friendKey of user.friends) {
+      const friendSocket = onlineUsers.get(friendKey);
+      if (friendSocket) {
+        io.to(friendSocket).emit("friend_profile_updated", {
+          username: user.username, avatarId: user.avatarId, displayName: user.displayName,
+        });
+      }
+    }
+    schedulePersist();
+  });
+
+  socket.on("react", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const messageId = toDisplayName(payload?.messageId);
+    const emoji = toDisplayName(payload?.emoji);
+    const toKey = normalizeName(payload?.to);
+    if (!messageId || !emoji || !toKey) return;
+    const me = users.get(userKey);
+    if (!me || !me.friends.has(toKey)) return;
+    const convKey = getConversationKey(userKey, toKey);
+    const conv = conversations.get(convKey) || [];
+    const message = conv.find((m) => m.id === messageId);
+    if (!message) return;
+    if (!message.reactions) message.reactions = {};
+    if (!message.reactions[emoji]) message.reactions[emoji] = { count: 0, userKeys: [] };
+    const entry = message.reactions[emoji];
+    const alreadyIdx = entry.userKeys.indexOf(userKey);
+    if (alreadyIdx >= 0) {
+      entry.userKeys.splice(alreadyIdx, 1);
+      entry.count = Math.max(0, entry.count - 1);
+    } else {
+      entry.userKeys.push(userKey);
+      entry.count++;
+    }
+    function buildReactionPayload(forUserKey) {
+      const out = {};
+      for (const [em, data] of Object.entries(message.reactions)) {
+        if (data.count > 0) out[em] = { count: data.count, mine: data.userKeys.includes(forUserKey) };
+      }
+      return out;
+    }
+    const senderSocket = onlineUsers.get(userKey);
+    const recipientSocket = onlineUsers.get(toKey);
+    if (senderSocket) io.to(senderSocket).emit("reaction_updated", { messageId, reactions: buildReactionPayload(userKey) });
+    if (recipientSocket) io.to(recipientSocket).emit("reaction_updated", { messageId, reactions: buildReactionPayload(toKey) });
+    schedulePersist();
   });
 
   socket.on("disconnect", () => {
