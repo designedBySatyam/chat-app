@@ -448,11 +448,11 @@ function syncRemoveFriendButton() {
   removeFriendBtn.classList.toggle("hidden", !hasActive);
   removeFriendBtn.disabled = !hasActive;
   if (hasActive) {
-    removeFriendBtn.title = `Remove @${activeFriend}`;
-    removeFriendBtn.setAttribute("aria-label", `Remove ${activeFriend}`);
+    removeFriendBtn.title = `Unfriend @${activeFriend}`;
+    removeFriendBtn.setAttribute("aria-label", `Unfriend ${activeFriend}`);
   } else {
-    removeFriendBtn.title = "Remove friend";
-    removeFriendBtn.setAttribute("aria-label", "Remove friend");
+    removeFriendBtn.title = "Unfriend";
+    removeFriendBtn.setAttribute("aria-label", "Unfriend");
   }
 }
 
@@ -574,7 +574,7 @@ if (removeFriendBtn) {
     if (!activeFriend) return;
     const target = activeFriend;
     const approved = window.confirm(
-      `Remove @${target} from your friends?\n\nThis also clears your chat history with this user.`
+      `Unfriend @${target}?\n\nThis also clears your chat history with this user.`
     );
     if (!approved) return;
     socket.emit("remove_friend", target);

@@ -315,7 +315,11 @@
   var modal       = document.getElementById('profileModal');
   var backdrop    = modal && modal.querySelector('.profile-modal-backdrop');
   var closeBtn    = document.getElementById('profileModalClose');
-  var openBtn     = document.getElementById('profileBtn');
+  var openButtons = Array.prototype.slice.call(document.querySelectorAll('[data-profile-open]'));
+  if (!openButtons.length) {
+    var fallbackOpenBtn = document.getElementById('profileBtn');
+    if (fallbackOpenBtn) openButtons.push(fallbackOpenBtn);
+  }
   var saveBtn     = document.getElementById('profileSaveBtn');
   var avatarBig   = document.getElementById('profileAvatarBig');
   var avatarGrid  = document.getElementById('profileAvatarGrid');
@@ -385,7 +389,9 @@
     modal.style.display = 'none';
   }
 
-  openBtn  && openBtn.addEventListener('click', showModal);
+  openButtons.forEach(function(btn) {
+    btn.addEventListener('click', showModal);
+  });
   closeBtn && closeBtn.addEventListener('click', hideModal);
   backdrop && backdrop.addEventListener('click', hideModal);
   document.addEventListener('keydown', function(e) {

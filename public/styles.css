@@ -461,11 +461,42 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   height: 100%;
 }
 .me-row-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.me-row-text { min-width: 0; }
+.me-row-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
 .me-row-text h2 {
   font-size: 1.02rem; font-weight: 700; margin-top: 1px;
   background: var(--g-brand); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.profile-inline-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid rgba(0,229,255,0.22);
+  background: rgba(0,229,255,0.08);
+  color: var(--cyan);
+  border-radius: 999px;
+  padding: 2px 9px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease;
+}
+.profile-inline-btn:hover {
+  background: rgba(0,229,255,0.16);
+  border-color: rgba(0,229,255,0.38);
+  transform: translateY(-1px);
+}
+:root.light .profile-inline-btn {
+  color: #0070a8;
+  border-color: rgba(0,112,168,0.24);
+  background: rgba(0,112,168,0.08);
 }
 
 .presence-pill {
@@ -617,28 +648,36 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 .remove-friend-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  height: 32px;
-  padding: 0 11px;
+  gap: 7px;
+  height: 34px;
+  padding: 0 12px;
   border-radius: var(--rp);
-  border: 1px solid rgba(255, 91, 133, 0.34);
-  background: rgba(255, 91, 133, 0.11);
-  color: #ff7aa5;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.01em;
+  border: 1px solid rgba(255, 87, 130, 0.52);
+  background: linear-gradient(135deg, rgba(255, 82, 120, 0.2), rgba(255, 42, 92, 0.12));
+  color: #ff8fb0;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  box-shadow: 0 0 0 1px rgba(255, 68, 113, 0.12) inset;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease, box-shadow 0.18s ease;
   flex-shrink: 0;
 }
 .remove-friend-btn:hover {
-  background: rgba(255, 91, 133, 0.19);
-  border-color: rgba(255, 91, 133, 0.48);
+  background: linear-gradient(135deg, rgba(255, 82, 120, 0.32), rgba(255, 42, 92, 0.24));
+  border-color: rgba(255, 87, 130, 0.75);
   transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(255, 49, 111, 0.2);
+}
+.remove-friend-btn svg {
+  width: 15px;
+  height: 15px;
+  opacity: 0.95;
 }
 :root.light .remove-friend-btn {
-  border-color: rgba(204, 28, 75, 0.28);
-  background: rgba(204, 28, 75, 0.08);
+  border-color: rgba(194, 24, 70, 0.44);
+  background: linear-gradient(135deg, rgba(194, 24, 70, 0.14), rgba(194, 24, 70, 0.08));
   color: #b60f3d;
 }
 
@@ -981,11 +1020,12 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   .chat-header h2   { font-size: 1.05rem; }
   .chat-header .eyebrow { display: none; }
   .remove-friend-btn {
-    width: 32px;
-    height: 32px;
+    width: 34px;
+    height: 34px;
     padding: 0;
     justify-content: center;
     border-radius: 50%;
+    box-shadow: none;
   }
   .remove-friend-btn span { display: none; }
 
@@ -1276,11 +1316,11 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   position: absolute;
   right: -5px;
   bottom: -4px;
-  width: 18px;
-  height: 18px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  border: 1px solid rgba(255,255,255,0.38);
-  background: linear-gradient(135deg, #00e5ff, #7c3aed);
+  border: 1px solid rgba(255,255,255,0.55);
+  background: linear-gradient(135deg, #00d9ff, #6f56ff);
   color: #fff;
   display: flex;
   align-items: center;
@@ -1359,6 +1399,8 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 :root.light .av-grid-btn.selected { border-color: var(--violet); box-shadow: 0 0 0 3px rgba(124,58,237,0.25); }
 
 .profile-fields { display: flex; flex-direction: column; gap: 14px; }
+.profile-field-row { display: flex; gap: 12px; }
+.profile-field-row .profile-field { flex: 1; }
 .profile-field { display: flex; flex-direction: column; gap: 5px; flex: 1; }
 .profile-field label {
   font-size: 0.73rem; font-weight: 600; color: var(--t2);
@@ -1379,6 +1421,9 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 }
 .profile-field select option { background: #1a1f35; color: #eef2f8; }
 :root.light .profile-field select option { background: #fff; color: #0d1120; }
+@media (max-width: 560px) {
+  .profile-field-row { flex-direction: column; gap: 10px; }
+}
 
 .profile-save-btn {
   width: 100%; padding: 11px; border-radius: var(--r2);

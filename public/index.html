@@ -161,7 +161,7 @@
             <div class="me-row-info">
               <div class="me-avatar-wrap">
                 <div class="me-avatar" id="meAvatar" aria-hidden="true">?</div>
-                <button class="profile-avatar-btn" id="profileBtn" title="Edit profile" aria-label="Edit profile">
+                <button class="profile-avatar-btn" id="profileBtn" data-profile-open type="button" title="Edit profile" aria-label="Edit profile">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M12 20h9"/>
                     <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
@@ -171,6 +171,13 @@
               <div class="me-row-text">
                 <p class="eyebrow">Signed in as</p>
                 <h2 id="meName">@you</h2>
+                <button class="profile-inline-btn" data-profile-open type="button" aria-label="Open edit profile">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                  </svg>
+                  Edit profile
+                </button>
               </div>
             </div>
             <div class="me-row-btns">
@@ -220,14 +227,13 @@
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
             </div>
-            <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Remove friend" aria-label="Remove friend">
+            <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Unfriend" aria-label="Unfriend">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
                 <circle cx="8.5" cy="7" r="4"/>
-                <line x1="20" y1="8" x2="20" y2="14"/>
                 <line x1="17" y1="11" x2="23" y2="11"/>
               </svg>
-              <span>Remove</span>
+              <span>Unfriend</span>
             </button>
             <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
           </header>
@@ -299,12 +305,12 @@
               <label for="profileDisplayName">Display Name</label>
               <input id="profileDisplayName" type="text" maxlength="32" placeholder="How friends see you" autocomplete="off"/>
             </div>
-            <div class="profile-field-row" style="display:flex;gap:12px;">
-              <div class="profile-field" style="flex:1;">
+            <div class="profile-field-row">
+              <div class="profile-field">
                 <label for="profileAge">Age</label>
                 <input id="profileAge" type="number" min="1" max="120" placeholder="Age" autocomplete="off"/>
               </div>
-              <div class="profile-field" style="flex:1;">
+              <div class="profile-field">
                 <label for="profileGender">Gender</label>
                 <select id="profileGender">
                   <option value="">Prefer not to say</option>
