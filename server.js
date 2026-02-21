@@ -657,6 +657,36 @@ function markConversationAsSeen(viewerKey, friendKey) {
   }
 }
 
+function removeFriendship(userAKey, userBKey) {
+  const aKey = normalizeName(userAKey);
+  const bKey = normalizeName(userBKey);
+  const userA = users.get(aKey);
+  const userB = users.get(bKey);
+
+  if (!userA || !userB) {
+    return false;
+  }
+
+  const wereFriends = userA.friends.has(bKey) || userB.friends.has(aKey);
+  if (!wereFriends) {
+    return false;
+  }
+
+  userA.friends.delete(bKey);
+  userB.friends.delete(aKey);
+
+  userA.requests.delete(bKey);
+  userB.requests.delete(aKey);
+
+  userA.unread.delete(bKey);
+  userB.unread.delete(aKey);
+
+  const conversationKey = getConversationKey(aKey, bKey);
+  conversations.delete(conversationKey);
+
+  return true;
+}
+
 io.on("connection", (socket) => {
   socket.on("register", (payload) => {
     const username =
@@ -850,6 +880,71 @@ io.on("connection", (socket) => {
     const friendSocket = onlineUsers.get(friendKey);
     if (friendSocket) {
       io.to(friendSocket).emit("friend_request_accepted", { by: me.username });
+    }
+
+    schedulePersist();
+  });
+
+  socket.on("remove_friend", (rawFriendName) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const friendName = toDisplayName(rawFriendName);
+    const friendKey = normalizeName(friendName);
+
+    const me = users.get(userKey);
+    const friend = users.get(friendKey);
+
+    if (!me || !friend || !me.friends.has(friendKey)) {
+      socket.emit("error_message", { message: "This user is not in your friends list." });
+      return;
+    }
+
+    const removed = removeFriendship(userKey, friendKey);
+    if (!removed) {
+      socket.emit("error_message", { message: "Could not remove friend. Try again." });
+      return;
+    }
+
+    if (socket.data.activeChatWith === friendKey) {
+      socket.data.activeChatWith = null;
+    }
+
+    const friendSocketId = onlineUsers.get(friendKey);
+    if (friendSocketId) {
+      const friendSocket = io.sockets.sockets.get(friendSocketId);
+      if (friendSocket && friendSocket.data.activeChatWith === userKey) {
+        friendSocket.data.activeChatWith = null;
+      }
+    }
+
+    socket.emit("typing", {
+      from: friend.username,
+      isTyping: false,
+    });
+
+    if (friendSocketId) {
+      io.to(friendSocketId).emit("typing", {
+        from: me.username,
+        isTyping: false,
+      });
+    }
+
+    emitFriendList(userKey);
+    emitFriendList(friendKey);
+    emitRequests(userKey);
+    emitRequests(friendKey);
+
+    socket.emit("friend_removed", {
+      username: friend.username,
+      by: me.username,
+    });
+
+    if (friendSocketId) {
+      io.to(friendSocketId).emit("friend_removed", {
+        username: me.username,
+        by: me.username,
+      });
     }
 
     schedulePersist();

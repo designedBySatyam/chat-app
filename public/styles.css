@@ -450,6 +450,16 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   letter-spacing: 0; flex-shrink: 0;
   box-shadow: 0 0 0 2px rgba(0,229,255,0.22), var(--glow-c);
 }
+.me-avatar-wrap {
+  position: relative;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+.me-avatar-wrap .me-avatar {
+  width: 100%;
+  height: 100%;
+}
 .me-row-info { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .me-row-text { min-width: 0; }
 .me-row-text h2 {
@@ -569,8 +579,68 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 }
 :root.light .chat-header { border-color: rgba(0,112,168,0.10); background: radial-gradient(ellipse 80% 80% at 100% 50%, rgba(0,112,168,0.04), transparent), rgba(255,255,255,0.80); }
 
+.active-presence { width: 34px; height: 34px; flex-shrink: 0; }
+.active-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--g-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  position: relative;
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.2), 0 6px 16px rgba(0,0,0,0.28);
+}
+.active-avatar::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 1px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-void);
+  background: var(--t3);
+}
+.active-avatar.online::after {
+  background: var(--online);
+  box-shadow: 0 0 7px rgba(0,201,122,0.9);
+}
+
 .chat-header-info { flex: 1; min-width: 0; }
 .chat-header h2 { font-size: clamp(1.05rem, 1.6vw, 1.35rem); font-weight: 700; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.remove-friend-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: var(--rp);
+  border: 1px solid rgba(255, 91, 133, 0.34);
+  background: rgba(255, 91, 133, 0.11);
+  color: #ff7aa5;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  transition: background 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
+  flex-shrink: 0;
+}
+.remove-friend-btn:hover {
+  background: rgba(255, 91, 133, 0.19);
+  border-color: rgba(255, 91, 133, 0.48);
+  transform: translateY(-1px);
+}
+:root.light .remove-friend-btn {
+  border-color: rgba(204, 28, 75, 0.28);
+  background: rgba(204, 28, 75, 0.08);
+  color: #b60f3d;
+}
 
 .mini-stat {
   padding: 5px 13px; border-radius: var(--rp);
@@ -906,8 +976,18 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
     background: var(--mob-bar-bg); backdrop-filter: blur(16px);
     padding: 12px 14px; gap: 10px;
   }
+  .active-presence { width: 30px; height: 30px; }
+  .active-avatar { font-size: 0.68rem; }
   .chat-header h2   { font-size: 1.05rem; }
   .chat-header .eyebrow { display: none; }
+  .remove-friend-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    justify-content: center;
+    border-radius: 50%;
+  }
+  .remove-friend-btn span { display: none; }
 
   .mob-back-btn {
     display: flex; align-items: center; justify-content: center;
@@ -1190,17 +1270,34 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
 }
 .message.highlight-flash { animation: highlightFlash 1.2s ease forwards; }
 
-/* ── Profile button in me-row ───────────────────────────────── */
+/* ── Profile edit on avatar ─────────────────────────────────── */
 .me-row-btns { display: flex; align-items: center; gap: 6px; }
-.profile-btn {
-  display: flex; align-items: center; justify-content: center;
-  width: 32px; height: 32px; border-radius: 50%; border: none;
-  background: rgba(0,229,255,0.08); color: var(--cyan);
-  cursor: pointer; transition: background 0.2s, transform 0.15s; flex-shrink: 0;
+.profile-avatar-btn {
+  position: absolute;
+  right: -5px;
+  bottom: -4px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.38);
+  background: linear-gradient(135deg, #00e5ff, #7c3aed);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+  transition: transform 0.15s ease, filter 0.15s ease;
+  padding: 0;
+  line-height: 1;
 }
-.profile-btn:hover { background: rgba(0,229,255,0.18); transform: scale(1.1); }
-:root.light .profile-btn { background: rgba(99,102,241,0.08); color: var(--violet); }
-:root.light .profile-btn:hover { background: rgba(99,102,241,0.16); }
+.profile-avatar-btn:hover {
+  transform: scale(1.12);
+  filter: brightness(1.08);
+}
+:root.light .profile-avatar-btn {
+  border-color: rgba(255,255,255,0.75);
+}
 
 /* ── Profile Modal ──────────────────────────────────────────── */
 .profile-modal {

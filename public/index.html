@@ -159,19 +159,21 @@
 
           <div class="me-row">
             <div class="me-row-info">
-              <div class="me-avatar" id="meAvatar" aria-hidden="true">?</div>
+              <div class="me-avatar-wrap">
+                <div class="me-avatar" id="meAvatar" aria-hidden="true">?</div>
+                <button class="profile-avatar-btn" id="profileBtn" title="Edit profile" aria-label="Edit profile">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 20h9"/>
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                  </svg>
+                </button>
+              </div>
               <div class="me-row-text">
                 <p class="eyebrow">Signed in as</p>
                 <h2 id="meName">@you</h2>
               </div>
             </div>
             <div class="me-row-btns">
-              <button class="profile-btn" id="profileBtn" title="Edit profile" aria-label="Edit profile">
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                  <circle cx="12" cy="7" r="4"/>
-                </svg>
-              </button>
               <button class="logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                   <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
@@ -211,10 +213,22 @@
             <button class="mob-back-btn" id="mobBackBtn" aria-label="Back to friends">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
+            <div id="activePresence" class="active-presence hidden" aria-hidden="true">
+              <div id="activeFriendAvatar" class="active-avatar">?</div>
+            </div>
             <div class="chat-header-info">
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
             </div>
+            <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Remove friend" aria-label="Remove friend">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="8.5" cy="7" r="4"/>
+                <line x1="20" y1="8" x2="20" y2="14"/>
+                <line x1="17" y1="11" x2="23" y2="11"/>
+              </svg>
+              <span>Remove</span>
+            </button>
             <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
           </header>
 
@@ -239,8 +253,21 @@
           </div>
 
           <div class="message-form-wrap">
-            <form id="messageForm" class="message-form">
-              <input id="messageInput" type="text" placeholder="Type a message…" autocomplete="off" maxlength="1000"/>
+          <form id="messageForm" class="message-form" autocomplete="off">
+              <input
+                id="messageInput"
+                name="chatMessage"
+                type="text"
+                placeholder="Type a message…"
+                autocomplete="off"
+                inputmode="text"
+                enterkeyhint="send"
+                autocapitalize="sentences"
+                autocorrect="on"
+                spellcheck="true"
+                data-lpignore="true"
+                maxlength="1000"
+              />
               <button type="submit">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                 Send

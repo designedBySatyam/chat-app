@@ -14,6 +14,9 @@ const friendInput       = document.getElementById("friendInput");
 const requestList       = document.getElementById("requestList");
 const friendList        = document.getElementById("friendList");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
+const activePresence    = document.getElementById("activePresence");
+const activeFriendAvatar = document.getElementById("activeFriendAvatar");
+const removeFriendBtn   = document.getElementById("removeFriendBtn");
 const messagesEl        = document.getElementById("messages");
 const meAvatar          = document.getElementById("meAvatar");
 const messageForm       = document.getElementById("messageForm");
@@ -396,6 +399,63 @@ function friendPreview(friend) {
   return `${prefix}${friend.lastMessage}`;
 }
 
+function findFriend(username) {
+  return friends.find(
+    (friend) => normalizeName(friend.username) === normalizeName(username)
+  );
+}
+
+function renderActiveFriendPresence() {
+  if (!activePresence || !activeFriendAvatar) return;
+
+  if (!activeFriend) {
+    activePresence.classList.add("hidden");
+    activeFriendAvatar.classList.remove("online");
+    activeFriendAvatar.textContent = "?";
+    activeFriendAvatar.style.background = "";
+    return;
+  }
+
+  const friend = findFriend(activeFriend);
+  if (!friend) {
+    activePresence.classList.add("hidden");
+    return;
+  }
+
+  activePresence.classList.remove("hidden");
+
+  const fallback = friend.username.slice(0, 2).toUpperCase();
+  if (friend.avatarId && window._novynAvatarUtils) {
+    window._novynAvatarUtils.applyAvatarToEl(
+      activeFriendAvatar,
+      friend.avatarId,
+      fallback
+    );
+  } else {
+    activeFriendAvatar.style.background = "";
+    activeFriendAvatar.textContent = fallback;
+  }
+
+  activeFriendAvatar.classList.toggle("online", !!friend.online);
+  activeFriendAvatar.title = friend.online
+    ? `${friend.username} is online`
+    : `${friend.username} is offline`;
+}
+
+function syncRemoveFriendButton() {
+  if (!removeFriendBtn) return;
+  const hasActive = Boolean(activeFriend);
+  removeFriendBtn.classList.toggle("hidden", !hasActive);
+  removeFriendBtn.disabled = !hasActive;
+  if (hasActive) {
+    removeFriendBtn.title = `Remove @${activeFriend}`;
+    removeFriendBtn.setAttribute("aria-label", `Remove ${activeFriend}`);
+  } else {
+    removeFriendBtn.title = "Remove friend";
+    removeFriendBtn.setAttribute("aria-label", "Remove friend");
+  }
+}
+
 function setActiveFriend(username) {
   if (activeFriend && normalizeName(activeFriend) !== normalizeName(username)) {
     stopLocalTyping(activeFriend);
@@ -404,6 +464,8 @@ function setActiveFriend(username) {
   activeFriend = username;
   clearReply();
   activeFriendLabel.textContent = username;
+  renderActiveFriendPresence();
+  syncRemoveFriendButton();
   setComposerEnabled(true);
   renderMessagesEmptyState("Loading conversation…");
   socket.emit("get_history", username);
@@ -422,6 +484,8 @@ function renderFriends() {
     empty.className   = "item-card";
     empty.textContent = "No friends yet — add one above";
     friendList.appendChild(empty);
+    renderActiveFriendPresence();
+    syncRemoveFriendButton();
     return;
   }
 
@@ -477,6 +541,9 @@ function renderFriends() {
     li.appendChild(btn);
     friendList.appendChild(li);
   }
+
+  renderActiveFriendPresence();
+  syncRemoveFriendButton();
 }
 
 // ─── Form handlers ────────────────────────────────────────────────────────────
@@ -502,8 +569,39 @@ addFriendForm.addEventListener("submit", (e) => {
   friendInput.value = "";
 });
 
-messageForm.addEventListener("submit", (e) => {
-  e.preventDefault();
+if (removeFriendBtn) {
+  removeFriendBtn.addEventListener("click", () => {
+    if (!activeFriend) return;
+    const target = activeFriend;
+    const approved = window.confirm(
+      `Remove @${target} from your friends?\n\nThis also clears your chat history with this user.`
+    );
+    if (!approved) return;
+    socket.emit("remove_friend", target);
+  });
+}
+
+function keepComposerFocused() {
+  if (!messageInput || messageInput.disabled) return;
+
+  const refocus = () => {
+    try {
+      messageInput.focus({ preventScroll: true });
+    } catch (_) {
+      messageInput.focus();
+    }
+    const caretPos = messageInput.value.length;
+    if (typeof messageInput.setSelectionRange === "function") {
+      messageInput.setSelectionRange(caretPos, caretPos);
+    }
+  };
+
+  // First immediate focus, then a delayed pass for mobile keyboards.
+  refocus();
+  setTimeout(refocus, 40);
+}
+
+function sendActiveMessage() {
   const text = messageInput.value.trim();
   if (!activeFriend) { showToast("Choose a friend first.", "error"); return; }
   if (!text) return;
@@ -517,6 +615,12 @@ messageForm.addEventListener("submit", (e) => {
 
   // Keep scroll pinned to bottom after sending
   scrollToBottom();
+  keepComposerFocused();
+}
+
+messageForm.addEventListener("submit", (e) => {
+  e.preventDefault();
+  sendActiveMessage();
 });
 
 messageInput.addEventListener("input", () => {
@@ -531,7 +635,7 @@ messageInput.addEventListener("blur", () => stopLocalTyping());
 messageInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    messageForm.requestSubmit();
+    sendActiveMessage();
   }
 });
 
@@ -554,6 +658,8 @@ socket.on("register_success", (data) => {
   applyMyAvatar();
   passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
+  renderActiveFriendPresence();
+  syncRemoveFriendButton();
 
   loginCard.classList.add("hidden");
   chatLayout.classList.remove("hidden");
@@ -614,10 +720,37 @@ socket.on("friend_list_updated", (data) => {
       activeFriendLabel.textContent = "Select a friend";
       setComposerEnabled(false);
       renderMessagesEmptyState("Choose a friend to load your conversation.");
+      renderActiveFriendPresence();
+      syncRemoveFriendButton();
     }
   }
 
   renderFriends();
+});
+
+socket.on("friend_removed", (data) => {
+  const removedUsername = String(data?.username || "").trim();
+  const removedKey = normalizeName(removedUsername);
+  const activeKey = normalizeName(activeFriend);
+
+  if (activeFriend && removedKey && activeKey === removedKey) {
+    stopLocalTyping(activeFriend);
+    activeFriend = "";
+    clearReply();
+    activeFriendLabel.textContent = "Select a friend";
+    setComposerEnabled(false);
+    hideTypingIndicator();
+    renderMessagesEmptyState("Choose a friend to load your conversation.");
+    renderActiveFriendPresence();
+    syncRemoveFriendButton();
+  }
+
+  const actor = String(data?.by || "").trim();
+  if (actor && normalizeName(actor) !== normalizeName(me)) {
+    showToast(`${actor} removed you from friends.`);
+  } else if (removedUsername) {
+    showToast(`${removedUsername} removed from friends.`);
+  }
 });
 
 socket.on("history", (data) => {
@@ -736,6 +869,8 @@ socket.on("reaction_updated", (payload) => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setComposerEnabled(false);
+renderActiveFriendPresence();
+syncRemoveFriendButton();
 
 window._novynReply = { setReply };
 window._novynSocket = socket;
