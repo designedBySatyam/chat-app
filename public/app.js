@@ -14,6 +14,12 @@ const messagesEl = document.getElementById("messages");
 const messageForm = document.getElementById("messageForm");
 const messageInput = document.getElementById("messageInput");
 const toast = document.getElementById("toast");
+const connectionLabel = document.getElementById("connectionLabel");
+const networkPill = document.getElementById("networkPill");
+const requestCount = document.getElementById("requestCount");
+const friendCount = document.getElementById("friendCount");
+const onlineCount = document.getElementById("onlineCount");
+const sendButton = messageForm.querySelector("button");
 
 let me = "";
 let activeFriend = "";
@@ -22,6 +28,17 @@ let requests = [];
 
 function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function setNetworkState(label, state) {
+  if (!connectionLabel || !networkPill) return;
+  connectionLabel.textContent = label;
+  networkPill.classList.remove("connected", "offline");
+  if (state === "connected") {
+    networkPill.classList.add("connected");
+  } else if (state === "offline") {
+    networkPill.classList.add("offline");
+  }
 }
 
 function showToast(message, type = "info") {
@@ -46,7 +63,43 @@ function clearMessages() {
   messagesEl.innerHTML = "";
 }
 
+function renderMessagesEmptyState(text) {
+  clearMessages();
+  const empty = document.createElement("div");
+  empty.className = "messages-empty";
+  empty.textContent = text;
+  messagesEl.appendChild(empty);
+}
+
+function updateStats() {
+  if (requestCount) {
+    requestCount.textContent = String(requests.length);
+  }
+  if (friendCount) {
+    friendCount.textContent = String(friends.length);
+  }
+  if (onlineCount) {
+    const online = friends.filter((friend) => friend.online).length;
+    onlineCount.textContent = `${online} online`;
+  }
+}
+
+function setComposerEnabled(isEnabled) {
+  messageInput.disabled = !isEnabled;
+  if (sendButton) {
+    sendButton.disabled = !isEnabled;
+  }
+  messageInput.placeholder = isEnabled
+    ? "Type a message"
+    : "Select a friend to start chatting";
+}
+
 function renderMessages(messages) {
+  if (!messages.length) {
+    renderMessagesEmptyState("No messages yet. Start the conversation.");
+    return;
+  }
+
   clearMessages();
 
   for (const msg of messages) {
@@ -70,6 +123,7 @@ function renderMessages(messages) {
 
 function renderRequests() {
   requestList.innerHTML = "";
+  updateStats();
 
   if (!requests.length) {
     const empty = document.createElement("li");
@@ -101,13 +155,15 @@ function renderRequests() {
 function setActiveFriend(username) {
   activeFriend = username;
   activeFriendLabel.textContent = `Chat with ${username}`;
-  clearMessages();
+  setComposerEnabled(true);
+  renderMessagesEmptyState("Loading conversation...");
   socket.emit("get_history", username);
   renderFriends();
 }
 
 function renderFriends() {
   friendList.innerHTML = "";
+  updateStats();
 
   if (!friends.length) {
     const empty = document.createElement("li");
@@ -173,10 +229,15 @@ socket.on("register_success", (data) => {
   me = data.username;
   friends = data.friends || [];
   requests = data.requests || [];
+  activeFriend = "";
 
   meName.textContent = `@${me}`;
+  activeFriendLabel.textContent = "Select a friend";
   loginCard.classList.add("hidden");
   chatLayout.classList.remove("hidden");
+  setComposerEnabled(false);
+  renderMessagesEmptyState("Choose a friend to load your conversation.");
+  setNetworkState("Connected", "connected");
   renderRequests();
   renderFriends();
   showToast("Connected");
@@ -207,7 +268,8 @@ socket.on("friend_list_updated", (data) => {
     if (!stillThere) {
       activeFriend = "";
       activeFriendLabel.textContent = "Select a friend";
-      clearMessages();
+      setComposerEnabled(false);
+      renderMessagesEmptyState("Choose a friend to load your conversation.");
     }
   }
 
@@ -224,6 +286,9 @@ socket.on("history", (data) => {
 socket.on("private_message", (message) => {
   const other = normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
   if (!activeFriend || normalizeName(other) !== normalizeName(activeFriend)) {
+    if (normalizeName(message.from) !== normalizeName(me)) {
+      showToast(`New message from ${message.from}`);
+    }
     return;
   }
 
@@ -259,6 +324,17 @@ socket.on("error_message", (data) => {
   showToast(data.message || "Something went wrong", "error");
 });
 
+socket.on("connect", () => {
+  setNetworkState("Connected", "connected");
+});
+
 socket.on("disconnect", () => {
+  setNetworkState("Disconnected", "offline");
   showToast("Disconnected from server", "error");
 });
+
+socket.on("connect_error", () => {
+  setNetworkState("Connection issue", "offline");
+});
+
+setComposerEnabled(false);

@@ -3,24 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Friends Chat</title>
+    <title>RippleRoom Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
+    <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-two" aria-hidden="true"></div>
+
     <main class="app-shell">
+      <header class="app-topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true"></span>
+          <div>
+            <p class="eyebrow">Realtime private messaging</p>
+            <h1>RippleRoom</h1>
+          </div>
+        </div>
+        <div id="networkPill" class="network-pill">
+          <span class="signal-dot" aria-hidden="true"></span>
+          <span id="connectionLabel">Connecting...</span>
+        </div>
+      </header>
+
       <section id="loginCard" class="card login-card">
-        <h1>Friends Chat</h1>
-        <p>Enter a username and start chatting.</p>
-        <form id="loginForm">
-          <input id="usernameInput" type="text" maxlength="24" placeholder="Your username" required />
-          <button type="submit">Join</button>
-        </form>
+        <div class="login-hero">
+          <p class="eyebrow">Simple, fast, social</p>
+          <h2>Chat in real time from anywhere.</h2>
+          <p>
+            Add friends, accept requests, and start secure one-to-one conversations in seconds.
+          </p>
+          <ul class="feature-list">
+            <li>Instant updates with WebSockets</li>
+            <li>Online status for your friends</li>
+            <li>Clean mobile + desktop experience</li>
+          </ul>
+        </div>
+
+        <div class="login-panel">
+          <h3>Join the room</h3>
+          <p>Pick a username to continue.</p>
+          <form id="loginForm">
+            <input id="usernameInput" type="text" maxlength="24" placeholder="Your username" required />
+            <button type="submit">Enter Chat</button>
+          </form>
+        </div>
       </section>
 
       <section id="chatLayout" class="chat-layout hidden">
         <aside class="sidebar card">
           <div class="me-row">
-            <h2 id="meName">@you</h2>
+            <div>
+              <p class="eyebrow">Signed in as</p>
+              <h2 id="meName">@you</h2>
+            </div>
+            <span class="presence-pill">
+              <span class="signal-dot online" aria-hidden="true"></span>
+              Active
+            </span>
           </div>
 
           <form id="addFriendForm" class="add-friend-form">
@@ -28,23 +70,35 @@
             <button type="submit">Add</button>
           </form>
 
-          <div class="requests">
-            <h3>Friend Requests</h3>
+          <div class="list-panel">
+            <div class="list-head">
+              <h3>Friend Requests</h3>
+              <span id="requestCount" class="count-pill">0</span>
+            </div>
             <ul id="requestList"></ul>
           </div>
 
-          <div class="friends">
-            <h3>Friends</h3>
+          <div class="list-panel friends-panel">
+            <div class="list-head">
+              <h3>Friends</h3>
+              <span id="friendCount" class="count-pill">0</span>
+            </div>
             <ul id="friendList"></ul>
           </div>
         </aside>
 
         <section class="chat card">
           <header class="chat-header">
-            <h2 id="activeFriendLabel">Select a friend</h2>
+            <div>
+              <p class="eyebrow">Conversation</p>
+              <h2 id="activeFriendLabel">Select a friend</h2>
+            </div>
+            <span id="onlineCount" class="mini-stat">0 online</span>
           </header>
 
-          <div id="messages" class="messages"></div>
+          <div id="messages" class="messages">
+            <div class="messages-empty">Choose a friend to load your conversation.</div>
+          </div>
 
           <form id="messageForm" class="message-form">
             <input id="messageInput" type="text" placeholder="Type a message" autocomplete="off" />
