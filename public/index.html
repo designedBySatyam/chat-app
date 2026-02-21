@@ -15,6 +15,8 @@
     <div class="grain-layer" aria-hidden="true"></div>
 
     <main class="app-shell">
+
+      <!-- ─── Top bar ─────────────────────────────────── -->
       <header class="app-topbar">
         <div class="brand">
           <span class="brand-mark" aria-hidden="true"></span>
@@ -23,135 +25,161 @@
             <h1>RippleRoom</h1>
           </div>
         </div>
-        <div id="networkPill" class="network-pill">
+        <div id="networkPill" class="network-pill" role="status" aria-live="polite">
           <span class="signal-dot" aria-hidden="true"></span>
-          <span id="connectionLabel">Connecting...</span>
+          <span id="connectionLabel">Connecting…</span>
         </div>
       </header>
 
-      <section id="loginCard" class="card login-card">
+      <!-- ─── Login card ────────────────────────────────── -->
+      <section id="loginCard" class="card login-card" aria-label="Login">
+
+        <!-- Left: hero / marketing panel -->
         <div class="login-hero">
-          <p class="eyebrow">Simple, fast, social</p>
-          <h2>Chat in real time from anywhere.</h2>
-          <p>
-            Add friends, accept requests, and start secure one-to-one conversations in seconds.
-          </p>
+          <p class="eyebrow">Simple · Fast · Social</p>
+          <h2>Chat in real&nbsp;time,<br>from&nbsp;anywhere.</h2>
+          <p>Add friends, accept requests, and start secure one-to-one conversations in seconds.</p>
+
           <div class="hero-visual" aria-hidden="true">
-            <svg class="hero-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+            <svg class="hero-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
               <defs>
                 <linearGradient id="heroPulse" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stop-color="#00e5ff" />
-                  <stop offset="50%" stop-color="#7c3aed" />
+                  <stop offset="0%"   stop-color="#00e5ff" />
+                  <stop offset="50%"  stop-color="#7c3aed" />
                   <stop offset="100%" stop-color="#f72585" />
                 </linearGradient>
                 <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.4" />
+                  <stop offset="0%"   stop-color="#00e5ff" stop-opacity="0.35" />
                   <stop offset="100%" stop-color="#00e5ff" stop-opacity="0" />
                 </radialGradient>
                 <radialGradient id="heroGlow2" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.35" />
+                  <stop offset="0%"   stop-color="#7c3aed" stop-opacity="0.3" />
                   <stop offset="100%" stop-color="#7c3aed" stop-opacity="0" />
                 </radialGradient>
               </defs>
-              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(6,10,20,0.7)" />
-              <circle cx="166" cy="140" r="74" fill="none" stroke="url(#heroPulse)" stroke-width="2" opacity="0.9" />
-              <circle cx="166" cy="140" r="50" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.5" />
-              <circle cx="166" cy="140" r="26" fill="none" stroke="#00e5ff" stroke-width="1" opacity="0.35" />
-              <path d="M252 94C300 78 364 84 402 128C432 164 430 210 402 230" fill="none" stroke="#00e5ff" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
-              <path d="M252 122C294 114 338 120 366 148C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round" opacity="0.6" />
+              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(5,8,15,0.65)" />
+              <!-- Concentric orbit rings -->
+              <circle cx="166" cy="140" r="76" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.8" />
+              <circle cx="166" cy="140" r="52" fill="none" stroke="url(#heroPulse)" stroke-width="1"   opacity="0.5" />
+              <circle cx="166" cy="140" r="28" fill="none" stroke="#00e5ff"         stroke-width="0.8" opacity="0.3" />
+              <!-- Connection curves -->
+              <path d="M252 94 C300 78 364 84 402 128 C432 164 430 210 402 230"  fill="none" stroke="#00e5ff" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
+              <path d="M252 122 C294 114 338 120 366 148 C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
+              <!-- Destination node glow -->
               <circle cx="430" cy="88" r="54" fill="url(#heroGlow2)" />
-              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.6" />
-              <circle cx="430" cy="88" r="22" fill="rgba(0,229,255,0.15)" stroke="#00e5ff" stroke-width="1.5" />
-              <circle cx="430" cy="88" r="8" fill="#00e5ff" />
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.5" />
+              <circle cx="430" cy="88" r="20" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.2" />
+              <circle cx="430" cy="88" r="7"  fill="#00e5ff" />
+              <!-- Source node -->
+              <circle cx="166" cy="140" r="10" fill="rgba(124,58,237,0.2)" stroke="#a855f7" stroke-width="1.2" />
+              <circle cx="166" cy="140" r="4"  fill="#a855f7" />
             </svg>
-            <div class="float-pill float-pill-one">Aarav is typing...</div>
+            <div class="float-pill float-pill-one">Aarav is typing…</div>
             <div class="float-pill float-pill-two">Delivered instantly</div>
           </div>
+
           <ul class="feature-list">
-            <li>Instant updates with WebSockets</li>
-            <li>Online status for your friends</li>
-            <li>Clean mobile + desktop experience</li>
+            <li>Instant updates via WebSockets</li>
+            <li>Live online status for friends</li>
+            <li>Polished mobile &amp; desktop UI</li>
           </ul>
         </div>
 
+        <!-- Right: sign-in form -->
         <div class="login-panel">
           <h3>Join the room</h3>
-          <p>New username creates account. Existing username requires password.</p>
-          <form id="loginForm">
-            <input id="usernameInput" type="text" maxlength="24" placeholder="Your username" required />
-            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" required />
-            <button type="submit">Enter Chat</button>
+          <p>New username creates an account. Existing username requires your password.</p>
+
+          <form id="loginForm" novalidate>
+            <input id="usernameInput" type="text"     maxlength="24"        placeholder="Username"  autocomplete="username"          required />
+            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" autocomplete="current-password" required />
+            <button type="submit">Enter Chat →</button>
           </form>
-          <p class="login-footnote">End-to-end session flow with encrypted password storage.</p>
-          <p id="usernameHint" class="username-hint hidden"></p>
-          <div id="usernameSuggestions" class="username-suggestions hidden"></div>
+
+          <p class="login-footnote">🔒 Encrypted password storage &amp; secure session handling.</p>
+          <p    id="usernameHint"        class="username-hint hidden"></p>
+          <div  id="usernameSuggestions" class="username-suggestions hidden"></div>
         </div>
       </section>
 
-      <section id="chatLayout" class="chat-layout hidden">
-        <aside class="sidebar card">
+      <!-- ─── Chat layout ────────────────────────────────── -->
+      <section id="chatLayout" class="chat-layout hidden" aria-label="Chat">
+
+        <!-- Sidebar -->
+        <aside class="sidebar card" aria-label="Friends &amp; requests">
+
+          <!-- Who am I -->
           <div class="me-row">
             <div>
               <p class="eyebrow">Signed in as</p>
               <h2 id="meName">@you</h2>
             </div>
-            <span class="presence-pill">
+            <span class="presence-pill" aria-label="Status: Active">
               <span class="signal-dot online" aria-hidden="true"></span>
               Active
             </span>
           </div>
 
+          <!-- Add friend -->
           <form id="addFriendForm" class="add-friend-form">
-            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend username" required />
+            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username" autocomplete="off" required />
             <button type="submit">Add</button>
           </form>
 
-          <div class="list-panel">
+          <!-- Friend requests -->
+          <div class="list-panel" aria-label="Friend requests">
             <div class="list-head">
-              <h3>Friend Requests</h3>
-              <span id="requestCount" class="count-pill">0</span>
+              <h3>Requests</h3>
+              <span id="requestCount" class="count-pill" aria-label="0 pending requests">0</span>
             </div>
-            <ul id="requestList"></ul>
+            <ul id="requestList" aria-live="polite"></ul>
           </div>
 
-          <div class="list-panel friends-panel">
+          <!-- Friends list -->
+          <div class="list-panel friends-panel" aria-label="Friends">
             <div class="list-head">
               <h3>Friends</h3>
-              <span id="friendCount" class="count-pill">0</span>
+              <span id="friendCount" class="count-pill" aria-label="0 friends">0</span>
             </div>
-            <ul id="friendList"></ul>
+            <ul id="friendList" aria-live="polite"></ul>
           </div>
         </aside>
 
-        <section class="chat card">
+        <!-- Chat area -->
+        <section class="chat card" aria-label="Conversation">
+
           <header class="chat-header">
             <div>
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
             </div>
-            <span id="onlineCount" class="mini-stat">0 online</span>
+            <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
           </header>
 
-          <div id="messages" class="messages">
-            <div class="messages-empty">Choose a friend to load your conversation.</div>
+          <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Messages">
+            <div class="messages-empty">
+              Select a friend from the sidebar<br>to start chatting.
+            </div>
           </div>
-          <div id="typingIndicator" class="typing-indicator hidden">
+
+          <div id="typingIndicator" class="typing-indicator hidden" aria-live="polite" aria-atomic="true">
             <span id="typingText">Someone is typing</span>
             <span class="typing-dots" aria-hidden="true">
-              <span></span>
-              <span></span>
-              <span></span>
+              <span></span><span></span><span></span>
             </span>
           </div>
 
           <form id="messageForm" class="message-form">
-            <input id="messageInput" type="text" placeholder="Type a message" autocomplete="off" />
+            <input id="messageInput" type="text" placeholder="Type a message…" autocomplete="off" />
             <button type="submit">Send</button>
           </form>
+
         </section>
       </section>
 
-      <div id="toast" class="toast hidden"></div>
+      <!-- Toast notifications -->
+      <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
