@@ -14,6 +14,7 @@ const requestList       = document.getElementById("requestList");
 const friendList        = document.getElementById("friendList");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
 const messagesEl        = document.getElementById("messages");
+const meAvatar          = document.getElementById("meAvatar");
 const messageForm       = document.getElementById("messageForm");
 const messageInput      = document.getElementById("messageInput");
 const toast             = document.getElementById("toast");
@@ -293,6 +294,7 @@ function renderMessages(messages) {
 
   // Jump straight to bottom for history load (no animation needed)
   scrollToBottom(true);
+  if (window._rippleFAB) window._rippleFAB.reset();
 }
 
 // ─── Requests ────────────────────────────────────────────────────────────────
@@ -372,6 +374,12 @@ function renderFriends() {
     btn.type          = "button";
     btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
+
+    // Avatar with initials + online dot
+    const avatar        = document.createElement("div");
+    avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
+    avatar.textContent  = friend.username.slice(0, 2).toUpperCase();
+    btn.appendChild(avatar);
 
     const main      = document.createElement("div");
     main.className  = "friend-main";
@@ -469,7 +477,10 @@ socket.on("register_success", (data) => {
   requests     = data.requests || [];
   activeFriend = "";
 
-  meName.textContent            = `@${me}`;
+  meName.textContent = `@${me}`;
+  if (meAvatar) {
+    meAvatar.textContent = me.slice(0, 2).toUpperCase();
+  }
   passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
 
@@ -483,7 +494,7 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
-  showToast(`Welcome, @${me}!`);
+  showToast(`Welcome to Novyn, @${me}! ✨`);
 });
 
 socket.on("username_unavailable", (data) => {
@@ -560,6 +571,7 @@ socket.on("private_message", (message) => {
   }
 
   appendMessage(message);
+  if (window._rippleFAB) window._rippleFAB.bump();
 });
 
 socket.on("message_status", (payload) => {

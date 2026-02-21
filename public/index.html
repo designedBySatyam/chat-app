@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>RippleRoom Chat</title>
+    <title>Novyn — Where Moments Connect</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
@@ -16,59 +16,106 @@
 
     <main class="app-shell">
 
-      <!-- ─── Top bar ─────────────────────────────────── -->
+      <!-- ─── Top bar ──────────────────────────────── -->
       <header class="app-topbar">
         <div class="brand">
-          <span class="brand-mark" aria-hidden="true"></span>
+          <!-- Animated SVG ripple logo -->
+          <svg class="brand-logo" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Novyn logo" role="img">
+            <defs>
+              <linearGradient id="lg1" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
+                <stop offset="0%"   stop-color="#00e5ff"/>
+                <stop offset="100%" stop-color="#7c3aed"/>
+              </linearGradient>
+            </defs>
+            <!-- Background rounded square -->
+            <rect width="42" height="42" rx="13" fill="url(#lg1)"/>
+            <!-- Dark inner frame -->
+            <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,8,15,0.52)"/>
+            <!-- Three expanding ripple rings -->
+            <circle class="brand-logo-ring" cx="21" cy="21" r="6"  fill="none" stroke="#00e5ff" stroke-width="2"/>
+            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#00e5ff" stroke-width="1.5" opacity="0.7"/>
+            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#00e5ff" stroke-width="1"   opacity="0.4"/>
+            <!-- Centre dot -->
+            <circle cx="21" cy="21" r="3" fill="#00e5ff"/>
+            <!-- Highlight glint -->
+            <circle cx="15" cy="13" r="2.5" fill="rgba(255,255,255,0.28)"/>
+          </svg>
           <div>
-            <p class="eyebrow">Realtime private messaging</p>
-            <h1>RippleRoom</h1>
+            <p class="eyebrow">Where Moments Connect</p>
+            <h1>Novyn</h1>
           </div>
         </div>
-        <div id="networkPill" class="network-pill" role="status" aria-live="polite">
-          <span class="signal-dot" aria-hidden="true"></span>
-          <span id="connectionLabel">Connecting…</span>
+
+        <div class="topbar-right">
+          <!-- Network status -->
+          <div id="networkPill" class="network-pill" role="status" aria-live="polite">
+            <span class="signal-dot" aria-hidden="true"></span>
+            <span id="connectionLabel">Connecting…</span>
+          </div>
+
+          <!-- Dark / light toggle -->
+          <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
+            <span class="theme-toggle-thumb">
+              <!-- Moon (dark mode) -->
+              <svg class="icon-moon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#c8d7ff" stroke="#c8d7ff" stroke-width="0.5" stroke-linejoin="round"/>
+              </svg>
+              <!-- Sun (light mode) -->
+              <svg class="icon-sun" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <circle cx="6" cy="6" r="2.5" fill="#f9a825"/>
+                <g stroke="#f9a825" stroke-width="1" stroke-linecap="round">
+                  <line x1="6" y1="0.5" x2="6" y2="2"/>
+                  <line x1="6" y1="10" x2="6" y2="11.5"/>
+                  <line x1="0.5" y1="6" x2="2" y2="6"/>
+                  <line x1="10" y1="6" x2="11.5" y2="6"/>
+                  <line x1="2.05" y1="2.05" x2="3.1" y2="3.1"/>
+                  <line x1="8.9" y1="8.9" x2="9.95" y2="9.95"/>
+                  <line x1="9.95" y1="2.05" x2="8.9" y2="3.1"/>
+                  <line x1="3.1" y1="8.9" x2="2.05" y2="9.95"/>
+                </g>
+              </svg>
+            </span>
+          </button>
         </div>
       </header>
 
-      <!-- ─── Login card ────────────────────────────────── -->
+      <!-- ─── Login card ───────────────────────────── -->
       <section id="loginCard" class="card login-card" aria-label="Login">
 
-        <!-- Left: hero / marketing panel -->
         <div class="login-hero">
-          <p class="eyebrow">Simple · Fast · Social</p>
-          <h2>Chat in real&nbsp;time,<br>from&nbsp;anywhere.</h2>
-          <p>Add friends, accept requests, and start secure one-to-one conversations in seconds.</p>
+          <p class="eyebrow">Where Moments Connect</p>
+          <h2>Where every moment finds its place.</h2>
+          <p>Add friends, share moments, and stay connected — beautifully, privately, instantly.</p>
 
           <div class="hero-visual" aria-hidden="true">
             <svg class="hero-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
               <defs>
                 <linearGradient id="heroPulse" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%"   stop-color="#00e5ff" />
-                  <stop offset="50%"  stop-color="#7c3aed" />
-                  <stop offset="100%" stop-color="#f72585" />
+                  <stop offset="0%"   stop-color="#00e5ff"/>
+                  <stop offset="50%"  stop-color="#7c3aed"/>
+                  <stop offset="100%" stop-color="#f72585"/>
                 </linearGradient>
                 <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stop-color="#00e5ff" stop-opacity="0.35" />
-                  <stop offset="100%" stop-color="#00e5ff" stop-opacity="0" />
+                  <stop offset="0%"   stop-color="#00e5ff" stop-opacity="0.35"/>
+                  <stop offset="100%" stop-color="#00e5ff" stop-opacity="0"/>
                 </radialGradient>
                 <radialGradient id="heroGlow2" cx="50%" cy="50%" r="50%">
-                  <stop offset="0%"   stop-color="#7c3aed" stop-opacity="0.3" />
-                  <stop offset="100%" stop-color="#7c3aed" stop-opacity="0" />
+                  <stop offset="0%"   stop-color="#7c3aed" stop-opacity="0.3"/>
+                  <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
                 </radialGradient>
               </defs>
-              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(5,8,15,0.65)" />
-              <circle cx="166" cy="140" r="76" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.8" />
-              <circle cx="166" cy="140" r="52" fill="none" stroke="url(#heroPulse)" stroke-width="1"   opacity="0.5" />
-              <circle cx="166" cy="140" r="28" fill="none" stroke="#00e5ff"         stroke-width="0.8" opacity="0.3" />
-              <path d="M252 94 C300 78 364 84 402 128 C432 164 430 210 402 230"  fill="none" stroke="#00e5ff" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
-              <path d="M252 122 C294 114 338 120 366 148 C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round" opacity="0.55" />
-              <circle cx="430" cy="88" r="54" fill="url(#heroGlow2)" />
-              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.5" />
-              <circle cx="430" cy="88" r="20" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.2" />
-              <circle cx="430" cy="88" r="7"  fill="#00e5ff" />
-              <circle cx="166" cy="140" r="10" fill="rgba(124,58,237,0.2)" stroke="#a855f7" stroke-width="1.2" />
-              <circle cx="166" cy="140" r="4"  fill="#a855f7" />
+              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(5,8,15,0.65)"/>
+              <circle cx="166" cy="140" r="76" fill="none" stroke="url(#heroPulse)" stroke-width="1.5" opacity="0.8"/>
+              <circle cx="166" cy="140" r="52" fill="none" stroke="url(#heroPulse)" stroke-width="1"   opacity="0.5"/>
+              <circle cx="166" cy="140" r="28" fill="none" stroke="#00e5ff"         stroke-width="0.8" opacity="0.3"/>
+              <path d="M252 94 C300 78 364 84 402 128 C432 164 430 210 402 230"   fill="none" stroke="#00e5ff" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+              <path d="M252 122 C294 114 338 120 366 148 C390 172 390 204 372 222" fill="none" stroke="#a855f7" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow2)"/>
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" opacity="0.5"/>
+              <circle cx="430" cy="88" r="20" fill="rgba(0,229,255,0.12)" stroke="#00e5ff" stroke-width="1.2"/>
+              <circle cx="430" cy="88" r="7"  fill="#00e5ff"/>
+              <circle cx="166" cy="140" r="10" fill="rgba(124,58,237,0.2)" stroke="#a855f7" stroke-width="1.2"/>
+              <circle cx="166" cy="140" r="4"  fill="#a855f7"/>
             </svg>
             <div class="float-pill float-pill-one">Aarav is typing…</div>
             <div class="float-pill float-pill-two">Delivered instantly</div>
@@ -77,38 +124,37 @@
           <ul class="feature-list">
             <li>Instant updates via WebSockets</li>
             <li>Live online status for friends</li>
-            <li>Polished mobile &amp; desktop UI</li>
+            <li>Dark &amp; light themes</li>
           </ul>
         </div>
 
-        <!-- Right: sign-in form -->
         <div class="login-panel">
           <h3>Join the room</h3>
           <p>New username creates an account. Existing username requires your password.</p>
-
           <form id="loginForm" novalidate>
-            <input id="usernameInput" type="text"     maxlength="24"        placeholder="Username"  autocomplete="username"          required />
-            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" autocomplete="current-password" required />
+            <input id="usernameInput" type="text"     maxlength="24"        placeholder="Username"  autocomplete="username"          required/>
+            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" autocomplete="current-password" required/>
             <button type="submit">Enter Chat →</button>
           </form>
-
           <p class="login-footnote">🔒 Encrypted password storage &amp; secure session handling.</p>
-          <p    id="usernameHint"        class="username-hint hidden"></p>
-          <div  id="usernameSuggestions" class="username-suggestions hidden"></div>
+          <p   id="usernameHint"        class="username-hint hidden"></p>
+          <div id="usernameSuggestions" class="username-suggestions hidden"></div>
         </div>
       </section>
 
-      <!-- ─── Chat layout ────────────────────────────────── -->
+      <!-- ─── Chat layout ──────────────────────────── -->
       <section id="chatLayout" class="chat-layout hidden" aria-label="Chat">
 
         <!-- Sidebar -->
         <aside class="sidebar card" id="mobileSidebar" aria-label="Friends &amp; requests">
 
-          <!-- Who am I -->
           <div class="me-row">
-            <div>
-              <p class="eyebrow">Signed in as</p>
-              <h2 id="meName">@you</h2>
+            <div class="me-row-info">
+              <div class="me-avatar" id="meAvatar" aria-hidden="true">?</div>
+              <div class="me-row-text">
+                <p class="eyebrow">Signed in as</p>
+                <h2 id="meName">@you</h2>
+              </div>
             </div>
             <span class="presence-pill" aria-label="Status: Active">
               <span class="signal-dot online" aria-hidden="true"></span>
@@ -116,26 +162,23 @@
             </span>
           </div>
 
-          <!-- Add friend -->
           <form id="addFriendForm" class="add-friend-form">
-            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username" autocomplete="off" required />
+            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username" autocomplete="off" required/>
             <button type="submit">Add</button>
           </form>
 
-          <!-- Friend requests -->
           <div class="list-panel" aria-label="Friend requests">
             <div class="list-head">
               <h3>Requests</h3>
-              <span id="requestCount" class="count-pill" aria-label="0 pending requests">0</span>
+              <span id="requestCount" class="count-pill">0</span>
             </div>
             <ul id="requestList" aria-live="polite"></ul>
           </div>
 
-          <!-- Friends list -->
           <div class="list-panel friends-panel" aria-label="Friends">
             <div class="list-head">
               <h3>Friends</h3>
-              <span id="friendCount" class="count-pill" aria-label="0 friends">0</span>
+              <span id="friendCount" class="count-pill">0</span>
             </div>
             <ul id="friendList" aria-live="polite"></ul>
           </div>
@@ -145,7 +188,6 @@
         <section class="chat card" id="mobileChat" aria-label="Conversation">
 
           <header class="chat-header">
-            <!-- Mobile back button (hidden on desktop) -->
             <button class="mob-back-btn" id="mobBackBtn" aria-label="Back to friends">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
             </button>
@@ -156,95 +198,298 @@
             <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
           </header>
 
-          <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Messages">
-            <div class="messages-empty">
-              Select a friend from the sidebar<br>to start chatting.
+          <!-- Scroll container + FAB -->
+          <div class="messages-wrap">
+            <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Messages">
+              <div class="messages-empty">Select a friend from the sidebar<br>to start chatting.</div>
             </div>
+            <!-- Scroll-to-bottom floating button -->
+            <button class="scroll-btn" id="scrollBtn" aria-label="Scroll to latest messages">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+              <span class="scroll-btn-badge hidden" id="scrollBadge"></span>
+            </button>
           </div>
 
           <div id="typingIndicator" class="typing-indicator hidden" aria-live="polite" aria-atomic="true">
             <span id="typingText">Someone is typing</span>
-            <span class="typing-dots" aria-hidden="true">
-              <span></span><span></span><span></span>
-            </span>
+            <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
           </div>
 
-          <form id="messageForm" class="message-form">
-            <input id="messageInput" type="text" placeholder="Type a message…" autocomplete="off" />
-            <button type="submit">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-              Send
-            </button>
-          </form>
+          <!-- Form + char counter -->
+          <div class="message-form-wrap">
+            <form id="messageForm" class="message-form">
+              <input id="messageInput" type="text" placeholder="Type a message…" autocomplete="off" maxlength="1000"/>
+              <button type="submit">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Send
+              </button>
+            </form>
+            <div class="char-counter hidden" id="charCounter" aria-live="polite" aria-atomic="true">0 / 1000</div>
+          </div>
 
         </section>
       </section>
 
-      <!-- Toast notifications -->
       <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
-
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
 
-    <!-- Mobile tab/panel switching — pure UI, no business logic -->
     <script>
-      (function () {
-        var MOBILE_BP = 768;
+    /* ── Theme toggle ─────────────────────────────────────────── */
+    (function () {
+      var root   = document.documentElement;
+      var btn    = document.getElementById('themeToggle');
+      var STORE  = 'novyn-theme';
 
-        function isMobile() { return window.innerWidth <= MOBILE_BP; }
-
-        function showPanel(panel) {
-          var sidebar = document.getElementById('mobileSidebar');
-          var chat    = document.getElementById('mobileChat');
-          var backBtn = document.getElementById('mobBackBtn');
-          if (!sidebar || !chat) return;
-
-          if (panel === 'chat') {
-            sidebar.setAttribute('data-mob-hidden', 'true');
-            chat.removeAttribute('data-mob-hidden');
-            if (backBtn) backBtn.setAttribute('data-visible', 'true');
-          } else {
-            chat.setAttribute('data-mob-hidden', 'true');
-            sidebar.removeAttribute('data-mob-hidden');
-            if (backBtn) backBtn.removeAttribute('data-visible');
-          }
+      function applyTheme(theme) {
+        if (theme === 'light') {
+          root.classList.add('light');
+        } else {
+          root.classList.remove('light');
         }
+        try { localStorage.setItem(STORE, theme); } catch(e) {}
+      }
 
-        // Tap a friend → switch to chat panel on mobile
-        document.addEventListener('click', function (e) {
-          if (!isMobile()) return;
-          var btn = e.target.closest('.friend-btn');
-          if (btn) { showPanel('chat'); }
-        });
+      // Restore saved preference
+      var saved = 'dark';
+      try { saved = localStorage.getItem(STORE) || 'dark'; } catch(e) {}
+      applyTheme(saved);
 
-        // Back button → return to sidebar
-        document.getElementById('mobBackBtn') &&
-          document.getElementById('mobBackBtn').addEventListener('click', function () {
-            if (isMobile()) showPanel('friends');
+      btn && btn.addEventListener('click', function () {
+        var next = root.classList.contains('light') ? 'dark' : 'light';
+        applyTheme(next);
+      });
+    })();
+
+    /* ── Mobile panel switching ───────────────────────────────── */
+    (function () {
+      var BP      = 768;
+      var sidebar = document.getElementById('mobileSidebar');
+      var chat    = document.getElementById('mobileChat');
+      var backBtn = document.getElementById('mobBackBtn');
+
+      function isMobile() { return window.innerWidth <= BP; }
+
+      function showPanel(panel) {
+        if (!sidebar || !chat) return;
+        if (panel === 'chat') {
+          sidebar.setAttribute('data-mob-hidden', 'true');
+          chat.removeAttribute('data-mob-hidden');
+          if (backBtn) backBtn.setAttribute('data-visible', 'true');
+        } else {
+          chat.setAttribute('data-mob-hidden', 'true');
+          sidebar.removeAttribute('data-mob-hidden');
+          if (backBtn) backBtn.removeAttribute('data-visible');
+        }
+      }
+
+      document.addEventListener('click', function (e) {
+        if (!isMobile()) return;
+        if (e.target.closest('.friend-btn')) showPanel('chat');
+      });
+
+      backBtn && backBtn.addEventListener('click', function () {
+        if (isMobile()) showPanel('friends');
+      });
+
+      window.addEventListener('resize', function () {
+        if (!isMobile()) {
+          if (sidebar) sidebar.removeAttribute('data-mob-hidden');
+          if (chat)    chat.removeAttribute('data-mob-hidden');
+        }
+      });
+
+      new MutationObserver(function () {
+        var layout = document.getElementById('chatLayout');
+        if (layout && !layout.classList.contains('hidden') && isMobile()) {
+          showPanel('friends');
+        }
+      }).observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
+    })();
+
+    /* ── Scroll-to-bottom FAB ─────────────────────────────────── */
+    (function () {
+      var messagesEl = document.getElementById('messages');
+      var scrollBtn  = document.getElementById('scrollBtn');
+      var badge      = document.getElementById('scrollBadge');
+      var unread     = 0;
+
+      function checkFAB() {
+        if (!messagesEl || !scrollBtn) return;
+        var threshold = 150;
+        var atBottom  =
+          messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight <= threshold;
+        scrollBtn.classList.toggle('visible', !atBottom);
+        if (atBottom) {
+          unread = 0;
+          if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
+        }
+      }
+
+      messagesEl && messagesEl.addEventListener('scroll', checkFAB, { passive: true });
+
+      scrollBtn && scrollBtn.addEventListener('click', function () {
+        if (messagesEl) messagesEl.scrollTo({ top: messagesEl.scrollHeight, behavior: 'smooth' });
+        unread = 0;
+        if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
+      });
+
+      // Expose so app.js can bump the counter when a message arrives off-screen
+      window._rippleFAB = {
+        bump: function () {
+          var threshold = 150;
+          var atBottom  =
+            messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight <= threshold;
+          if (!atBottom) {
+            unread++;
+            if (badge) {
+              badge.textContent = unread > 9 ? '9+' : String(unread);
+              badge.classList.remove('hidden');
+            }
+          }
+          checkFAB();
+        },
+        reset: function () {
+          unread = 0;
+          if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
+          checkFAB();
+        }
+      };
+    })();
+
+    /* ── Character counter ────────────────────────────────────── */
+    (function () {
+      var input   = document.getElementById('messageInput');
+      var counter = document.getElementById('charCounter');
+      var MAX     = 1000;
+      var WARN    = 800;
+
+      if (!input || !counter) return;
+
+      input.addEventListener('input', function () {
+        var len = input.value.length;
+        if (len === 0) {
+          counter.classList.add('hidden');
+          return;
+        }
+        counter.classList.remove('hidden', 'warn', 'limit');
+        counter.textContent = len + ' / ' + MAX;
+        if (len >= MAX)       counter.classList.add('limit');
+        else if (len >= WARN) counter.classList.add('warn');
+      });
+    })();
+
+    /* ── Emoji reactions ──────────────────────────────────────── */
+    (function () {
+      var EMOJIS = ['👍','❤️','😂','😮','😢','🔥'];
+
+      // Attach reaction handling to messages as they're added
+      var messagesEl = document.getElementById('messages');
+      if (!messagesEl) return;
+
+      var activePickerId = null;
+
+      function closePicker() {
+        var open = document.querySelector('.reaction-picker');
+        if (open) open.remove();
+        activePickerId = null;
+      }
+
+      document.addEventListener('click', function (e) {
+        if (!e.target.closest('.reaction-picker') && !e.target.closest('.msg-action-btn')) {
+          closePicker();
+        }
+      });
+
+      function addReactionsUI(msgEl) {
+        // Action button row (emoji picker trigger)
+        var actions = document.createElement('div');
+        actions.className = 'msg-actions';
+
+        var emojiBtn = document.createElement('button');
+        emojiBtn.className   = 'msg-action-btn';
+        emojiBtn.title       = 'React';
+        emojiBtn.textContent = '😊';
+        emojiBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var id = msgEl.dataset.messageId || msgEl.dataset.tempId;
+          if (activePickerId === id) { closePicker(); return; }
+          closePicker();
+          activePickerId = id;
+
+          var picker = document.createElement('div');
+          picker.className = 'reaction-picker';
+          EMOJIS.forEach(function (emoji) {
+            var b = document.createElement('button');
+            b.textContent = emoji;
+            b.title       = emoji;
+            b.addEventListener('click', function (ev) {
+              ev.stopPropagation();
+              toggleReaction(msgEl, emoji);
+              closePicker();
+            });
+            picker.appendChild(b);
           });
-
-        // Default: show sidebar first on mobile
-        window.addEventListener('resize', function () {
-          if (!isMobile()) {
-            // reset any mobile state on desktop
-            var sidebar = document.getElementById('mobileSidebar');
-            var chat    = document.getElementById('mobileChat');
-            if (sidebar) sidebar.removeAttribute('data-mob-hidden');
-            if (chat)    chat.removeAttribute('data-mob-hidden');
-          }
+          msgEl.appendChild(picker);
         });
 
-        // When chat layout appears, default to sidebar on mobile
-        var observer = new MutationObserver(function () {
-          var layout = document.getElementById('chatLayout');
-          if (layout && !layout.classList.contains('hidden') && isMobile()) {
-            showPanel('friends');
+        actions.appendChild(emojiBtn);
+        msgEl.appendChild(actions);
+
+        // Reactions container
+        var reactWrap = document.createElement('div');
+        reactWrap.className = 'message-reactions';
+        msgEl.appendChild(reactWrap);
+      }
+
+      function toggleReaction(msgEl, emoji) {
+        var reactWrap = msgEl.querySelector('.message-reactions');
+        if (!reactWrap) return;
+
+        var existing = Array.from(reactWrap.querySelectorAll('.reaction-btn'))
+          .find(function (b) { return b.dataset.emoji === emoji; });
+
+        if (existing) {
+          var count = parseInt(existing.dataset.count || '1', 10);
+          var mine  = existing.classList.contains('mine');
+          if (mine) {
+            count--;
+            existing.classList.remove('mine');
+          } else {
+            count++;
+            existing.classList.add('mine');
           }
+          if (count <= 0) {
+            existing.remove();
+          } else {
+            existing.dataset.count = count;
+            existing.querySelector('.r-count').textContent = count;
+          }
+        } else {
+          var btn = document.createElement('button');
+          btn.className       = 'reaction-btn mine';
+          btn.dataset.emoji   = emoji;
+          btn.dataset.count   = '1';
+          btn.innerHTML       = emoji + '<span class="r-count">1</span>';
+          btn.addEventListener('click', function () { toggleReaction(msgEl, emoji); });
+          reactWrap.appendChild(btn);
+        }
+      }
+
+      // Watch for new message articles being added
+      var observer = new MutationObserver(function (mutations) {
+        mutations.forEach(function (m) {
+          m.addedNodes.forEach(function (node) {
+            if (node.nodeType === 1 && node.tagName === 'ARTICLE' && node.classList.contains('message')) {
+              addReactionsUI(node);
+            }
+          });
         });
-        observer.observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
-      })();
+      });
+      observer.observe(messagesEl, { childList: true });
+    })();
     </script>
   </body>
 </html>
