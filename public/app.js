@@ -1,5 +1,4 @@
-﻿const socketAvailable = typeof io === "function";
-const socket = socketAvailable ? io() : { on() {}, emit() {} };
+﻿const socket = io();
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -32,9 +31,6 @@ let me           = "";
 let activeFriend = "";
 let friends      = [];
 let requests     = [];
-let replyTo      = null;
-let myProfile    = { avatarId: "", displayName: "", age: "", gender: "" };
-window._novynProfile = myProfile;
 
 const localTyping = {
   active:    false,
@@ -57,7 +53,7 @@ function scrollToBottom(skipAnimation = false) {
   if (!messagesEl) return;
   messagesEl.scrollTo({
     top:      messagesEl.scrollHeight,
-    behavior: skipAnimation ? "auto" : "smooth",
+    behavior: skipAnimation ? "instant" : "smooth",
   });
 }
 
@@ -205,38 +201,6 @@ function clearMessages() {
   messagesEl.innerHTML = "";
 }
 
-// ─── Reply UI ─────────────────────────────────────────────────────────────────
-
-const replyBanner = (() => {
-  const banner     = document.createElement("div");
-  banner.id        = "replyBanner";
-  banner.className = "reply-banner hidden";
-  const preview    = document.createElement("span");
-  preview.className = "reply-preview-text";
-  banner.appendChild(preview);
-  const closeBtn   = document.createElement("button");
-  closeBtn.type    = "button";
-  closeBtn.className = "reply-cancel-btn";
-  closeBtn.innerHTML = "✕";
-  closeBtn.addEventListener("click", clearReply);
-  banner.appendChild(closeBtn);
-  messageForm.parentNode.insertBefore(banner, messageForm);
-  return { banner, preview };
-})();
-
-function setReply(message) {
-  replyTo = { id: message.id, from: message.from, text: message.text };
-  replyBanner.preview.textContent = `Replying to ${message.from}: ${message.text.slice(0, 60)}${message.text.length > 60 ? "…" : ""}`;
-  replyBanner.banner.classList.remove("hidden");
-  messageInput.focus();
-}
-
-function clearReply() {
-  replyTo = null;
-  replyBanner.banner.classList.add("hidden");
-  replyBanner.preview.textContent = "";
-}
-
 function renderMessagesEmptyState(text) {
   clearMessages();
   hideTypingIndicator();
@@ -263,43 +227,19 @@ function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
 
   const row       = document.createElement("article");
+  // Add no-anim class to suppress CSS animation for history loads
   row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
-  row.dataset.messageFrom = message.from;
-  row.dataset.messageText = message.text;
 
   const meta        = document.createElement("span");
   meta.className    = "message-meta";
   meta.textContent  = buildMessageMeta(message, mine);
 
-  row.append(meta);
-
-  if (message.replyTo) {
-    const rq      = document.createElement("div");
-    rq.className  = "reply-quote";
-    const ra      = document.createElement("span");
-    ra.className  = "reply-quote-author";
-    ra.textContent = message.replyTo.from;
-    const rt      = document.createElement("span");
-    rt.className  = "reply-quote-text";
-    rt.textContent = message.replyTo.text.slice(0, 80) + (message.replyTo.text.length > 80 ? "…" : "");
-    rq.addEventListener("click", () => {
-      const orig = messagesEl.querySelector(`[data-message-id="${message.replyTo.id}"]`);
-      if (orig) {
-        orig.scrollIntoView({ behavior: "smooth", block: "center" });
-        orig.classList.add("highlight-flash");
-        setTimeout(() => orig.classList.remove("highlight-flash"), 1200);
-      }
-    });
-    rq.append(ra, rt);
-    row.append(rq);
-  }
-
   const body        = document.createElement("div");
   body.className    = "message-body";
   body.textContent  = message.text;
 
-  row.append(body);
+  row.append(meta, body);
   return row;
 }
 
@@ -402,7 +342,6 @@ function setActiveFriend(username) {
   }
 
   activeFriend = username;
-  clearReply();
   activeFriendLabel.textContent = username;
   setComposerEnabled(true);
   renderMessagesEmptyState("Loading conversation…");
@@ -437,11 +376,7 @@ function renderFriends() {
     // Avatar with initials + online dot
     const avatar        = document.createElement("div");
     avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
-    if (friend.avatarId && window._novynAvatarUtils) {
-      window._novynAvatarUtils.applyAvatarToEl(avatar, friend.avatarId, friend.username.slice(0, 2).toUpperCase());
-    } else {
-      avatar.textContent = friend.username.slice(0, 2).toUpperCase();
-    }
+    avatar.textContent  = friend.username.slice(0, 2).toUpperCase();
     btn.appendChild(avatar);
 
     const main      = document.createElement("div");
@@ -509,11 +444,8 @@ messageForm.addEventListener("submit", (e) => {
   if (!text) return;
 
   stopLocalTyping();
-  const payload = { to: activeFriend, text };
-  if (replyTo) payload.replyTo = replyTo;
-  socket.emit("private_message", payload);
+  socket.emit("private_message", { to: activeFriend, text });
   messageInput.value = "";
-  clearReply();
 
   // Keep scroll pinned to bottom after sending
   scrollToBottom();
@@ -544,14 +476,9 @@ socket.on("register_success", (data) => {
   activeFriend = "";
 
   meName.textContent = `@${me}`;
-  if (data.profile) {
-    myProfile.avatarId    = data.profile.avatarId || "";
-    myProfile.displayName = data.profile.displayName || "";
-    myProfile.age         = data.profile.age || "";
-    myProfile.gender      = data.profile.gender || "";
-    window._novynProfile  = myProfile;
+  if (meAvatar) {
+    meAvatar.textContent = me.slice(0, 2).toUpperCase();
   }
-  applyMyAvatar();
   passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
 
@@ -649,17 +576,9 @@ socket.on("private_message", (message) => {
 });
 
 socket.on("message_status", (payload) => {
-  if (!payload?.id || !payload?.with) return;
+  if (!payload?.with) return;
   if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) return;
-  const msgEl = messagesEl.querySelector(`[data-message-id="${payload.id}"]`);
-  if (!msgEl || !msgEl.classList.contains("me")) return;
-  const metaEl = msgEl.querySelector(".message-meta");
-  if (!metaEl) return;
-  const timeText = metaEl.textContent.split("·")[0]?.trim() || "";
-  let statusText = "Sent";
-  if (payload.seenAt) statusText = "Seen";
-  else if (payload.deliveredAt) statusText = "Delivered";
-  metaEl.textContent = `${timeText} · ${statusText}`;
+  socket.emit("get_history", activeFriend);
 });
 
 socket.on("typing", ({ from, isTyping }) => {
@@ -695,55 +614,5 @@ socket.on("connect_error", () => {
   setNetworkState("Connection issue", "offline");
 });
 
-// ─── Profile helpers ──────────────────────────────────────────────────────────
-
-function applyMyAvatar() {
-  if (!meAvatar) return;
-  const utils = window._novynAvatarUtils;
-  if (utils && myProfile.avatarId) {
-    utils.applyAvatarToEl(meAvatar, myProfile.avatarId, me.slice(0, 2).toUpperCase());
-  } else {
-    meAvatar.style.background = "";
-    meAvatar.textContent = me.slice(0, 2).toUpperCase();
-  }
-}
-
-socket.on("profile_updated", (data) => {
-  myProfile.avatarId    = data.avatarId    || "";
-  myProfile.displayName = data.displayName || "";
-  myProfile.age         = data.age         || "";
-  myProfile.gender      = data.gender      || "";
-  window._novynProfile  = myProfile;
-  applyMyAvatar();
-  showToast("Profile updated ✨");
-});
-
-socket.on("friend_profile_updated", (data) => {
-  friends = friends.map((f) =>
-    normalizeName(f.username) === normalizeName(data.username)
-      ? { ...f, avatarId: data.avatarId, displayName: data.displayName }
-      : f
-  );
-  renderFriends();
-});
-
-socket.on("reaction_updated", (payload) => {
-  if (!payload?.messageId) return;
-  if (window._novynReactions) {
-    window._novynReactions.applyServerReactions(payload.messageId, payload.reactions);
-  }
-});
-
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setComposerEnabled(false);
-
-window._novynReply = { setReply };
-window._novynSocket = socket;
-window._novynMe = () => me;
-window._novynActiveFriend = () => activeFriend;
-setTimeout(applyMyAvatar, 200);
-
-if (!socketAvailable) {
-  setNetworkState("Realtime unavailable", "offline");
-  showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
-}

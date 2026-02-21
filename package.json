@@ -1,4 +1,4 @@
-{
+﻿{
   "name": "novyn-chat",
   "version": "1.0.0",
   "description": "Simple web chat app with friends and real-time messaging",
@@ -7,13 +7,8 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "@capacitor/android": "^8.1.0",
-    "@capacitor/core": "^8.1.0",
     "express": "^4.21.2",
     "mongodb": "^6.21.0",
     "socket.io": "^4.8.1"
-  },
-  "devDependencies": {
-    "@capacitor/cli": "^7.5.0"
   }
 }
