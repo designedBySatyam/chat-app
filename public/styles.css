@@ -834,11 +834,11 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: scroll;    /* always show scrollbar gutter so layout doesn't jump */
+  overflow-y: scroll;
   overflow-x: hidden;
   padding: 4px 6px 4px 2px;
-  min-height: 0;         /* critical: lets this 1fr row shrink below content size */
-  scroll-behavior: smooth;
+  min-height: 0;
+  /* scroll-behavior is controlled by JS: smooth for new messages, instant for history */
   scrollbar-width: thin;
   scrollbar-color: rgba(0,229,255,0.22) transparent;
 }

@@ -1,71 +1,99 @@
 ﻿const socket = io();
 
-const loginCard = document.getElementById("loginCard");
-const chatLayout = document.getElementById("chatLayout");
-const loginForm = document.getElementById("loginForm");
-const usernameInput = document.getElementById("usernameInput");
-const passwordInput = document.getElementById("passwordInput");
-const usernameHint = document.getElementById("usernameHint");
+const loginCard         = document.getElementById("loginCard");
+const chatLayout        = document.getElementById("chatLayout");
+const loginForm         = document.getElementById("loginForm");
+const usernameInput     = document.getElementById("usernameInput");
+const passwordInput     = document.getElementById("passwordInput");
+const usernameHint      = document.getElementById("usernameHint");
 const usernameSuggestions = document.getElementById("usernameSuggestions");
-const meName = document.getElementById("meName");
-const addFriendForm = document.getElementById("addFriendForm");
-const friendInput = document.getElementById("friendInput");
-const requestList = document.getElementById("requestList");
-const friendList = document.getElementById("friendList");
+const meName            = document.getElementById("meName");
+const addFriendForm     = document.getElementById("addFriendForm");
+const friendInput       = document.getElementById("friendInput");
+const requestList       = document.getElementById("requestList");
+const friendList        = document.getElementById("friendList");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
-const messagesEl = document.getElementById("messages");
-const messageForm = document.getElementById("messageForm");
-const messageInput = document.getElementById("messageInput");
-const toast = document.getElementById("toast");
-const typingIndicator = document.getElementById("typingIndicator");
-const typingText = document.getElementById("typingText");
-const connectionLabel = document.getElementById("connectionLabel");
-const networkPill = document.getElementById("networkPill");
-const requestCount = document.getElementById("requestCount");
-const friendCount = document.getElementById("friendCount");
-const onlineCount = document.getElementById("onlineCount");
-const sendButton = messageForm.querySelector("button");
+const messagesEl        = document.getElementById("messages");
+const messageForm       = document.getElementById("messageForm");
+const messageInput      = document.getElementById("messageInput");
+const toast             = document.getElementById("toast");
+const typingIndicator   = document.getElementById("typingIndicator");
+const typingText        = document.getElementById("typingText");
+const connectionLabel   = document.getElementById("connectionLabel");
+const networkPill       = document.getElementById("networkPill");
+const requestCount      = document.getElementById("requestCount");
+const friendCount       = document.getElementById("friendCount");
+const onlineCount       = document.getElementById("onlineCount");
+const sendButton        = messageForm.querySelector("button");
 
-let me = "";
+let me           = "";
 let activeFriend = "";
-let friends = [];
-let requests = [];
+let friends      = [];
+let requests     = [];
 
 const localTyping = {
-  active: false,
-  target: "",
+  active:    false,
+  target:    "",
   timeoutId: null,
 };
+
+// ─── Utilities ───────────────────────────────────────────────────────────────
 
 function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+/**
+ * Smooth-scroll the messages container to the bottom.
+ * Uses scrollTo with behavior:'smooth' so it animates instead of jumping.
+ * Falls back to instant scroll for initial history load (skipAnimation).
+ */
+function scrollToBottom(skipAnimation = false) {
+  if (!messagesEl) return;
+  messagesEl.scrollTo({
+    top:      messagesEl.scrollHeight,
+    behavior: skipAnimation ? "instant" : "smooth",
+  });
+}
+
+/**
+ * Returns true when the user is already near the bottom of the message list.
+ * We only auto-scroll when they're within 120px of the bottom — if they've
+ * scrolled up to read history, we don't yank them back down on new messages.
+ */
+function isNearBottom() {
+  const threshold = 120;
+  return (
+    messagesEl.scrollHeight - messagesEl.scrollTop - messagesEl.clientHeight <=
+    threshold
+  );
+}
+
+// ─── Network state ────────────────────────────────────────────────────────────
+
 function setNetworkState(label, state) {
   if (!connectionLabel || !networkPill) return;
   connectionLabel.textContent = label;
   networkPill.classList.remove("connected", "offline");
-
-  if (state === "connected") {
-    networkPill.classList.add("connected");
-  } else if (state === "offline") {
-    networkPill.classList.add("offline");
-  }
+  if (state === "connected") networkPill.classList.add("connected");
+  if (state === "offline")   networkPill.classList.add("offline");
 }
+
+// ─── Toast ────────────────────────────────────────────────────────────────────
 
 function showToast(message, type = "info") {
   toast.textContent = message;
   toast.classList.remove("hidden", "error");
-
-  if (type === "error") {
-    toast.classList.add("error");
-  }
+  if (type === "error") toast.classList.add("error");
 
   clearTimeout(showToast._timer);
+  // Auto-hide after 2.8 s
   showToast._timer = setTimeout(() => {
     toast.classList.add("hidden");
-  }, 2600);
+  }, 2800);
 }
+
+// ─── Username suggestions ─────────────────────────────────────────────────────
 
 function clearUsernameSuggestions() {
   if (!usernameHint || !usernameSuggestions) return;
@@ -77,30 +105,29 @@ function clearUsernameSuggestions() {
 
 function showUsernameSuggestions(requested, suggestions) {
   if (!usernameHint || !usernameSuggestions) return;
+  const list = Array.isArray(suggestions) ? suggestions.slice(0, 6) : [];
 
-  const suggestionList = Array.isArray(suggestions) ? suggestions.slice(0, 6) : [];
-  usernameHint.textContent = `${requested} is already registered. Try one of these:`;
+  usernameHint.textContent = `"${requested}" is taken. Try one of these:`;
   usernameHint.classList.remove("hidden");
   usernameSuggestions.innerHTML = "";
 
-  for (const suggestion of suggestionList) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "suggestion-chip";
+  for (const suggestion of list) {
+    const btn      = document.createElement("button");
+    btn.type       = "button";
+    btn.className  = "suggestion-chip";
     btn.textContent = suggestion;
     btn.addEventListener("click", () => {
       usernameInput.value = suggestion;
       usernameInput.focus();
+      clearUsernameSuggestions();
     });
     usernameSuggestions.appendChild(btn);
   }
 
-  if (suggestionList.length) {
-    usernameSuggestions.classList.remove("hidden");
-  } else {
-    usernameSuggestions.classList.add("hidden");
-  }
+  usernameSuggestions.classList.toggle("hidden", list.length === 0);
 }
+
+// ─── Time formatting ──────────────────────────────────────────────────────────
 
 function prettyTime(iso) {
   if (!iso) return "";
@@ -109,10 +136,14 @@ function prettyTime(iso) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+// ─── Typing indicator ─────────────────────────────────────────────────────────
+
 function showTypingIndicator(username) {
   if (!typingIndicator || !typingText) return;
   typingText.textContent = `${username} is typing`;
   typingIndicator.classList.remove("hidden");
+  // If user is near bottom, scroll down to keep typing dots visible
+  if (isNearBottom()) scrollToBottom();
 }
 
 function hideTypingIndicator() {
@@ -122,10 +153,7 @@ function hideTypingIndicator() {
 
 function emitTyping(isTyping, target = activeFriend) {
   if (!target) return;
-  socket.emit("typing", {
-    to: target,
-    isTyping,
-  });
+  socket.emit("typing", { to: target, isTyping });
 }
 
 function clearLocalTypingTimer() {
@@ -136,25 +164,21 @@ function clearLocalTypingTimer() {
 }
 
 function stopLocalTyping(target = localTyping.target || activeFriend) {
-  if (localTyping.active && target) {
-    emitTyping(false, target);
-  }
-
-  localTyping.active = false;
-  localTyping.target = "";
+  if (localTyping.active && target) emitTyping(false, target);
+  localTyping.active    = false;
+  localTyping.target    = "";
   clearLocalTypingTimer();
 }
 
 function scheduleLocalTypingStop() {
   clearLocalTypingTimer();
-  localTyping.timeoutId = setTimeout(() => {
-    stopLocalTyping();
-  }, 1200);
+  localTyping.timeoutId = setTimeout(() => stopLocalTyping(), 1200);
 }
 
 function markLocalTyping() {
   if (!activeFriend) return;
 
+  // If switched to a different friend while typing, stop the old indicator
   if (
     localTyping.active &&
     localTyping.target &&
@@ -163,14 +187,14 @@ function markLocalTyping() {
     stopLocalTyping(localTyping.target);
   }
 
-  if (!localTyping.active) {
-    emitTyping(true, activeFriend);
-  }
+  if (!localTyping.active) emitTyping(true, activeFriend);
 
   localTyping.active = true;
   localTyping.target = activeFriend;
   scheduleLocalTypingStop();
 }
+
+// ─── Messages ─────────────────────────────────────────────────────────────────
 
 function clearMessages() {
   messagesEl.innerHTML = "";
@@ -180,79 +204,69 @@ function renderMessagesEmptyState(text) {
   clearMessages();
   hideTypingIndicator();
 
-  const empty = document.createElement("div");
-  empty.className = "messages-empty";
+  const empty       = document.createElement("div");
+  empty.className   = "messages-empty";
   empty.textContent = text;
   messagesEl.appendChild(empty);
 }
 
 function getMessageStatusText(message) {
-  if (message?.seenAt) return "Seen";
+  if (message?.seenAt)      return "Seen";
   if (message?.deliveredAt) return "Delivered";
   return "Sent";
 }
 
 function buildMessageMeta(message, mine) {
   const time = prettyTime(message.timestamp);
-  if (!mine) {
-    return `${message.from} • ${time}`;
-  }
-
-  return `${message.from} • ${time} • ${getMessageStatusText(message)}`;
+  if (!mine) return `${message.from} · ${time}`;
+  return `${time} · ${getMessageStatusText(message)}`;
 }
 
 function buildMessageElement(message) {
   const mine = normalizeName(message.from) === normalizeName(me);
 
-  const row = document.createElement("article");
-  row.className = `message ${mine ? "me" : "them"}`;
+  const row       = document.createElement("article");
+  row.className   = `message ${mine ? "me" : "them"}`;
+  if (message.id) row.dataset.messageId = message.id;
 
-  if (message.id) {
-    row.dataset.messageId = message.id;
-  }
+  const meta        = document.createElement("span");
+  meta.className    = "message-meta";
+  meta.textContent  = buildMessageMeta(message, mine);
 
-  const meta = document.createElement("span");
-  meta.className = "message-meta";
-  meta.textContent = buildMessageMeta(message, mine);
-
-  const body = document.createElement("div");
-  body.textContent = message.text;
+  const body        = document.createElement("div");
+  body.className    = "message-body";
+  body.textContent  = message.text;
 
   row.append(meta, body);
   return row;
 }
 
-function appendMessage(message) {
+function appendMessage(message, skipAnimation = false) {
+  // Remove empty-state placeholder if present
   const emptyNode = messagesEl.querySelector(".messages-empty");
-  if (emptyNode) {
-    emptyNode.remove();
-  }
+  if (emptyNode) emptyNode.remove();
 
-  const row = buildMessageElement(message);
+  const row  = buildMessageElement(message);
+  const near = isNearBottom();
+
   messagesEl.appendChild(row);
-  messagesEl.scrollTop = messagesEl.scrollHeight;
+
+  // Only auto-scroll if already near the bottom (don't interrupt manual scroll)
+  if (near) scrollToBottom(skipAnimation);
 }
 
 function updateStats() {
-  if (requestCount) {
-    requestCount.textContent = String(requests.length);
-  }
-
-  if (friendCount) {
-    friendCount.textContent = String(friends.length);
-  }
-
+  if (requestCount) requestCount.textContent = String(requests.length);
+  if (friendCount)  friendCount.textContent  = String(friends.length);
   if (onlineCount) {
-    const online = friends.filter((friend) => friend.online).length;
+    const online = friends.filter((f) => f.online).length;
     onlineCount.textContent = `${online} online`;
   }
 }
 
 function setComposerEnabled(isEnabled) {
   messageInput.disabled = !isEnabled;
-  if (sendButton) {
-    sendButton.disabled = !isEnabled;
-  }
+  if (sendButton) sendButton.disabled = !isEnabled;
 
   if (!isEnabled) {
     stopLocalTyping();
@@ -260,58 +274,64 @@ function setComposerEnabled(isEnabled) {
   }
 
   messageInput.placeholder = isEnabled
-    ? "Type a message"
+    ? "Type a message…"
     : "Select a friend to start chatting";
 }
 
 function renderMessages(messages) {
+  clearMessages();
+
   if (!messages.length) {
-    renderMessagesEmptyState("No messages yet. Start the conversation.");
+    renderMessagesEmptyState("No messages yet. Say hello!");
     return;
   }
 
-  clearMessages();
+  // Render all historical messages instantly (no animation per bubble)
   for (const message of messages) {
-    appendMessage(message);
+    appendMessage(message, /* skipAnimation */ true);
   }
+
+  // Jump straight to bottom for history load (no animation needed)
+  scrollToBottom(true);
 }
+
+// ─── Requests ────────────────────────────────────────────────────────────────
 
 function renderRequests() {
   requestList.innerHTML = "";
   updateStats();
 
   if (!requests.length) {
-    const empty = document.createElement("li");
-    empty.className = "item-card";
+    const empty       = document.createElement("li");
+    empty.className   = "item-card";
     empty.textContent = "No pending requests";
     requestList.appendChild(empty);
     return;
   }
 
   for (const username of requests) {
-    const li = document.createElement("li");
-    li.className = "item-card request-row";
+    const li      = document.createElement("li");
+    li.className  = "item-card request-row";
 
-    const name = document.createElement("span");
-    name.textContent = username;
+    const name        = document.createElement("span");
+    name.textContent  = username;
 
-    const btn = document.createElement("button");
-    btn.type = "button";
+    const btn       = document.createElement("button");
+    btn.type        = "button";
     btn.textContent = "Accept";
-    btn.addEventListener("click", () => {
-      socket.emit("accept_friend", username);
-    });
+    btn.addEventListener("click", () => socket.emit("accept_friend", username));
 
     li.append(name, btn);
     requestList.appendChild(li);
   }
 }
 
+// ─── Friends ──────────────────────────────────────────────────────────────────
+
 function friendPreview(friend) {
   if (!friend.lastMessage) {
     return friend.online ? "Online now" : "No messages yet";
   }
-
   const prefix = normalizeName(friend.lastFrom) === normalizeName(me) ? "You: " : "";
   return `${prefix}${friend.lastMessage}`;
 }
@@ -322,11 +342,14 @@ function setActiveFriend(username) {
   }
 
   activeFriend = username;
-  activeFriendLabel.textContent = `Chat with ${username}`;
+  activeFriendLabel.textContent = username;
   setComposerEnabled(true);
-  renderMessagesEmptyState("Loading conversation...");
+  renderMessagesEmptyState("Loading conversation…");
   socket.emit("get_history", username);
   renderFriends();
+
+  // Focus input after selecting friend (better UX, especially on desktop)
+  setTimeout(() => messageInput.focus(), 50);
 }
 
 function renderFriends() {
@@ -334,49 +357,48 @@ function renderFriends() {
   updateStats();
 
   if (!friends.length) {
-    const empty = document.createElement("li");
-    empty.className = "item-card";
-    empty.textContent = "No friends yet";
+    const empty       = document.createElement("li");
+    empty.className   = "item-card";
+    empty.textContent = "No friends yet — add one above";
     friendList.appendChild(empty);
     return;
   }
 
   for (const friend of friends) {
-    const li = document.createElement("li");
-    li.className = "item-card";
+    const li      = document.createElement("li");
+    li.className  = "item-card";
 
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = `friend-btn ${normalizeName(activeFriend) === normalizeName(friend.username) ? "active" : ""}`;
+    const btn         = document.createElement("button");
+    btn.type          = "button";
+    btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
-    const main = document.createElement("div");
-    main.className = "friend-main";
+    const main      = document.createElement("div");
+    main.className  = "friend-main";
 
-    const name = document.createElement("span");
-    name.className = "friend-name";
-    name.textContent = friend.username;
+    const name        = document.createElement("span");
+    name.className    = "friend-name";
+    name.textContent  = friend.username;
 
-    const preview = document.createElement("span");
-    preview.className = "friend-preview";
+    const preview       = document.createElement("span");
+    preview.className   = "friend-preview";
     preview.textContent = friendPreview(friend);
 
     main.append(name, preview);
 
-    const side = document.createElement("div");
-    side.className = "friend-side";
+    const side      = document.createElement("div");
+    side.className  = "friend-side";
 
-    const status = document.createElement("span");
-    status.className = `status ${friend.online ? "online" : ""}`;
-    status.textContent = friend.online ? "Online" : "Offline";
-
+    const status        = document.createElement("span");
+    status.className    = `status${friend.online ? " online" : ""}`;
+    status.textContent  = friend.online ? "Online" : "Offline";
     side.appendChild(status);
 
     const unreadCount = Number(friend.unreadCount) || 0;
     if (unreadCount > 0) {
-      const unread = document.createElement("span");
-      unread.className = "unread-badge";
-      unread.textContent = unreadCount > 99 ? "99+" : String(unreadCount);
+      const unread        = document.createElement("span");
+      unread.className    = "unread-badge";
+      unread.textContent  = unreadCount > 99 ? "99+" : String(unreadCount);
       side.appendChild(unread);
     }
 
@@ -386,73 +408,71 @@ function renderFriends() {
   }
 }
 
+// ─── Form handlers ────────────────────────────────────────────────────────────
+
 loginForm.addEventListener("submit", (e) => {
   e.preventDefault();
   clearUsernameSuggestions();
-  socket.emit("register", {
-    username: usernameInput.value,
-    password: passwordInput.value,
-  });
+  const username = usernameInput.value.trim();
+  const password = passwordInput.value;
+  if (!username || !password) return;
+  socket.emit("register", { username, password });
 });
 
-usernameInput.addEventListener("input", () => {
-  clearUsernameSuggestions();
-});
-
-passwordInput.addEventListener("input", () => {
-  clearUsernameSuggestions();
-});
+// Clear suggestions as soon as the user starts editing
+usernameInput.addEventListener("input", clearUsernameSuggestions);
+passwordInput.addEventListener("input", clearUsernameSuggestions);
 
 addFriendForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  socket.emit("add_friend", friendInput.value);
+  const val = friendInput.value.trim();
+  if (!val) return;
+  socket.emit("add_friend", val);
   friendInput.value = "";
 });
 
 messageForm.addEventListener("submit", (e) => {
   e.preventDefault();
-
   const text = messageInput.value.trim();
-  if (!activeFriend) {
-    showToast("Choose a friend first.", "error");
-    return;
-  }
-
+  if (!activeFriend) { showToast("Choose a friend first.", "error"); return; }
   if (!text) return;
 
   stopLocalTyping();
-  socket.emit("private_message", {
-    to: activeFriend,
-    text,
-  });
-
+  socket.emit("private_message", { to: activeFriend, text });
   messageInput.value = "";
+
+  // Keep scroll pinned to bottom after sending
+  scrollToBottom();
 });
 
 messageInput.addEventListener("input", () => {
   if (!activeFriend) return;
+  messageInput.value.trim() ? markLocalTyping() : stopLocalTyping();
+});
 
-  if (!messageInput.value.trim()) {
-    stopLocalTyping();
-    return;
+// Stop typing indicator when input loses focus
+messageInput.addEventListener("blur", () => stopLocalTyping());
+
+// Allow Shift+Enter to send (optional quality-of-life)
+messageInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) {
+    e.preventDefault();
+    messageForm.requestSubmit();
   }
-
-  markLocalTyping();
 });
 
-messageInput.addEventListener("blur", () => {
-  stopLocalTyping();
-});
+// ─── Socket events ────────────────────────────────────────────────────────────
 
 socket.on("register_success", (data) => {
-  me = data.username;
-  friends = data.friends || [];
-  requests = data.requests || [];
+  me           = data.username;
+  friends      = data.friends  || [];
+  requests     = data.requests || [];
   activeFriend = "";
 
-  meName.textContent = `@${me}`;
-  passwordInput.value = "";
+  meName.textContent            = `@${me}`;
+  passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
+
   loginCard.classList.add("hidden");
   chatLayout.classList.remove("hidden");
 
@@ -463,24 +483,22 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
-  showToast("Connected");
+  showToast(`Welcome, @${me}!`);
 });
 
 socket.on("username_unavailable", (data) => {
-  const requested = data?.requested || "This username";
+  const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
   showUsernameSuggestions(requested, suggestions);
-  showToast("Username already taken. Pick another one.", "error");
+  showToast("Username already taken.", "error");
 });
 
 socket.on("auth_failed", (data) => {
-  const message = data?.message || "Authentication failed.";
+  const message     = data?.message     || "Authentication failed.";
   const suggestions = data?.suggestions || [];
-
   if (Array.isArray(suggestions) && suggestions.length) {
     showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
   }
-
   showToast(message, "error");
 });
 
@@ -498,16 +516,19 @@ socket.on("requests_updated", (data) => {
 });
 
 socket.on("friend_request_accepted", (data) => {
-  showToast(`${data.by} is now your friend`);
+  showToast(`${data.by} is now your friend 🎉`);
 });
 
 socket.on("friend_list_updated", (data) => {
   friends = data.friends || [];
 
+  // If current chat partner was removed, reset
   if (activeFriend) {
-    const stillThere = friends.some((friend) => normalizeName(friend.username) === normalizeName(activeFriend));
+    const stillThere = friends.some(
+      (f) => normalizeName(f.username) === normalizeName(activeFriend)
+    );
     if (!stillThere) {
-      activeFriend = "";
+      activeFriend                  = "";
       activeFriendLabel.textContent = "Select a friend";
       setComposerEnabled(false);
       renderMessagesEmptyState("Choose a friend to load your conversation.");
@@ -518,18 +539,18 @@ socket.on("friend_list_updated", (data) => {
 });
 
 socket.on("history", (data) => {
-  if (normalizeName(data.with) !== normalizeName(activeFriend)) {
-    return;
-  }
-
+  if (normalizeName(data.with) !== normalizeName(activeFriend)) return;
   renderMessages(data.messages || []);
 });
 
 socket.on("private_message", (message) => {
-  const other = normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
+  const other =
+    normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
+
   if (!activeFriend || normalizeName(other) !== normalizeName(activeFriend)) {
+    // Message is for a different conversation — just show a toast
     if (normalizeName(message.from) !== normalizeName(me)) {
-      showToast(`New message from ${message.from}`);
+      showToast(`💬 ${message.from}: ${message.text.slice(0, 40)}${message.text.length > 40 ? "…" : ""}`);
     }
     return;
   }
@@ -543,33 +564,20 @@ socket.on("private_message", (message) => {
 
 socket.on("message_status", (payload) => {
   if (!payload?.with) return;
-  if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) {
-    return;
-  }
-
+  if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) return;
   socket.emit("get_history", activeFriend);
 });
 
 socket.on("typing", ({ from, isTyping }) => {
-  if (!activeFriend || normalizeName(from) !== normalizeName(activeFriend)) {
-    return;
-  }
-
-  if (isTyping) {
-    showTypingIndicator(from);
-  } else {
-    hideTypingIndicator();
-  }
+  if (!activeFriend || normalizeName(from) !== normalizeName(activeFriend)) return;
+  isTyping ? showTypingIndicator(from) : hideTypingIndicator();
 });
 
 socket.on("user_status", ({ username, online }) => {
-  friends = friends.map((friend) =>
-    normalizeName(friend.username) === normalizeName(username)
-      ? {
-          ...friend,
-          online,
-        }
-      : friend
+  friends = friends.map((f) =>
+    normalizeName(f.username) === normalizeName(username)
+      ? { ...f, online }
+      : f
   );
   renderFriends();
 });
@@ -593,4 +601,5 @@ socket.on("connect_error", () => {
   setNetworkState("Connection issue", "offline");
 });
 
+// ─── Init ─────────────────────────────────────────────────────────────────────
 setComposerEnabled(false);
