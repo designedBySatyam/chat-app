@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "key": "satyam",
+      "username": "satyam",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "c315fc99c7de00772d8be7b54d1f4bc1",
+      "passwordHash": "f517a66471b5b4eb4936f104a6c08355b39e354b406374ba9246702c0425408103e58891c4d8c818405cfb8159a5672ed397f67f4d2b02b428ee81e66b42fa0d",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": ""
+    }
+  ],
+  "conversations": []
+}
