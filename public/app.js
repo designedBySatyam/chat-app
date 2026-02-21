@@ -1,4 +1,5 @@
-﻿const socket = io();
+﻿const socketAvailable = typeof io === "function";
+const socket = socketAvailable ? io() : { on() {}, emit() {} };
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -56,7 +57,7 @@ function scrollToBottom(skipAnimation = false) {
   if (!messagesEl) return;
   messagesEl.scrollTo({
     top:      messagesEl.scrollHeight,
-    behavior: skipAnimation ? "instant" : "smooth",
+    behavior: skipAnimation ? "auto" : "smooth",
   });
 }
 
@@ -741,3 +742,8 @@ window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
 setTimeout(applyMyAvatar, 200);
+
+if (!socketAvailable) {
+  setNetworkState("Realtime unavailable", "offline");
+  showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
+}
