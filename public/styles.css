@@ -130,6 +130,7 @@ h1,h2,h3 { letter-spacing: -0.02em; font-weight: 700; }
   width: 100%;
   margin: 0 auto;
   padding: 20px clamp(14px, 2.8vw, 32px) 24px;
+  overflow: hidden;   /* shell itself must NOT scroll — children do */
 }
 
 /* ─── Top bar ───────────────────────────────────── */
@@ -538,6 +539,7 @@ button:disabled {
   grid-template-rows: 1fr;
   gap: 14px;
   flex: 1;
+  height: 0;          /* forces flex child to respect its allocation, not grow */
   min-height: 0;
   animation: fadeUp 0.48s cubic-bezier(0.22, 1, 0.36, 1);
   overflow: hidden;
@@ -549,6 +551,7 @@ button:disabled {
   grid-template-rows: auto auto auto 1fr;
   gap: 10px;
   padding: 14px;
+  height: 100%;       /* fill the grid row */
   min-height: 0;
   overflow: hidden;
 }
@@ -787,9 +790,10 @@ button:disabled {
 
 .chat {
   display: grid;
-  grid-template-rows: auto 1fr auto auto;
+  grid-template-rows: auto 1fr auto auto;  /* header | MESSAGES scrolls | typing | input */
   gap: 10px;
   padding: 14px;
+  height: 100%;       /* fill the grid row */
   min-height: 0;
   overflow: hidden;
 }
@@ -830,9 +834,13 @@ button:disabled {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  overflow-y: auto;
+  overflow-y: scroll;    /* always show scrollbar gutter so layout doesn't jump */
+  overflow-x: hidden;
   padding: 4px 6px 4px 2px;
-  min-height: 0;
+  min-height: 0;         /* critical: lets this 1fr row shrink below content size */
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,229,255,0.22) transparent;
 }
 
 .messages-empty {
@@ -976,18 +984,21 @@ button:disabled {
 
 #requestList::-webkit-scrollbar,
 #friendList::-webkit-scrollbar,
-.messages::-webkit-scrollbar { width: 3px; }
+.messages::-webkit-scrollbar { width: 4px; }
 
 #requestList::-webkit-scrollbar-thumb,
 #friendList::-webkit-scrollbar-thumb,
 .messages::-webkit-scrollbar-thumb {
-  background: rgba(0,229,255,0.18);
+  background: rgba(0,229,255,0.22);
   border-radius: var(--rp);
 }
 
 #requestList::-webkit-scrollbar-track,
 #friendList::-webkit-scrollbar-track,
 .messages::-webkit-scrollbar-track { background: transparent; }
+
+/* Hide scrollbar gutter when empty */
+.messages::-webkit-scrollbar-button { display: none; }
 
 /* ═══════════════════════════════════════════════════════════════
    KEYFRAMES
