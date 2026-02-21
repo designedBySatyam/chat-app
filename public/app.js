@@ -373,10 +373,14 @@ function renderFriends() {
     btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
-    // Avatar with initials + online dot
+    // Avatar with initials/emoji + online dot
     const avatar        = document.createElement("div");
     avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
-    avatar.textContent  = friend.username.slice(0, 2).toUpperCase();
+    if (friend.avatarId && window._novynAvatarUtils) {
+      window._novynAvatarUtils.applyAvatarToEl(avatar, friend.avatarId, friend.username.slice(0, 2).toUpperCase());
+    } else {
+      avatar.textContent = friend.username.slice(0, 2).toUpperCase();
+    }
     btn.appendChild(avatar);
 
     const main      = document.createElement("div");
@@ -476,9 +480,16 @@ socket.on("register_success", (data) => {
   activeFriend = "";
 
   meName.textContent = `@${me}`;
-  if (meAvatar) {
-    meAvatar.textContent = me.slice(0, 2).toUpperCase();
+
+  // Load profile if provided
+  if (data.profile) {
+    myProfile.avatarId     = data.profile.avatarId || "";
+    myProfile.displayName  = data.profile.displayName || "";
+    myProfile.age          = data.profile.age || "";
+    myProfile.gender       = data.profile.gender || "";
+    window._novynProfile   = myProfile;
   }
+  applyMyAvatar();
   passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
 
@@ -612,6 +623,39 @@ socket.on("disconnect", () => {
 
 socket.on("connect_error", () => {
   setNetworkState("Connection issue", "offline");
+});
+
+// ─── Profile helpers ──────────────────────────────────────────────────────────
+
+function applyMyAvatar() {
+  if (!meAvatar) return;
+  const utils = window._novynAvatarUtils;
+  if (utils && myProfile.avatarId) {
+    utils.applyAvatarToEl(meAvatar, myProfile.avatarId, me.slice(0, 2).toUpperCase());
+  } else {
+    meAvatar.style.background = "";
+    meAvatar.textContent = me.slice(0, 2).toUpperCase();
+  }
+}
+
+socket.on("profile_updated", (data) => {
+  myProfile.avatarId    = data.avatarId    || "";
+  myProfile.displayName = data.displayName || "";
+  myProfile.age         = data.age         || "";
+  myProfile.gender      = data.gender      || "";
+  window._novynProfile  = myProfile;
+  applyMyAvatar();
+  showToast("Profile updated ✨");
+});
+
+socket.on("friend_profile_updated", (data) => {
+  // Update friend avatar in the friends list if they changed their avatar
+  friends = friends.map((f) =>
+    normalizeName(f.username) === normalizeName(data.username)
+      ? { ...f, avatarId: data.avatarId, displayName: data.displayName }
+      : f
+  );
+  renderFriends();
 });
 
 // ─── Init ─────────────────────────────────────────────────────────────────────

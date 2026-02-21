@@ -165,14 +165,23 @@
                 <h2 id="meName">@you</h2>
               </div>
             </div>
-            <!-- Logout button -->
-            <button class="logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </button>
+            <div class="me-row-btns">
+              <!-- Profile button -->
+              <button class="profile-btn" id="profileBtn" title="Edit profile" aria-label="Edit profile">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+              </button>
+              <!-- Logout button -->
+              <button class="logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                  <polyline points="16 17 21 12 16 7"/>
+                  <line x1="21" y1="12" x2="9" y2="12"/>
+                </svg>
+              </button>
+            </div>
           </div>
 
           <form id="addFriendForm" class="add-friend-form">
@@ -223,8 +232,12 @@
           </div>
 
           <div id="typingIndicator" class="typing-indicator hidden" aria-live="polite" aria-atomic="true">
-            <span id="typingText">Someone is typing</span>
-            <span class="typing-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+            <div class="snap-typing-bubble">
+              <span class="snap-dot"></span>
+              <span class="snap-dot"></span>
+              <span class="snap-dot"></span>
+            </div>
+            <span id="typingText" class="snap-typing-label">Someone is typing</span>
           </div>
 
           <div class="message-form-wrap">
@@ -240,6 +253,56 @@
 
         </section>
       </section>
+
+      <!-- ─── Profile Modal ─────────────────────── -->
+      <div id="profileModal" class="profile-modal hidden" role="dialog" aria-modal="true" aria-label="Edit Profile">
+        <div class="profile-modal-backdrop"></div>
+        <div class="profile-modal-card">
+          <div class="profile-modal-header">
+            <h3>Edit Profile</h3>
+            <button class="profile-modal-close" id="profileModalClose" aria-label="Close">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+
+          <!-- Current avatar preview -->
+          <div class="profile-avatar-preview">
+            <div class="profile-avatar-big" id="profileAvatarBig">?</div>
+            <p class="profile-avatar-hint">Choose an avatar below</p>
+          </div>
+
+          <!-- Avatar grid -->
+          <div class="profile-avatar-grid" id="profileAvatarGrid">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Profile fields -->
+          <div class="profile-fields">
+            <div class="profile-field">
+              <label for="profileDisplayName">Display Name</label>
+              <input id="profileDisplayName" type="text" maxlength="32" placeholder="How friends see you" autocomplete="off"/>
+            </div>
+            <div class="profile-field profile-field-row">
+              <div class="profile-field">
+                <label for="profileAge">Age</label>
+                <input id="profileAge" type="number" min="1" max="120" placeholder="Age" autocomplete="off"/>
+              </div>
+              <div class="profile-field">
+                <label for="profileGender">Gender</label>
+                <select id="profileGender">
+                  <option value="">Prefer not to say</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Non-binary">Non-binary</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <button class="profile-save-btn" id="profileSaveBtn">Save Profile</button>
+        </div>
+      </div>
 
       <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
     </main>
@@ -498,6 +561,136 @@
 
       // Expose so app.js can trigger reactions on incoming messages
       window._novynReactions = { store: reactionStore };
+    })();
+    </script>
+
+    <script>
+    /* ── Profile Modal ─────────────────────────────────── */
+    (function () {
+      var AVATARS = [
+        { id: 'av-ghost',     bg: 'linear-gradient(135deg,#667eea,#764ba2)', label: '👻', emoji: '👻' },
+        { id: 'av-alien',     bg: 'linear-gradient(135deg,#11998e,#38ef7d)', label: '👽', emoji: '👽' },
+        { id: 'av-robot',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', label: '🤖', emoji: '🤖' },
+        { id: 'av-cat',       bg: 'linear-gradient(135deg,#f953c6,#b91d73)', label: '🐱', emoji: '🐱' },
+        { id: 'av-fox',       bg: 'linear-gradient(135deg,#f7971e,#ffd200)', label: '🦊', emoji: '🦊' },
+        { id: 'av-bear',      bg: 'linear-gradient(135deg,#8B5E3C,#d4a96a)', label: '🐻', emoji: '🐻' },
+        { id: 'av-panda',     bg: 'linear-gradient(135deg,#2c3e50,#bdc3c7)', label: '🐼', emoji: '🐼' },
+        { id: 'av-wolf',      bg: 'linear-gradient(135deg,#4b6cb7,#182848)', label: '🐺', emoji: '🐺' },
+        { id: 'av-dragon',    bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', label: '🐲', emoji: '🐲' },
+        { id: 'av-ninja',     bg: 'linear-gradient(135deg,#1a1a2e,#16213e)', label: '🥷', emoji: '🥷' },
+        { id: 'av-wizard',    bg: 'linear-gradient(135deg,#6a11cb,#2575fc)', label: '🧙', emoji: '🧙' },
+        { id: 'av-astronaut', bg: 'linear-gradient(135deg,#0f0c29,#302b63)', label: '👨‍🚀', emoji: '👨‍🚀' },
+        { id: 'av-angel',     bg: 'linear-gradient(135deg,#f0c27f,#fc67fa)', label: '😇', emoji: '😇' },
+        { id: 'av-demon',     bg: 'linear-gradient(135deg,#870000,#190a05)', label: '😈', emoji: '😈' },
+        { id: 'av-cool',      bg: 'linear-gradient(135deg,#00b09b,#96c93d)', label: '😎', emoji: '😎' },
+        { id: 'av-fire',      bg: 'linear-gradient(135deg,#f12711,#f5af19)', label: '🔥', emoji: '🔥' },
+        { id: 'av-snow',      bg: 'linear-gradient(135deg,#a1c4fd,#c2e9fb)', label: '❄️', emoji: '❄️' },
+        { id: 'av-star',      bg: 'linear-gradient(135deg,#f7971e,#ffd200)', label: '⭐', emoji: '⭐' },
+        { id: 'av-diamond',   bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', label: '💎', emoji: '💎' },
+        { id: 'av-crown',     bg: 'linear-gradient(135deg,#f7971e,#ffd200)', label: '👑', emoji: '👑' },
+        { id: 'av-skull',     bg: 'linear-gradient(135deg,#232526,#414345)', label: '💀', emoji: '💀' },
+        { id: 'av-clown',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', label: '🤡', emoji: '🤡' },
+        { id: 'av-sunflower', bg: 'linear-gradient(135deg,#f9d423,#ff4e50)', label: '🌻', emoji: '🌻' },
+        { id: 'av-planet',    bg: 'linear-gradient(135deg,#141e30,#243b55)', label: '🪐', emoji: '🪐' },
+      ];
+
+      var modal        = document.getElementById('profileModal');
+      var backdrop     = modal && modal.querySelector('.profile-modal-backdrop');
+      var closeBtn     = document.getElementById('profileModalClose');
+      var openBtn      = document.getElementById('profileBtn');
+      var saveBtn      = document.getElementById('profileSaveBtn');
+      var avatarBig    = document.getElementById('profileAvatarBig');
+      var avatarGrid   = document.getElementById('profileAvatarGrid');
+      var inputName    = document.getElementById('profileDisplayName');
+      var inputAge     = document.getElementById('profileAge');
+      var inputGender  = document.getElementById('profileGender');
+
+      var currentAvatarId = '';
+
+      function getAvatarById(id) {
+        return AVATARS.find(function(a){ return a.id === id; }) || null;
+      }
+
+      function applyAvatarToEl(el, avatarId, fallbackText) {
+        var av = getAvatarById(avatarId);
+        if (av) {
+          el.style.background = av.bg;
+          el.textContent = av.emoji;
+        } else {
+          el.style.background = '';
+          el.textContent = fallbackText || '?';
+        }
+      }
+
+      // Build avatar grid
+      if (avatarGrid) {
+        AVATARS.forEach(function(av) {
+          var btn = document.createElement('button');
+          btn.className = 'av-grid-btn';
+          btn.type = 'button';
+          btn.title = av.label;
+          btn.dataset.avId = av.id;
+          btn.style.background = av.bg;
+          btn.textContent = av.emoji;
+          btn.addEventListener('click', function() {
+            currentAvatarId = av.id;
+            if (avatarBig) {
+              avatarBig.style.background = av.bg;
+              avatarBig.textContent = av.emoji;
+            }
+            document.querySelectorAll('.av-grid-btn').forEach(function(b){ b.classList.remove('selected'); });
+            btn.classList.add('selected');
+          });
+          avatarGrid.appendChild(btn);
+        });
+      }
+
+      function openModal() {
+        if (!modal) return;
+        modal.classList.remove('hidden');
+        // Populate from current global state
+        if (window._novynProfile) {
+          var p = window._novynProfile;
+          currentAvatarId = p.avatarId || '';
+          if (inputName)   inputName.value  = p.displayName || '';
+          if (inputAge)    inputAge.value   = p.age || '';
+          if (inputGender) inputGender.value = p.gender || '';
+          if (avatarBig) applyAvatarToEl(avatarBig, currentAvatarId, window._novynMe ? (window._novynMe() || '?').slice(0,2).toUpperCase() : '?');
+          document.querySelectorAll('.av-grid-btn').forEach(function(b) {
+            b.classList.toggle('selected', b.dataset.avId === currentAvatarId);
+          });
+        }
+        setTimeout(function(){ modal.querySelector('.profile-modal-card').focus(); }, 50);
+      }
+
+      function closeModal() {
+        if (!modal) return;
+        modal.classList.add('hidden');
+      }
+
+      openBtn   && openBtn.addEventListener('click', openModal);
+      closeBtn  && closeBtn.addEventListener('click', closeModal);
+      backdrop  && backdrop.addEventListener('click', closeModal);
+
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && !modal.classList.contains('hidden')) closeModal();
+      });
+
+      saveBtn && saveBtn.addEventListener('click', function() {
+        var payload = {
+          avatarId: currentAvatarId,
+          displayName: inputName ? inputName.value.trim() : '',
+          age: inputAge ? inputAge.value.trim() : '',
+          gender: inputGender ? inputGender.value : '',
+        };
+        if (window._novynSocket) {
+          window._novynSocket.emit('update_profile', payload);
+        }
+        closeModal();
+      });
+
+      // Expose so app.js can call applyAvatarToEl from socket events
+      window._novynAvatarUtils = { getAvatarById: getAvatarById, applyAvatarToEl: applyAvatarToEl, AVATARS: AVATARS };
     })();
     </script>
   </body>

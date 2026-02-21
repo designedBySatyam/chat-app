@@ -100,6 +100,10 @@ function createUserRecord(username) {
     isRegistered: false,
     passwordSalt: "",
     passwordHash: "",
+    avatarId: "",
+    age: "",
+    gender: "",
+    displayName: "",
   };
 }
 
@@ -114,6 +118,10 @@ function serializeState() {
       isRegistered: Boolean(user.isRegistered),
       passwordSalt: toDisplayName(user.passwordSalt),
       passwordHash: toDisplayName(user.passwordHash),
+      avatarId: toDisplayName(user.avatarId),
+      age: toDisplayName(user.age),
+      gender: toDisplayName(user.gender),
+      displayName: toDisplayName(user.displayName),
     })),
     conversations: Array.from(conversations.entries()).map(([key, messages]) => ({
       key,
@@ -205,6 +213,10 @@ function applyLoadedState(parsed) {
     user.isRegistered = Boolean(entry.isRegistered);
     user.passwordSalt = toDisplayName(entry.passwordSalt);
     user.passwordHash = toDisplayName(entry.passwordHash);
+    user.avatarId = toDisplayName(entry.avatarId);
+    user.age = toDisplayName(entry.age);
+    user.gender = toDisplayName(entry.gender);
+    user.displayName = toDisplayName(entry.displayName);
 
     for (const unreadEntry of entry.unread || []) {
       if (!Array.isArray(unreadEntry) || unreadEntry.length < 2) continue;
@@ -490,6 +502,8 @@ function buildFriendList(forUser) {
       lastMessage: summary.lastMessage,
       lastTimestamp: summary.lastTimestamp,
       lastFrom: summary.lastFrom,
+      avatarId: friend?.avatarId || "",
+      displayName: friend?.displayName || "",
     };
   });
 
@@ -703,6 +717,12 @@ io.on("connection", (socket) => {
         const requester = users.get(requesterKey);
         return requester?.username || requesterKey;
       }),
+      profile: {
+        avatarId: user.avatarId || "",
+        age: user.age || "",
+        gender: user.gender || "",
+        displayName: user.displayName || "",
+      },
     });
 
     emitStatusToFriends(userKey, true);

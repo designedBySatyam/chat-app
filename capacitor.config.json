@@ -1,0 +1,9 @@
+{
+  "appId": "com.novyn.chat",
+  "appName": "Novyn",
+  "webDir": "public",
+  "server": {
+    "url": "https://chat-app-iila.onrender.com",
+    "cleartext": false
+  }
+}
