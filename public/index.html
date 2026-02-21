@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Friends Chat</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <section id="loginCard" class="card login-card">
+        <h1>Friends Chat</h1>
+        <p>Enter a username and start chatting.</p>
+        <form id="loginForm">
+          <input id="usernameInput" type="text" maxlength="24" placeholder="Your username" required />
+          <button type="submit">Join</button>
+        </form>
+      </section>
+
+      <section id="chatLayout" class="chat-layout hidden">
+        <aside class="sidebar card">
+          <div class="me-row">
+            <h2 id="meName">@you</h2>
+          </div>
+
+          <form id="addFriendForm" class="add-friend-form">
+            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend username" required />
+            <button type="submit">Add</button>
+          </form>
+
+          <div class="requests">
+            <h3>Friend Requests</h3>
+            <ul id="requestList"></ul>
+          </div>
+
+          <div class="friends">
+            <h3>Friends</h3>
+            <ul id="friendList"></ul>
+          </div>
+        </aside>
+
+        <section class="chat card">
+          <header class="chat-header">
+            <h2 id="activeFriendLabel">Select a friend</h2>
+          </header>
+
+          <div id="messages" class="messages"></div>
+
+          <form id="messageForm" class="message-form">
+            <input id="messageInput" type="text" placeholder="Type a message" autocomplete="off" />
+            <button type="submit">Send</button>
+          </form>
+        </section>
+      </section>
+
+      <div id="toast" class="toast hidden"></div>
+    </main>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>

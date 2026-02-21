@@ -1,0 +1,13 @@
+﻿{
+  "name": "simple-friends-chat",
+  "version": "1.0.0",
+  "description": "Simple web chat app with friends and real-time messaging",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}

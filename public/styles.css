@@ -1,0 +1,273 @@
+﻿:root {
+  --bg: #0e1018;
+  --panel: #171a24;
+  --panel-soft: #202535;
+  --text: #eff2fb;
+  --muted: #a5adc5;
+  --accent: #5dd8ff;
+  --accent-2: #38a4ff;
+  --danger: #ff7a90;
+  --success: #6ce2aa;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at 15% 20%, #1d2a4a, transparent 35%),
+    radial-gradient(circle at 80% 5%, #24395f, transparent 30%), var(--bg);
+  color: var(--text);
+}
+
+.app-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.card {
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(23, 26, 36, 0.9);
+  backdrop-filter: blur(6px);
+  border-radius: 16px;
+  box-shadow: 0 20px 32px rgba(0, 0, 0, 0.35);
+}
+
+.hidden {
+  display: none !important;
+}
+
+.login-card {
+  max-width: 420px;
+  margin: 80px auto;
+  padding: 24px;
+}
+
+.login-card h1 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.login-card p {
+  margin-top: 0;
+  color: var(--muted);
+}
+
+input,
+button {
+  font: inherit;
+  border-radius: 10px;
+}
+
+input {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: var(--panel-soft);
+  color: var(--text);
+  padding: 10px 12px;
+}
+
+input:focus {
+  outline: 2px solid rgba(93, 216, 255, 0.45);
+  border-color: transparent;
+}
+
+button {
+  border: 0;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #081320;
+  font-weight: 700;
+  padding: 10px 14px;
+  cursor: pointer;
+}
+
+button:hover {
+  filter: brightness(1.05);
+}
+
+#loginForm {
+  display: grid;
+  gap: 10px;
+}
+
+.chat-layout {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  gap: 16px;
+  min-height: 78vh;
+}
+
+.sidebar {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.me-row h2 {
+  margin: 0;
+}
+
+.add-friend-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.requests,
+.friends {
+  min-height: 0;
+}
+
+.requests h3,
+.friends h3 {
+  margin: 0 0 8px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+
+#requestList,
+#friendList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  max-height: 220px;
+  overflow: auto;
+}
+
+.item-card {
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.request-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.request-row button {
+  padding: 6px 10px;
+  font-size: 0.85rem;
+}
+
+.friend-btn {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 10px;
+  padding: 10px;
+  background: transparent;
+  color: var(--text);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.friend-btn:hover,
+.friend-btn.active {
+  background: rgba(93, 216, 255, 0.15);
+}
+
+.status {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.status.online {
+  color: var(--success);
+}
+
+.chat {
+  padding: 16px;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 12px;
+  min-height: 0;
+}
+
+.chat-header h2 {
+  margin: 0;
+}
+
+.messages {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message {
+  max-width: 76%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  line-height: 1.35;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.message.me {
+  margin-left: auto;
+  background: rgba(93, 216, 255, 0.15);
+}
+
+.message.them {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.message-meta {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+}
+
+.message-form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.toast {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  background: rgba(17, 20, 28, 0.95);
+  color: var(--text);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-left: 4px solid var(--accent);
+  border-radius: 12px;
+  padding: 12px 14px;
+  max-width: 320px;
+}
+
+.toast.error {
+  border-left-color: var(--danger);
+}
+
+@media (max-width: 900px) {
+  .chat-layout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  #requestList,
+  #friendList {
+    max-height: 140px;
+  }
+
+  .messages {
+    min-height: 360px;
+  }
+}
