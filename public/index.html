@@ -12,6 +12,7 @@
   <body>
     <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
     <div class="bg-shape bg-shape-two" aria-hidden="true"></div>
+    <div class="grain-layer" aria-hidden="true"></div>
 
     <main class="app-shell">
       <header class="app-topbar">
@@ -35,6 +36,31 @@
           <p>
             Add friends, accept requests, and start secure one-to-one conversations in seconds.
           </p>
+          <div class="hero-visual" aria-hidden="true">
+            <svg class="hero-svg" viewBox="0 0 600 280" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="heroPulse" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#ffd26e" />
+                  <stop offset="50%" stop-color="#59d6ff" />
+                  <stop offset="100%" stop-color="#2f76ff" />
+                </linearGradient>
+                <radialGradient id="heroGlow" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#ffffff" stop-opacity="0.9" />
+                  <stop offset="100%" stop-color="#ffffff" stop-opacity="0" />
+                </radialGradient>
+              </defs>
+              <rect x="40" y="26" width="520" height="224" rx="28" fill="rgba(9,31,61,0.55)" />
+              <circle cx="166" cy="140" r="74" fill="none" stroke="url(#heroPulse)" stroke-width="6" />
+              <circle cx="166" cy="140" r="48" fill="none" stroke="url(#heroPulse)" stroke-width="3" opacity="0.75" />
+              <path d="M252 94C300 78 364 84 402 128C432 164 430 210 402 230" fill="none" stroke="#9adcf0" stroke-width="3" stroke-linecap="round" />
+              <path d="M252 122C294 114 338 120 366 148C390 172 390 204 372 222" fill="none" stroke="#ffd26e" stroke-width="3" stroke-linecap="round" />
+              <circle cx="430" cy="88" r="54" fill="url(#heroGlow)" />
+              <circle cx="430" cy="88" r="24" fill="#ffffff" fill-opacity="0.9" />
+              <circle cx="430" cy="88" r="10" fill="#2f76ff" />
+            </svg>
+            <div class="float-pill float-pill-one">Aarav is typing...</div>
+            <div class="float-pill float-pill-two">Delivered instantly</div>
+          </div>
           <ul class="feature-list">
             <li>Instant updates with WebSockets</li>
             <li>Online status for your friends</li>
@@ -50,6 +76,7 @@
             <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" required />
             <button type="submit">Enter Chat</button>
           </form>
+          <p class="login-footnote">End-to-end session flow with encrypted password storage.</p>
           <p id="usernameHint" class="username-hint hidden"></p>
           <div id="usernameSuggestions" class="username-suggestions hidden"></div>
         </div>
