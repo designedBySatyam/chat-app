@@ -44,6 +44,7 @@ const MIN_PASSWORD_LENGTH = 4;
 const PASSWORD_ITERATIONS = 120000;
 const PASSWORD_KEY_LENGTH = 64;
 const PASSWORD_DIGEST = "sha512";
+const DELETED_MESSAGE_TEXT = "This message was deleted.";
 
 const users = new Map();
 const onlineUsers = new Map();
@@ -115,6 +116,7 @@ function createUserRecord(username) {
     age: "",
     gender: "",
     displayName: "",
+    bio: "",
     lastSeenAt: "",
   };
 }
@@ -134,6 +136,7 @@ function serializeState() {
       age: toDisplayName(user.age),
       gender: toDisplayName(user.gender),
       displayName: toDisplayName(user.displayName),
+      bio: toDisplayName(user.bio),
       lastSeenAt: toDisplayName(user.lastSeenAt),
     })),
     conversations: Array.from(conversations.entries()).map(([key, messages]) => ({
@@ -209,8 +212,12 @@ function hydrateMessage(rawMessage) {
     timestamp: toDisplayName(message.timestamp) || nowIso(),
     deliveredAt: toDisplayName(message.deliveredAt) || null,
     seenAt: toDisplayName(message.seenAt) || null,
+    deletedAt: toDisplayName(message.deletedAt) || null,
     reactions: message.reactions || {},
   };
+  if (hydrated.deletedAt && !hydrated.text) {
+    hydrated.text = DELETED_MESSAGE_TEXT;
+  }
   if (message.replyTo && message.replyTo.id) {
     hydrated.replyTo = {
       id: toDisplayName(message.replyTo.id),
@@ -239,6 +246,7 @@ function applyLoadedState(parsed) {
     user.age = toDisplayName(entry.age);
     user.gender = toDisplayName(entry.gender);
     user.displayName = toDisplayName(entry.displayName);
+    user.bio = toDisplayName(entry.bio);
     user.lastSeenAt = toDisplayName(entry.lastSeenAt);
 
     for (const unreadEntry of entry.unread || []) {
@@ -499,7 +507,7 @@ function getConversationSummary(userKey, friendKey) {
   }
 
   const message = messages[messages.length - 1];
-  const text = toDisplayName(message.text);
+  const text = message.deletedAt ? DELETED_MESSAGE_TEXT : toDisplayName(message.text);
   const compact = text.length > 52 ? `${text.slice(0, 49)}...` : text;
 
   return {
@@ -527,6 +535,7 @@ function buildFriendList(forUser) {
       lastFrom: summary.lastFrom,
       avatarId: friend?.avatarId || "",
       displayName: friend?.displayName || "",
+      bio: friend?.bio || "",
       lastSeenAt: friend?.lastSeenAt || "",
     };
   });
@@ -778,6 +787,7 @@ io.on("connection", (socket) => {
         age: user.age || "",
         gender: user.gender || "",
         displayName: user.displayName || "",
+        bio: user.bio || "",
       },
     });
 
@@ -1016,6 +1026,7 @@ io.on("connection", (socket) => {
       timestamp,
       deliveredAt: recipientSocketId ? timestamp : null,
       seenAt: recipientViewing ? timestamp : null,
+      deletedAt: null,
       reactions: {},
     };
     if (payload?.replyTo && payload.replyTo.id) {
@@ -1078,14 +1089,15 @@ io.on("connection", (socket) => {
     if (payload?.age !== undefined) user.age = toDisplayName(payload.age).slice(0, 3);
     if (payload?.gender !== undefined) user.gender = toDisplayName(payload.gender).slice(0, 20);
     if (payload?.displayName !== undefined) user.displayName = toDisplayName(payload.displayName).slice(0, 32);
+    if (payload?.bio !== undefined) user.bio = toDisplayName(payload.bio).slice(0, 120);
     socket.emit("profile_updated", {
-      avatarId: user.avatarId, age: user.age, gender: user.gender, displayName: user.displayName,
+      avatarId: user.avatarId, age: user.age, gender: user.gender, displayName: user.displayName, bio: user.bio,
     });
     for (const friendKey of user.friends) {
       const friendSocket = onlineUsers.get(friendKey);
       if (friendSocket) {
         io.to(friendSocket).emit("friend_profile_updated", {
-          username: user.username, avatarId: user.avatarId, displayName: user.displayName,
+          username: user.username, avatarId: user.avatarId, displayName: user.displayName, bio: user.bio,
         });
       }
     }
@@ -1127,6 +1139,67 @@ io.on("connection", (socket) => {
     const recipientSocket = onlineUsers.get(toKey);
     if (senderSocket) io.to(senderSocket).emit("reaction_updated", { messageId, reactions: buildReactionPayload(userKey) });
     if (recipientSocket) io.to(recipientSocket).emit("reaction_updated", { messageId, reactions: buildReactionPayload(toKey) });
+    schedulePersist();
+  });
+
+  socket.on("delete_message", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const messageId = toDisplayName(payload?.messageId);
+    const to = toDisplayName(payload?.to);
+    const toKey = normalizeName(to);
+    if (!messageId || !toKey) return;
+
+    const me = users.get(userKey);
+    const friend = users.get(toKey);
+    if (!me || !friend || !me.friends.has(toKey)) {
+      socket.emit("error_message", { message: "You can delete messages only in active friend chats." });
+      return;
+    }
+
+    const conversationKey = getConversationKey(userKey, toKey);
+    const conversation = conversations.get(conversationKey) || [];
+    const message = conversation.find((entry) => entry.id === messageId);
+    if (!message) {
+      socket.emit("error_message", { message: "Message not found." });
+      return;
+    }
+
+    if (message.fromKey !== userKey) {
+      socket.emit("error_message", { message: "You can delete only your own messages." });
+      return;
+    }
+
+    if (message.deletedAt) {
+      return;
+    }
+
+    message.deletedAt = nowIso();
+    message.text = DELETED_MESSAGE_TEXT;
+    message.reactions = {};
+
+    socket.emit("message_deleted", {
+      messageId: message.id,
+      with: friend.username,
+      text: message.text,
+      deletedAt: message.deletedAt,
+      by: me.username,
+    });
+
+    const friendSocket = onlineUsers.get(toKey);
+    if (friendSocket) {
+      io.to(friendSocket).emit("message_deleted", {
+        messageId: message.id,
+        with: me.username,
+        text: message.text,
+        deletedAt: message.deletedAt,
+        by: me.username,
+      });
+    }
+
+    emitFriendList(userKey);
+    emitFriendList(toKey);
     schedulePersist();
   });
 

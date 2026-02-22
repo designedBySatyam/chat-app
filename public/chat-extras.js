@@ -124,7 +124,12 @@
 
 /* ── Emoji Reactions + Reply button ─────────────────────────────────────────── */
 (function () {
-  var EMOJIS     = ['👍','❤️','😂','😮','😢','🔥'];
+    var EMOJIS     = [
+    "\u{1F44D}", "\u2764\uFE0F", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F525}",
+    "\u{1F44F}", "\u{1F60D}", "\u{1F61C}", "\u{1F914}", "\u{1F389}", "\u{1F44C}",
+    "\u{1F44E}", "\u{1F64C}", "\u{1F92F}", "\u{1F680}", "\u{1F3AF}", "\u{1F31F}",
+    "\u{1F4AF}", "\u{1F937}", "\u{1F60E}", "\u{1F49A}", "\u{1F49B}", "\u{1F499}"
+  ];
   var messagesEl = document.getElementById('messages');
   if (!messagesEl) return;
 
@@ -232,6 +237,7 @@
   }
 
   function addActionsUI(msgEl) {
+    if (msgEl.classList.contains('message-deleted')) return;
     var msgId = msgEl.dataset.messageId || ('tmp-' + Date.now() + '-' + Math.random());
     if (!msgEl.dataset.messageId) msgEl.dataset.messageId = msgId;
     if ((!reactionStore[msgId] || !Object.keys(reactionStore[msgId]).length) && msgEl.dataset.messageReactions) {
@@ -246,6 +252,7 @@
     // Reply button
     var replyBtn = document.createElement('button');
     replyBtn.className = 'msg-action-btn';
+    replyBtn.dataset.msgAction = 'reply';
     replyBtn.title     = 'Reply';
     replyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
     replyBtn.addEventListener('click', function (e) {
@@ -262,6 +269,7 @@
     // Emoji button
     var emojiBtn = document.createElement('button');
     emojiBtn.className = 'msg-action-btn';
+    emojiBtn.dataset.msgAction = 'react';
     emojiBtn.title     = 'React';
     emojiBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
     emojiBtn.addEventListener('click', function (e) {
@@ -272,16 +280,34 @@
 
       var picker = document.createElement('div');
       picker.className = 'reaction-picker';
-      EMOJIS.forEach(function (emoji) {
-        var b = document.createElement('button');
-        b.textContent = emoji;
-        b.title = emoji;
-        b.addEventListener('click', function (ev) {
-          ev.stopPropagation();
-          sendReaction(msgEl, msgId, emoji);
+      var expanded = false;
+      function renderPickerEmojiButtons() {
+        picker.innerHTML = '';
+        var visible = expanded ? EMOJIS : EMOJIS.slice(0, 10);
+        visible.forEach(function (emoji) {
+          var b = document.createElement('button');
+          b.textContent = emoji;
+          b.title = emoji;
+          b.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            sendReaction(msgEl, msgId, emoji);
+          });
+          picker.appendChild(b);
         });
-        picker.appendChild(b);
-      });
+        if (!expanded && EMOJIS.length > 10) {
+          var moreBtn = document.createElement('button');
+          moreBtn.className = 'reaction-picker-more';
+          moreBtn.textContent = '+';
+          moreBtn.title = 'More reactions';
+          moreBtn.addEventListener('click', function (ev) {
+            ev.stopPropagation();
+            expanded = true;
+            renderPickerEmojiButtons();
+          });
+          picker.appendChild(moreBtn);
+        }
+      }
+      renderPickerEmojiButtons();
 
       picker.style.position = 'fixed';
       picker.style.left = '0';
@@ -376,6 +402,7 @@
   var avatarBig   = document.getElementById('profileAvatarBig');
   var avatarGrid  = document.getElementById('profileAvatarGrid');
   var inputName   = document.getElementById('profileDisplayName');
+  var inputBio    = document.getElementById('profileBio');
   var inputAge    = document.getElementById('profileAge');
   var inputGender = document.getElementById('profileGender');
 
@@ -425,6 +452,7 @@
     var p = window._novynProfile || {};
     currentAvatarId = p.avatarId || '';
     if (inputName)   inputName.value   = p.displayName || '';
+    if (inputBio)    inputBio.value    = p.bio || '';
     if (inputAge)    inputAge.value    = p.age || '';
     if (inputGender) inputGender.value = p.gender || '';
     if (avatarBig) {
@@ -454,6 +482,7 @@
     var payload = {
       avatarId: currentAvatarId,
       displayName: inputName   ? inputName.value.trim()   : '',
+      bio:         inputBio    ? inputBio.value.trim()    : '',
       age:         inputAge    ? inputAge.value.trim()    : '',
       gender:      inputGender ? inputGender.value        : '',
     };
@@ -464,3 +493,4 @@
   // Expose avatar utils for app.js
   window._novynAvatarUtils = { getAvatarById: getAvatarById, applyAvatarToEl: applyAvatarToEl, AVATARS: AVATARS };
 })();
+

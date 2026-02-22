@@ -31,13 +31,17 @@ const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
 const sendButton        = messageForm.querySelector("button");
+const messageSearchInput = document.getElementById("messageSearchInput");
+const messageSearchClear = document.getElementById("messageSearchClear");
+const messageSearchCount = document.getElementById("messageSearchCount");
 
 let me           = "";
 let activeFriend = "";
 let friends      = [];
 let requests     = [];
 let replyTo      = null;
-let myProfile    = { avatarId: "", displayName: "", age: "", gender: "" };
+let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
+let conversationMessages = [];
 window._novynProfile = myProfile;
 
 const localTyping = {
@@ -45,12 +49,108 @@ const localTyping = {
   target:    "",
   timeoutId: null,
 };
+const scrollState = {
+  pinnedToBottom: true,
+};
+const DELETED_MESSAGE_TEXT = "This message was deleted.";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
 function normalizeName(value) {
   return String(value || "").trim().toLowerCase();
 }
+
+function normalizeSearchText(value) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getLocalDateKey(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateSeparatorLabel(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown date";
+  const now = new Date();
+
+  const startOfNow = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const daysDiff = Math.round((startOfNow - startOfDate) / (24 * 60 * 60 * 1000));
+
+  if (daysDiff === 0) return "Today";
+  if (daysDiff === 1) return "Yesterday";
+  return date.toLocaleDateString([], { weekday: "short", month: "short", day: "numeric" });
+}
+
+function formatFullTimestamp(iso) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toLocaleString([], {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+function getMessageStatusKey(message) {
+  if (message?.seenAt) return "seen";
+  if (message?.deliveredAt) return "delivered";
+  return "sent";
+}
+
+const notificationAudio = {
+  context: null,
+  unlocked: false,
+};
+
+function unlockNotificationAudio() {
+  if (notificationAudio.unlocked) return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  try {
+    if (!notificationAudio.context) notificationAudio.context = new AudioCtx();
+    const ctx = notificationAudio.context;
+    if (ctx.state === "suspended") ctx.resume().catch(() => {});
+    notificationAudio.unlocked = true;
+  } catch (_) {
+    // Ignore browsers that block audio context creation.
+  }
+}
+
+function playIncomingPing() {
+  const ctx = notificationAudio.context;
+  if (!notificationAudio.unlocked || !ctx) return;
+  try {
+    const now = ctx.currentTime;
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(740, now);
+    oscillator.frequency.exponentialRampToValueAtTime(560, now + 0.14);
+
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.045, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.16);
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.17);
+  } catch (_) {
+    // Ignore transient audio failures.
+  }
+}
+
+document.addEventListener("pointerdown", unlockNotificationAudio, { passive: true });
+document.addEventListener("keydown", unlockNotificationAudio, { passive: true });
 
 /**
  * Smooth-scroll the messages container to the bottom.
@@ -196,6 +296,11 @@ function displayDiffersFromUsername(friend) {
 
 function getFriendPresenceText(friend) {
   const statusText = friend.online ? "Online now" : formatLastSeen(friend.lastSeenAt);
+  const bio = cleanDisplayName(friend?.bio);
+  if (bio) {
+    const compactBio = bio.length > 48 ? `${bio.slice(0, 45)}...` : bio;
+    return `${statusText} · ${compactBio}`;
+  }
   if (displayDiffersFromUsername(friend)) {
     return `${statusText} · @${friend.username}`;
   }
@@ -266,6 +371,97 @@ function clearMessages() {
   messagesEl.innerHTML = "";
 }
 
+function getLastRenderedDateKey() {
+  for (let i = messagesEl.children.length - 1; i >= 0; i -= 1) {
+    const node = messagesEl.children[i];
+    if (!node) continue;
+    if (node.classList.contains("message-date-separator") && node.dataset.dateKey) {
+      return node.dataset.dateKey;
+    }
+    if (node.classList.contains("message") && node.dataset.dateKey) {
+      return node.dataset.dateKey;
+    }
+  }
+  return "";
+}
+
+function appendDateSeparator(iso) {
+  const dateKey = getLocalDateKey(iso);
+  if (!dateKey) return;
+
+  const previousKey = getLastRenderedDateKey();
+  if (previousKey === dateKey) return;
+
+  const separator = document.createElement("div");
+  separator.className = "message-date-separator";
+  separator.dataset.dateKey = dateKey;
+  separator.textContent = formatDateSeparatorLabel(iso);
+  messagesEl.appendChild(separator);
+}
+
+function getSearchQuery() {
+  return normalizeSearchText(messageSearchInput ? messageSearchInput.value : "");
+}
+
+function shouldAutoScrollForMessage(message, skipAnimation = false) {
+  if (skipAnimation) return true;
+  if (getSearchQuery()) return false;
+
+  if (!message) {
+    return scrollState.pinnedToBottom || isNearBottom();
+  }
+
+  const mine = normalizeName(message.from) === normalizeName(me);
+  if (mine) return true;
+
+  return scrollState.pinnedToBottom || isNearBottom();
+}
+
+function resetMessageSearch() {
+  if (messageSearchInput) messageSearchInput.value = "";
+  applyMessageSearch();
+}
+
+function applyMessageSearch() {
+  const query = getSearchQuery();
+  const messageNodes = Array.from(messagesEl.querySelectorAll("article.message"));
+  let visibleCount = 0;
+
+  for (const row of messageNodes) {
+    const searchable = normalizeSearchText(
+      row.dataset.searchText || `${row.dataset.messageText || ""} ${row.dataset.messageFrom || ""}`
+    );
+    const match = !query || searchable.includes(query);
+    row.classList.toggle("search-hidden", !match);
+    if (match) visibleCount += 1;
+  }
+
+  const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator"));
+  for (const separator of separatorNodes) {
+    let hasVisibleMessages = false;
+    let cursor = separator.nextElementSibling;
+    while (cursor && !cursor.classList.contains("message-date-separator")) {
+      if (cursor.classList.contains("message") && !cursor.classList.contains("search-hidden")) {
+        hasVisibleMessages = true;
+        break;
+      }
+      cursor = cursor.nextElementSibling;
+    }
+    separator.classList.toggle("search-hidden", Boolean(query) && !hasVisibleMessages);
+  }
+
+  if (messageSearchCount) {
+    if (!query) {
+      messageSearchCount.classList.add("hidden");
+      messageSearchCount.textContent = "";
+    } else {
+      const total = messageNodes.length;
+      messageSearchCount.classList.remove("hidden");
+      messageSearchCount.textContent = `${visibleCount}/${total} match${visibleCount === 1 ? "" : "es"}`;
+    }
+  }
+}
+
 // ─── Reply UI ─────────────────────────────────────────────────────────────────
 
 const replyBanner = (() => {
@@ -298,6 +494,167 @@ function clearReply() {
   replyBanner.preview.textContent = "";
 }
 
+const messageContextMenu = (() => {
+  const menu = document.createElement("div");
+  menu.id = "messageContextMenu";
+  menu.className = "message-context-menu hidden";
+  menu.innerHTML = `
+    <button type="button" data-action="copy">Copy</button>
+    <button type="button" data-action="reply">Reply</button>
+    <button type="button" data-action="react">React</button>
+    <button type="button" data-action="delete" class="danger">Delete</button>
+  `;
+  document.body.appendChild(menu);
+
+  let currentMessageEl = null;
+
+  function close() {
+    menu.classList.add("hidden");
+    currentMessageEl = null;
+  }
+
+  function getMessagePeer(msgEl) {
+    let target = String(msgEl?.dataset?.messageFrom || "").trim();
+    if (normalizeName(target) === normalizeName(me)) {
+      target = activeFriend;
+    }
+    return target;
+  }
+
+  function open(msgEl, x, y) {
+    if (!msgEl) return;
+    currentMessageEl = msgEl;
+
+    const mine = msgEl.classList.contains("me");
+    const deleted = msgEl.classList.contains("message-deleted");
+    const deleteBtn = menu.querySelector('[data-action="delete"]');
+    const copyBtn = menu.querySelector('[data-action="copy"]');
+    const replyBtn = menu.querySelector('[data-action="reply"]');
+    const reactBtn = menu.querySelector('[data-action="react"]');
+
+    if (deleteBtn) deleteBtn.classList.toggle("hidden", !mine || deleted);
+    if (copyBtn) copyBtn.classList.toggle("hidden", deleted);
+    if (replyBtn) replyBtn.classList.toggle("hidden", deleted);
+    if (reactBtn) reactBtn.classList.toggle("hidden", deleted);
+
+    menu.classList.remove("hidden");
+    menu.style.left = "0px";
+    menu.style.top = "0px";
+
+    const rect = menu.getBoundingClientRect();
+    const margin = 8;
+    let left = x;
+    let top = y;
+
+    if (left + rect.width > window.innerWidth - margin) {
+      left = window.innerWidth - rect.width - margin;
+    }
+    if (top + rect.height > window.innerHeight - margin) {
+      top = window.innerHeight - rect.height - margin;
+    }
+    if (left < margin) left = margin;
+    if (top < margin) top = margin;
+
+    menu.style.left = `${left}px`;
+    menu.style.top = `${top}px`;
+  }
+
+  menu.addEventListener("click", async (e) => {
+    const actionBtn = e.target.closest("button[data-action]");
+    if (!actionBtn || !currentMessageEl) return;
+
+    const action = actionBtn.dataset.action;
+    const messageId = currentMessageEl.dataset.messageId;
+    const messageText = currentMessageEl.dataset.messageText || "";
+    const targetPeer = getMessagePeer(currentMessageEl);
+
+    if (action === "copy") {
+      try {
+        await navigator.clipboard.writeText(messageText);
+        showToast("Message copied");
+      } catch (_) {
+        showToast("Could not copy message", "error");
+      }
+      close();
+      return;
+    }
+
+    if (action === "reply") {
+      setReply({
+        id: messageId,
+        from: currentMessageEl.dataset.messageFrom || "",
+        text: messageText,
+      });
+      close();
+      return;
+    }
+
+    if (action === "react") {
+      const reactBtn = currentMessageEl.querySelector('[data-msg-action="react"]');
+      if (reactBtn) reactBtn.click();
+      close();
+      return;
+    }
+
+    if (action === "delete") {
+      if (!messageId || !targetPeer) {
+        close();
+        return;
+      }
+      socket.emit("delete_message", { messageId, to: targetPeer });
+      close();
+    }
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest("#messageContextMenu")) close();
+  });
+  window.addEventListener("resize", close);
+  messagesEl.addEventListener("scroll", close, { passive: true });
+
+  messagesEl.addEventListener("contextmenu", (e) => {
+    const msgEl = e.target.closest("article.message");
+    if (!msgEl) return;
+    e.preventDefault();
+    open(msgEl, e.clientX, e.clientY);
+  });
+
+  let longPressTimer = null;
+  let longPressTarget = null;
+  let longPressStartX = 0;
+  let longPressStartY = 0;
+
+  function clearLongPress() {
+    if (longPressTimer) clearTimeout(longPressTimer);
+    longPressTimer = null;
+    longPressTarget = null;
+  }
+
+  messagesEl.addEventListener("pointerdown", (e) => {
+    const msgEl = e.target.closest("article.message");
+    if (!msgEl) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    longPressTarget = msgEl;
+    longPressStartX = e.clientX;
+    longPressStartY = e.clientY;
+    longPressTimer = setTimeout(() => {
+      if (!longPressTarget) return;
+      open(longPressTarget, longPressStartX, longPressStartY);
+      clearLongPress();
+    }, 520);
+  });
+  messagesEl.addEventListener("pointermove", (e) => {
+    if (!longPressTimer) return;
+    const dx = Math.abs(e.clientX - longPressStartX);
+    const dy = Math.abs(e.clientY - longPressStartY);
+    if (dx > 8 || dy > 8) clearLongPress();
+  });
+  messagesEl.addEventListener("pointerup", clearLongPress);
+  messagesEl.addEventListener("pointercancel", clearLongPress);
+
+  return { open, close };
+})();
+
 function renderMessagesEmptyState(text) {
   clearMessages();
   hideTypingIndicator();
@@ -306,32 +663,68 @@ function renderMessagesEmptyState(text) {
   empty.className   = "messages-empty";
   empty.textContent = text;
   messagesEl.appendChild(empty);
+  applyMessageSearch();
 }
 
-function getMessageStatusText(message) {
-  if (message?.seenAt)      return "Seen";
-  if (message?.deliveredAt) return "Delivered";
-  return "Sent";
+function renderMineMessageMeta(metaEl, timeText, statusKey) {
+  metaEl.innerHTML = "";
+  metaEl.classList.add("mine");
+  metaEl.dataset.time = timeText;
+  metaEl.dataset.status = statusKey;
+
+  const time = document.createElement("span");
+  time.className = "message-meta-time";
+  time.textContent = timeText;
+
+  const status = document.createElement("span");
+  status.className = `message-status message-status-${statusKey}`;
+
+  const tickA = document.createElement("span");
+  tickA.className = "tick";
+  tickA.textContent = "✓";
+
+  const tickB = document.createElement("span");
+  tickB.className = "tick";
+  tickB.textContent = "✓";
+
+  status.append(tickA, tickB);
+  metaEl.append(time, status);
 }
 
-function buildMessageMeta(message, mine) {
+function renderIncomingMessageMeta(metaEl, message) {
+  metaEl.classList.remove("mine");
+  metaEl.innerHTML = "";
   const time = prettyTime(message.timestamp);
-  if (!mine) {
-    const friend = findFriend(message.from);
-    const senderName = friend ? getFriendDisplayName(friend) : message.from;
-    return `${senderName} · ${time}`;
-  }
-  return `${time} · ${getMessageStatusText(message)}`;
+  const friend = findFriend(message.from);
+  const senderName = friend ? getFriendDisplayName(friend) : message.from;
+  metaEl.textContent = `${senderName} · ${time}`;
 }
 
 function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
+  const isDeleted = Boolean(message.deletedAt);
+  const dateKey = getLocalDateKey(message.timestamp);
+  const fullTimestamp = formatFullTimestamp(message.timestamp);
 
   const row       = document.createElement("article");
   row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
+  row.dataset.dateKey = dateKey;
+  row.dataset.timestamp = message.timestamp || "";
+  row.dataset.tsFull = fullTimestamp;
+  if (fullTimestamp) row.title = fullTimestamp;
   row.dataset.messageFrom = message.from;
-  row.dataset.messageText = message.text;
+  row.dataset.messageText = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
+  row.dataset.searchText = [
+    row.dataset.messageFrom,
+    row.dataset.messageText,
+    message.replyTo?.text || "",
+    message.replyTo?.from || "",
+  ].join(" ");
+  if (isDeleted) {
+    row.classList.add("message-deleted");
+  }
+
   if (message.reactions && Object.keys(message.reactions).length) {
     try {
       row.dataset.messageReactions = JSON.stringify(message.reactions);
@@ -342,11 +735,16 @@ function buildMessageElement(message, skipAnimation = false) {
 
   const meta        = document.createElement("span");
   meta.className    = "message-meta";
-  meta.textContent  = buildMessageMeta(message, mine);
+  if (mine) {
+    row.dataset.timeLabel = prettyTime(message.timestamp);
+    renderMineMessageMeta(meta, row.dataset.timeLabel, getMessageStatusKey(message));
+  } else {
+    renderIncomingMessageMeta(meta, message);
+  }
 
   row.append(meta);
 
-  if (message.replyTo) {
+  if (message.replyTo && !isDeleted) {
     const rq      = document.createElement("div");
     rq.className  = "reply-quote";
     const ra      = document.createElement("span");
@@ -372,25 +770,41 @@ function buildMessageElement(message, skipAnimation = false) {
 
   const body        = document.createElement("div");
   body.className    = "message-body";
-  body.textContent  = message.text;
+  body.textContent  = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
+  if (isDeleted) body.classList.add("message-body-deleted");
 
   row.append(body);
   return row;
 }
 
-function appendMessage(message, skipAnimation = false) {
+function appendMessage(message, skipAnimation = false, withSeparator = true) {
   const emptyNode = messagesEl.querySelector(".messages-empty");
   if (emptyNode) emptyNode.remove();
+  const preserveTop = messagesEl.scrollTop;
+  const shouldAutoScroll = shouldAutoScrollForMessage(message, skipAnimation);
 
-  const row  = buildMessageElement(message, skipAnimation);
-  const near = isNearBottom();
+  if (withSeparator) {
+    appendDateSeparator(message.timestamp);
+  }
+
+  const row = buildMessageElement(message, skipAnimation);
 
   messagesEl.appendChild(row);
-  if (near) scrollToBottom(skipAnimation);
+  applyMessageSearch();
+  if (shouldAutoScroll) {
+    const mine = normalizeName(message.from) === normalizeName(me);
+    scrollToBottom(skipAnimation || mine);
+    scrollState.pinnedToBottom = true;
+  } else {
+    messagesEl.scrollTop = preserveTop;
+  }
 }
 
 function updateStats() {
-  if (requestCount) requestCount.textContent = String(requests.length);
+  if (requestCount) {
+    requestCount.textContent = String(requests.length);
+    requestCount.classList.toggle("has-pending", requests.length > 0);
+  }
   if (friendCount)  friendCount.textContent  = String(friends.length);
   if (onlineCount) {
     const online = friends.filter((f) => f.online).length;
@@ -414,20 +828,57 @@ function setComposerEnabled(isEnabled) {
 
 function renderMessages(messages) {
   clearMessages();
+  conversationMessages = Array.isArray(messages) ? messages.slice() : [];
 
-  if (!messages.length) {
+  if (!conversationMessages.length) {
     renderMessagesEmptyState("No messages yet. Say hello!");
+    applyMessageSearch();
     return;
   }
 
   // Render all historical messages instantly (no animation per bubble)
-  for (const message of messages) {
-    appendMessage(message, /* skipAnimation */ true);
+  for (const message of conversationMessages) {
+    appendMessage(message, /* skipAnimation */ true, /* withSeparator */ true);
   }
 
   // Jump straight to bottom for history load (no animation needed)
   scrollToBottom(true);
   if (window._novynFAB) window._novynFAB.reset();
+  applyMessageSearch();
+}
+
+function markConversationMessageDeleted(messageId, deletedAt, replacementText = DELETED_MESSAGE_TEXT) {
+  for (const message of conversationMessages) {
+    if (message.id !== messageId) continue;
+    message.deletedAt = deletedAt || message.deletedAt || new Date().toISOString();
+    message.text = replacementText;
+    message.reactions = {};
+    break;
+  }
+}
+
+function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_TEXT) {
+  const row = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
+  if (!row) return;
+
+  row.classList.add("message-deleted");
+  row.dataset.messageText = replacementText;
+  row.dataset.searchText = `${row.dataset.messageFrom || ""} ${replacementText}`;
+
+  const body = row.querySelector(".message-body");
+  if (body) {
+    body.textContent = replacementText;
+    body.classList.add("message-body-deleted");
+  }
+
+  const replyQuote = row.querySelector(".reply-quote");
+  if (replyQuote) replyQuote.remove();
+
+  const actions = row.querySelector(".msg-actions");
+  if (actions) actions.remove();
+
+  const reactions = row.querySelector(".message-reactions");
+  if (reactions) reactions.innerHTML = "";
 }
 
 // ─── Requests ────────────────────────────────────────────────────────────────
@@ -465,6 +916,8 @@ function renderRequests() {
 
 function friendPreview(friend) {
   if (!friend.lastMessage) {
+    const bio = cleanDisplayName(friend?.bio);
+    if (bio) return bio;
     return friend.online ? "Online now" : "No messages yet";
   }
   if (normalizeName(friend.lastFrom) === normalizeName(me)) {
@@ -554,7 +1007,9 @@ function setActiveFriend(username) {
   }
 
   activeFriend = username;
+  conversationMessages = [];
   clearReply();
+  resetMessageSearch();
   activeFriendLabel.textContent = "Loading...";
   renderActiveFriendPresence();
   syncRemoveFriendButton();
@@ -715,7 +1170,8 @@ function sendActiveMessage() {
   clearReply();
 
   // Keep scroll pinned to bottom after sending
-  scrollToBottom();
+  scrollToBottom(true);
+  scrollState.pinnedToBottom = true;
   keepComposerFocused();
 }
 
@@ -728,6 +1184,17 @@ messageInput.addEventListener("input", () => {
   if (!activeFriend) return;
   messageInput.value.trim() ? markLocalTyping() : stopLocalTyping();
 });
+
+if (messageSearchInput) {
+  messageSearchInput.addEventListener("input", applyMessageSearch);
+}
+if (messageSearchClear) {
+  messageSearchClear.addEventListener("click", () => {
+    if (messageSearchInput) messageSearchInput.value = "";
+    applyMessageSearch();
+    if (messageSearchInput) messageSearchInput.focus();
+  });
+}
 
 // Stop typing indicator when input loses focus
 messageInput.addEventListener("blur", () => stopLocalTyping());
@@ -753,11 +1220,13 @@ socket.on("register_success", (data) => {
     myProfile.displayName = data.profile.displayName || "";
     myProfile.age         = data.profile.age || "";
     myProfile.gender      = data.profile.gender || "";
+    myProfile.bio         = data.profile.bio || "";
   } else {
     myProfile.avatarId    = "";
     myProfile.displayName = "";
     myProfile.age         = "";
     myProfile.gender      = "";
+    myProfile.bio         = "";
   }
   window._novynProfile  = myProfile;
   renderMyName();
@@ -798,6 +1267,11 @@ socket.on("auth_failed", (data) => {
 
 socket.on("friend_request_received", (data) => {
   showToast(`${data.from} sent you a friend request`);
+  if (!requests.includes(data.from)) {
+    requests = [...requests, data.from];
+    renderRequests();
+  }
+  playIncomingPing();
 });
 
 socket.on("friend_request_sent", (data) => {
@@ -823,9 +1297,11 @@ socket.on("friend_list_updated", (data) => {
     );
     if (!stillThere) {
       activeFriend                  = "";
+      conversationMessages          = [];
       activeFriendLabel.textContent = "Select a friend";
       setComposerEnabled(false);
       renderMessagesEmptyState("Choose a friend to load your conversation.");
+      resetMessageSearch();
       renderActiveFriendPresence();
       syncRemoveFriendButton();
     }
@@ -842,11 +1318,13 @@ socket.on("friend_removed", (data) => {
   if (activeFriend && removedKey && activeKey === removedKey) {
     stopLocalTyping(activeFriend);
     activeFriend = "";
+    conversationMessages = [];
     clearReply();
     activeFriendLabel.textContent = "Select a friend";
     setComposerEnabled(false);
     hideTypingIndicator();
     renderMessagesEmptyState("Choose a friend to load your conversation.");
+    resetMessageSearch();
     renderActiveFriendPresence();
     syncRemoveFriendButton();
   }
@@ -874,14 +1352,17 @@ socket.on("private_message", (message) => {
       const sender = findFriend(message.from);
       const senderName = sender ? getFriendDisplayName(sender) : message.from;
       showToast(`💬 ${senderName}: ${message.text.slice(0, 40)}${message.text.length > 40 ? "…" : ""}`);
+      playIncomingPing();
     }
     return;
   }
 
   if (normalizeName(message.from) !== normalizeName(me)) {
     hideTypingIndicator();
+    playIncomingPing();
   }
 
+  conversationMessages.push(message);
   appendMessage(message);
   // Only bump the unread FAB counter for incoming messages, not our own
   if (normalizeName(message.from) !== normalizeName(me)) {
@@ -892,15 +1373,19 @@ socket.on("private_message", (message) => {
 socket.on("message_status", (payload) => {
   if (!payload?.id || !payload?.with) return;
   if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) return;
+  for (const message of conversationMessages) {
+    if (message.id !== payload.id) continue;
+    if (payload.deliveredAt) message.deliveredAt = payload.deliveredAt;
+    if (payload.seenAt) message.seenAt = payload.seenAt;
+    break;
+  }
   const msgEl = messagesEl.querySelector(`[data-message-id="${payload.id}"]`);
   if (!msgEl || !msgEl.classList.contains("me")) return;
   const metaEl = msgEl.querySelector(".message-meta");
   if (!metaEl) return;
-  const timeText = metaEl.textContent.split("·")[0]?.trim() || "";
-  let statusText = "Sent";
-  if (payload.seenAt) statusText = "Seen";
-  else if (payload.deliveredAt) statusText = "Delivered";
-  metaEl.textContent = `${timeText} · ${statusText}`;
+  const timeText = msgEl.dataset.timeLabel || prettyTime(msgEl.dataset.timestamp) || "";
+  const statusKey = payload.seenAt ? "seen" : payload.deliveredAt ? "delivered" : "sent";
+  renderMineMessageMeta(metaEl, timeText, statusKey);
 });
 
 socket.on("typing", ({ from, isTyping }) => {
@@ -954,6 +1439,7 @@ socket.on("profile_updated", (data) => {
   myProfile.displayName = data.displayName || "";
   myProfile.age         = data.age         || "";
   myProfile.gender      = data.gender      || "";
+  myProfile.bio         = data.bio         || "";
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
@@ -963,7 +1449,7 @@ socket.on("profile_updated", (data) => {
 socket.on("friend_profile_updated", (data) => {
   friends = friends.map((f) =>
     normalizeName(f.username) === normalizeName(data.username)
-      ? { ...f, avatarId: data.avatarId, displayName: data.displayName }
+      ? { ...f, avatarId: data.avatarId, displayName: data.displayName, bio: data.bio || "" }
       : f
   );
   renderFriends();
@@ -976,10 +1462,28 @@ socket.on("reaction_updated", (payload) => {
   }
 });
 
+socket.on("message_deleted", (payload) => {
+  if (!payload?.messageId || !payload?.with) return;
+  if (!activeFriend || normalizeName(payload.with) !== normalizeName(activeFriend)) return;
+
+  markConversationMessageDeleted(payload.messageId, payload.deletedAt, payload.text || DELETED_MESSAGE_TEXT);
+  applyDeletedMessageToDom(payload.messageId, payload.text || DELETED_MESSAGE_TEXT);
+  applyMessageSearch();
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 setComposerEnabled(false);
 renderActiveFriendPresence();
 syncRemoveFriendButton();
+if (messagesEl) {
+  messagesEl.addEventListener("scroll", () => {
+    scrollState.pinnedToBottom = isNearBottom();
+  }, { passive: true });
+}
+window.addEventListener("resize", () => {
+  if (!activeFriend) return;
+  if (scrollState.pinnedToBottom) scrollToBottom(true);
+}, { passive: true });
 
 window._novynReply = { setReply };
 window._novynSocket = socket;
