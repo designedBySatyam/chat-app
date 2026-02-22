@@ -758,27 +758,39 @@ button:disabled { cursor: not-allowed; opacity: 0.4; filter: grayscale(0.3); tra
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  border: 1px solid rgba(0,229,255,0.25);
-  background: rgba(0,229,255,0.06);
-  color: var(--cyan);
+  border: 1px solid rgba(0,229,255,0.42);
+  background: linear-gradient(145deg, rgba(5,20,42,0.95), rgba(9,28,58,0.88));
+  color: #8ff6ff;
   cursor: pointer;
-  box-shadow: none;
+  box-shadow: 0 0 0 1px rgba(0,229,255,0.1) inset, 0 6px 14px rgba(0,0,0,0.22);
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.12s ease, box-shadow 0.16s ease;
   flex-shrink: 0;
 }
+.search-toggle-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.35;
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(0,229,255,0.24));
+}
 .search-toggle-btn:hover {
-  background: rgba(0,229,255,0.14);
-  border-color: rgba(0,229,255,0.45);
+  background: linear-gradient(145deg, rgba(4,30,58,0.98), rgba(12,36,70,0.92));
+  border-color: rgba(0,229,255,0.72);
   transform: translateY(-1px);
+  color: #d5fbff;
 }
 .search-toggle-btn.active {
-  background: rgba(0,229,255,0.2);
-  border-color: rgba(0,229,255,0.62);
-  box-shadow: 0 0 0 3px rgba(0,229,255,0.12);
+  background: linear-gradient(145deg, rgba(0,229,255,0.22), rgba(60,90,255,0.2));
+  border-color: rgba(0,229,255,0.85);
+  box-shadow: 0 0 0 3px rgba(0,229,255,0.16), 0 8px 18px rgba(0,0,0,0.24);
+  color: #ffffff;
 }
 :root.light .search-toggle-btn {
   border-color: rgba(0,112,168,0.28);
-  background: rgba(0,112,168,0.08);
+  background: linear-gradient(145deg, rgba(255,255,255,0.94), rgba(236,246,255,0.9));
   color: #0070a8;
 }
 
