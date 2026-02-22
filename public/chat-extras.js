@@ -136,6 +136,41 @@
     return reactionStore[id];
   }
 
+  function normalizePayloadReactions(raw) {
+    var meKey = '';
+    if (window._novynMe) {
+      meKey = String(window._novynMe() || '').trim().toLowerCase();
+    }
+    var input = raw && typeof raw === 'object' ? raw : {};
+    var normalized = {};
+    Object.keys(input).forEach(function (emoji) {
+      var entry = input[emoji];
+      if (!entry || typeof entry !== 'object') return;
+
+      var count = 0;
+      var mine = false;
+
+      if (Array.isArray(entry.userKeys)) {
+        count = Number.isFinite(Number(entry.count))
+          ? Math.max(0, Math.floor(Number(entry.count)))
+          : entry.userKeys.length;
+        mine = entry.userKeys.some(function (userKey) {
+          return String(userKey || '').trim().toLowerCase() === meKey;
+        });
+      } else {
+        count = Number.isFinite(Number(entry.count))
+          ? Math.max(0, Math.floor(Number(entry.count)))
+          : 0;
+        mine = Boolean(entry.mine);
+      }
+
+      if (count > 0) {
+        normalized[emoji] = { count: count, mine: mine };
+      }
+    });
+    return normalized;
+  }
+
   function closePicker() {
     var open = document.querySelector('.reaction-picker');
     if (open) open.remove();
@@ -191,13 +226,7 @@
   }
 
   function applyServerReactions(msgId, reactions) {
-    reactionStore[msgId] = reactionStore[msgId] || {};
-    Object.keys(reactions).forEach(function(emoji) {
-      reactionStore[msgId][emoji] = reactions[emoji];
-    });
-    Object.keys(reactionStore[msgId]).forEach(function(emoji) {
-      if (!reactions[emoji]) reactionStore[msgId][emoji] = { count: 0, mine: false };
-    });
+    reactionStore[msgId] = normalizePayloadReactions(reactions);
     var msgEl = messagesEl.querySelector('[data-message-id="' + msgId + '"]');
     if (msgEl) renderReactions(msgEl, msgId);
   }
@@ -205,6 +234,11 @@
   function addActionsUI(msgEl) {
     var msgId = msgEl.dataset.messageId || ('tmp-' + Date.now() + '-' + Math.random());
     if (!msgEl.dataset.messageId) msgEl.dataset.messageId = msgId;
+    if ((!reactionStore[msgId] || !Object.keys(reactionStore[msgId]).length) && msgEl.dataset.messageReactions) {
+      try {
+        reactionStore[msgId] = normalizePayloadReactions(JSON.parse(msgEl.dataset.messageReactions));
+      } catch (e) {}
+    }
 
     var actions = document.createElement('div');
     actions.className = 'msg-actions';
@@ -248,12 +282,30 @@
         });
         picker.appendChild(b);
       });
-      var rect = emojiBtn.getBoundingClientRect();
+
       picker.style.position = 'fixed';
-      picker.style.bottom   = (window.innerHeight - rect.top + 6) + 'px';
-      picker.style.left     = rect.left + 'px';
-      picker.style.zIndex   = '9999';
+      picker.style.left = '0';
+      picker.style.top = '0';
+      picker.style.zIndex = '9999';
       document.body.appendChild(picker);
+
+      var rect = emojiBtn.getBoundingClientRect();
+      var pickerRect = picker.getBoundingClientRect();
+      var margin = 8;
+      var left = rect.left;
+      if (left + pickerRect.width > window.innerWidth - margin) {
+        left = window.innerWidth - pickerRect.width - margin;
+      }
+      if (left < margin) left = margin;
+
+      var top = rect.top - pickerRect.height - 8;
+      if (top < margin) top = rect.bottom + 8;
+      if (top + pickerRect.height > window.innerHeight - margin) {
+        top = Math.max(margin, window.innerHeight - pickerRect.height - margin);
+      }
+
+      picker.style.left = left + 'px';
+      picker.style.top = top + 'px';
     });
 
     actions.append(replyBtn, emojiBtn);

@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260221b" />
+    <link rel="stylesheet" href="styles.css?v=20260222a" />
   </head>
   <body>
     <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
@@ -67,48 +67,45 @@
       <!-- ─── Login card ───────────────────────────── -->
       <section id="loginCard" class="card login-card" aria-label="Login">
 
-        <!-- Hero panel — redesigned as a chat preview mockup -->
+        <!-- Hero panel -->
         <div class="login-hero">
           <p class="eyebrow">Where Moments Connect</p>
-          <h2>Where every moment finds its place.</h2>
-          <p>Add friends, share moments, and stay connected — beautifully, privately, instantly.</p>
+          <h2>Chat faster, cleaner, and more personal.</h2>
+          <p>Novyn keeps your close circle in one place with realtime chat, reactions, and profile presence.</p>
 
-          <!-- Chat bubble mockup visual -->
           <div class="hero-visual" aria-hidden="true">
-            <div class="hero-mock">
-              <!-- Mock chat header -->
-              <div class="mock-header">
-                <div class="mock-avatar" style="background:linear-gradient(135deg,#00e5ff,#7c3aed)">A</div>
-                <div>
-                  <div class="mock-name">Aarav</div>
-                  <div class="mock-status">
-                    <span class="mock-dot"></span>Online
-                  </div>
-                </div>
+            <div class="hero-showcase">
+              <div class="hero-stat-grid">
+                <article class="hero-stat">
+                  <p class="hero-stat-label">Realtime</p>
+                  <p class="hero-stat-value">WebSocket Live</p>
+                  <p class="hero-stat-note">Messages sync instantly</p>
+                </article>
+                <article class="hero-stat">
+                  <p class="hero-stat-label">Presence</p>
+                  <p class="hero-stat-value">Online + Last Seen</p>
+                  <p class="hero-stat-note">Know who is around</p>
+                </article>
+                <article class="hero-stat">
+                  <p class="hero-stat-label">Profiles</p>
+                  <p class="hero-stat-value">Avatar + Bio</p>
+                  <p class="hero-stat-note">Personalized identity</p>
+                </article>
               </div>
-              <!-- Mock messages -->
-              <div class="mock-messages">
-                <div class="mock-msg mock-them">
-                  <div class="mock-bubble">Hey! Did you see the sunset? 🌅</div>
-                  <div class="mock-time">6:41 PM</div>
+              <div class="hero-flow" role="presentation">
+                <div class="hero-flow-step">
+                  <span class="hero-flow-dot"></span>
+                  Add friend
                 </div>
-                <div class="mock-msg mock-me">
-                  <div class="mock-bubble">It was gorgeous 😍 Sent you some pics!</div>
-                  <div class="mock-time">6:42 PM · Delivered</div>
+                <span class="hero-flow-arrow">→</span>
+                <div class="hero-flow-step">
+                  <span class="hero-flow-dot"></span>
+                  Start chat
                 </div>
-                <div class="mock-msg mock-them">
-                  <div class="mock-bubble">
-                    <span class="mock-reaction-row">❤️ 2</span>
-                    Love them! Let's go again tomorrow 🔥
-                  </div>
-                  <div class="mock-time">6:43 PM</div>
-                </div>
-                <!-- Typing indicator -->
-                <div class="mock-typing">
-                  <div class="mock-avatar-sm" style="background:linear-gradient(135deg,#00e5ff,#7c3aed)">A</div>
-                  <div class="mock-dots">
-                    <span></span><span></span><span></span>
-                  </div>
+                <span class="hero-flow-arrow">→</span>
+                <div class="hero-flow-step">
+                  <span class="hero-flow-dot"></span>
+                  React + reply
                 </div>
               </div>
             </div>
@@ -116,8 +113,8 @@
 
           <ul class="feature-list">
             <li>Instant updates via WebSockets</li>
-            <li>Emoji reactions on every message</li>
-            <li>Dark &amp; light themes built in</li>
+            <li>Reactions, replies, and typing indicators</li>
+            <li>Dark &amp; light themes with profile presence</li>
           </ul>
         </div>
 
@@ -171,13 +168,6 @@
               <div class="me-row-text">
                 <p class="eyebrow">Signed in as</p>
                 <h2 id="meName">@you</h2>
-                <button class="profile-inline-btn" data-profile-open type="button" aria-label="Open edit profile">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M12 20h9"/>
-                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
-                  </svg>
-                  Edit profile
-                </button>
               </div>
             </div>
             <div class="me-row-btns">
@@ -226,6 +216,7 @@
             <div class="chat-header-info">
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
+              <p id="activeFriendPresenceLine" class="active-friend-presence">Select a friend to start chatting</p>
             </div>
             <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Unfriend" aria-label="Unfriend">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -290,20 +281,33 @@
         <div class="profile-modal-backdrop"></div>
         <div class="profile-modal-card">
           <div class="profile-modal-header">
-            <h3>Edit Profile</h3>
+            <div class="profile-modal-heading">
+              <p class="profile-modal-eyebrow">Profile Studio</p>
+              <h3>Edit Profile</h3>
+              <p class="profile-modal-subtitle">Customize how friends see you across Novyn.</p>
+            </div>
             <button class="profile-modal-close" id="profileModalClose" aria-label="Close">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>
           </div>
-          <div class="profile-avatar-preview">
-            <div class="profile-avatar-big" id="profileAvatarBig">?</div>
-            <p class="profile-avatar-hint">Choose an avatar below</p>
+          <div class="profile-identity">
+            <div class="profile-avatar-preview">
+              <div class="profile-avatar-big" id="profileAvatarBig">?</div>
+              <p class="profile-avatar-hint">Choose an avatar style</p>
+            </div>
+            <div class="profile-identity-copy">
+              <p class="profile-identity-title">Public identity</p>
+              <p class="profile-identity-desc">Avatar + display name are shown in chats, replies, and friend list cards.</p>
+            </div>
           </div>
-          <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
+          <div class="profile-avatar-grid-wrap">
+            <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
+          </div>
           <div class="profile-fields">
             <div class="profile-field">
               <label for="profileDisplayName">Display Name</label>
               <input id="profileDisplayName" type="text" maxlength="32" placeholder="How friends see you" autocomplete="off"/>
+              <p class="profile-field-help">Leave empty to use your username.</p>
             </div>
             <div class="profile-field-row">
               <div class="profile-field">
@@ -330,7 +334,7 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js?v=20260221b"></script>
-    <script src="chat-extras.js?v=20260221b"></script>
+    <script src="app.js?v=20260222a"></script>
+    <script src="chat-extras.js?v=20260222a"></script>
   </body>
 </html>

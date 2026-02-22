@@ -14,6 +14,7 @@ const friendInput       = document.getElementById("friendInput");
 const requestList       = document.getElementById("requestList");
 const friendList        = document.getElementById("friendList");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
+const activeFriendPresenceLine = document.getElementById("activeFriendPresenceLine");
 const activePresence    = document.getElementById("activePresence");
 const activeFriendAvatar = document.getElementById("activeFriendAvatar");
 const removeFriendBtn   = document.getElementById("removeFriendBtn");
@@ -144,6 +145,63 @@ function prettyTime(iso) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatLastSeen(iso) {
+  if (!iso) return "Offline";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Offline";
+
+  const now = new Date();
+  const timeText = date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  if (date.toDateString() === now.toDateString()) {
+    return `Last seen ${timeText}`;
+  }
+
+  const y = new Date(now);
+  y.setDate(now.getDate() - 1);
+  if (date.toDateString() === y.toDateString()) {
+    return `Last seen yesterday ${timeText}`;
+  }
+
+  const dateText = date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return `Last seen ${dateText}, ${timeText}`;
+}
+
+function cleanDisplayName(value) {
+  return String(value || "").trim();
+}
+
+function getMyDisplayName() {
+  const display = cleanDisplayName(myProfile.displayName);
+  if (display) return display;
+  return me ? `@${me}` : "@you";
+}
+
+function renderMyName() {
+  if (!meName) return;
+  meName.textContent = getMyDisplayName();
+  meName.title = me ? `@${me}` : "";
+}
+
+function getFriendDisplayName(friend) {
+  const fallback = String(friend?.username || "").trim();
+  const display = cleanDisplayName(friend?.displayName);
+  return display || fallback;
+}
+
+function displayDiffersFromUsername(friend) {
+  const username = String(friend?.username || "").trim();
+  const display = cleanDisplayName(friend?.displayName);
+  return Boolean(display) && normalizeName(display) !== normalizeName(username);
+}
+
+function getFriendPresenceText(friend) {
+  const statusText = friend.online ? "Online now" : formatLastSeen(friend.lastSeenAt);
+  if (displayDiffersFromUsername(friend)) {
+    return `${statusText} · @${friend.username}`;
+  }
+  return statusText;
+}
+
 // ─── Typing indicator ─────────────────────────────────────────────────────────
 
 function showTypingIndicator(username) {
@@ -258,7 +316,11 @@ function getMessageStatusText(message) {
 
 function buildMessageMeta(message, mine) {
   const time = prettyTime(message.timestamp);
-  if (!mine) return `${message.from} · ${time}`;
+  if (!mine) {
+    const friend = findFriend(message.from);
+    const senderName = friend ? getFriendDisplayName(friend) : message.from;
+    return `${senderName} · ${time}`;
+  }
   return `${time} · ${getMessageStatusText(message)}`;
 }
 
@@ -270,6 +332,13 @@ function buildMessageElement(message, skipAnimation = false) {
   if (message.id) row.dataset.messageId = message.id;
   row.dataset.messageFrom = message.from;
   row.dataset.messageText = message.text;
+  if (message.reactions && Object.keys(message.reactions).length) {
+    try {
+      row.dataset.messageReactions = JSON.stringify(message.reactions);
+    } catch (_) {
+      // Ignore serialization errors for malformed payloads.
+    }
+  }
 
   const meta        = document.createElement("span");
   meta.className    = "message-meta";
@@ -282,7 +351,10 @@ function buildMessageElement(message, skipAnimation = false) {
     rq.className  = "reply-quote";
     const ra      = document.createElement("span");
     ra.className  = "reply-quote-author";
-    ra.textContent = message.replyTo.from;
+    const replyAuthor = findFriend(message.replyTo.from);
+    ra.textContent = replyAuthor
+      ? getFriendDisplayName(replyAuthor)
+      : message.replyTo.from;
     const rt      = document.createElement("span");
     rt.className  = "reply-quote-text";
     rt.textContent = message.replyTo.text.slice(0, 80) + (message.replyTo.text.length > 80 ? "…" : "");
@@ -395,8 +467,13 @@ function friendPreview(friend) {
   if (!friend.lastMessage) {
     return friend.online ? "Online now" : "No messages yet";
   }
-  const prefix = normalizeName(friend.lastFrom) === normalizeName(me) ? "You: " : "";
-  return `${prefix}${friend.lastMessage}`;
+  if (normalizeName(friend.lastFrom) === normalizeName(me)) {
+    return `You: ${friend.lastMessage}`;
+  }
+  if (friend.lastFrom) {
+    return `${getFriendDisplayName(friend)}: ${friend.lastMessage}`;
+  }
+  return friend.lastMessage;
 }
 
 function findFriend(username) {
@@ -413,16 +490,26 @@ function renderActiveFriendPresence() {
     activeFriendAvatar.classList.remove("online");
     activeFriendAvatar.textContent = "?";
     activeFriendAvatar.style.background = "";
+    if (activeFriendPresenceLine) {
+      activeFriendPresenceLine.textContent = "Select a friend to start chatting";
+      activeFriendPresenceLine.classList.remove("online");
+    }
     return;
   }
 
   const friend = findFriend(activeFriend);
   if (!friend) {
     activePresence.classList.add("hidden");
+    if (activeFriendPresenceLine) {
+      activeFriendPresenceLine.textContent = "Loading contact status...";
+      activeFriendPresenceLine.classList.remove("online");
+    }
     return;
   }
 
   activePresence.classList.remove("hidden");
+  activeFriendLabel.textContent = getFriendDisplayName(friend);
+  activeFriendLabel.title = `@${friend.username}`;
 
   const fallback = friend.username.slice(0, 2).toUpperCase();
   if (friend.avatarId && window._novynAvatarUtils) {
@@ -440,6 +527,11 @@ function renderActiveFriendPresence() {
   activeFriendAvatar.title = friend.online
     ? `${friend.username} is online`
     : `${friend.username} is offline`;
+
+  if (activeFriendPresenceLine) {
+    activeFriendPresenceLine.textContent = getFriendPresenceText(friend);
+    activeFriendPresenceLine.classList.toggle("online", !!friend.online);
+  }
 }
 
 function syncRemoveFriendButton() {
@@ -463,7 +555,7 @@ function setActiveFriend(username) {
 
   activeFriend = username;
   clearReply();
-  activeFriendLabel.textContent = username;
+  activeFriendLabel.textContent = "Loading...";
   renderActiveFriendPresence();
   syncRemoveFriendButton();
   setComposerEnabled(true);
@@ -513,11 +605,19 @@ function renderFriends() {
 
     const name        = document.createElement("span");
     name.className    = "friend-name";
-    name.textContent  = friend.username;
+    name.textContent  = getFriendDisplayName(friend);
+    if (displayDiffersFromUsername(friend)) {
+      name.title = `${getFriendDisplayName(friend)} (@${friend.username})`;
+    } else {
+      name.title = friend.username;
+    }
 
     const preview       = document.createElement("span");
     preview.className   = "friend-preview";
-    preview.textContent = friendPreview(friend);
+    const previewBase = friendPreview(friend);
+    preview.textContent = displayDiffersFromUsername(friend)
+      ? `@${friend.username} · ${previewBase}`
+      : previewBase;
 
     main.append(name, preview);
 
@@ -526,7 +626,8 @@ function renderFriends() {
 
     const status        = document.createElement("span");
     status.className    = `status${friend.online ? " online" : ""}`;
-    status.textContent  = friend.online ? "Online" : "Offline";
+    status.textContent  = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
+    status.title = status.textContent;
     side.appendChild(status);
 
     const unreadCount = Number(friend.unreadCount) || 0;
@@ -647,14 +748,19 @@ socket.on("register_success", (data) => {
   requests     = data.requests || [];
   activeFriend = "";
 
-  meName.textContent = `@${me}`;
   if (data.profile) {
     myProfile.avatarId    = data.profile.avatarId || "";
     myProfile.displayName = data.profile.displayName || "";
     myProfile.age         = data.profile.age || "";
     myProfile.gender      = data.profile.gender || "";
-    window._novynProfile  = myProfile;
+  } else {
+    myProfile.avatarId    = "";
+    myProfile.displayName = "";
+    myProfile.age         = "";
+    myProfile.gender      = "";
   }
+  window._novynProfile  = myProfile;
+  renderMyName();
   applyMyAvatar();
   passwordInput.value           = "";
   activeFriendLabel.textContent = "Select a friend";
@@ -765,7 +871,9 @@ socket.on("private_message", (message) => {
   if (!activeFriend || normalizeName(other) !== normalizeName(activeFriend)) {
     // Message is for a different conversation — just show a toast
     if (normalizeName(message.from) !== normalizeName(me)) {
-      showToast(`💬 ${message.from}: ${message.text.slice(0, 40)}${message.text.length > 40 ? "…" : ""}`);
+      const sender = findFriend(message.from);
+      const senderName = sender ? getFriendDisplayName(sender) : message.from;
+      showToast(`💬 ${senderName}: ${message.text.slice(0, 40)}${message.text.length > 40 ? "…" : ""}`);
     }
     return;
   }
@@ -800,10 +908,10 @@ socket.on("typing", ({ from, isTyping }) => {
   isTyping ? showTypingIndicator(from) : hideTypingIndicator();
 });
 
-socket.on("user_status", ({ username, online }) => {
+socket.on("user_status", ({ username, online, lastSeenAt }) => {
   friends = friends.map((f) =>
     normalizeName(f.username) === normalizeName(username)
-      ? { ...f, online }
+      ? { ...f, online, lastSeenAt: lastSeenAt || f.lastSeenAt || "" }
       : f
   );
   renderFriends();
@@ -847,6 +955,7 @@ socket.on("profile_updated", (data) => {
   myProfile.age         = data.age         || "";
   myProfile.gender      = data.gender      || "";
   window._novynProfile  = myProfile;
+  renderMyName();
   applyMyAvatar();
   showToast("Profile updated ✨");
 });
@@ -876,6 +985,7 @@ window._novynReply = { setReply };
 window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
+renderMyName();
 setTimeout(applyMyAvatar, 200);
 
 if (!socketAvailable) {

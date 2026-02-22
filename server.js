@@ -115,6 +115,7 @@ function createUserRecord(username) {
     age: "",
     gender: "",
     displayName: "",
+    lastSeenAt: "",
   };
 }
 
@@ -133,6 +134,7 @@ function serializeState() {
       age: toDisplayName(user.age),
       gender: toDisplayName(user.gender),
       displayName: toDisplayName(user.displayName),
+      lastSeenAt: toDisplayName(user.lastSeenAt),
     })),
     conversations: Array.from(conversations.entries()).map(([key, messages]) => ({
       key,
@@ -237,6 +239,7 @@ function applyLoadedState(parsed) {
     user.age = toDisplayName(entry.age);
     user.gender = toDisplayName(entry.gender);
     user.displayName = toDisplayName(entry.displayName);
+    user.lastSeenAt = toDisplayName(entry.lastSeenAt);
 
     for (const unreadEntry of entry.unread || []) {
       if (!Array.isArray(unreadEntry) || unreadEntry.length < 2) continue;
@@ -524,6 +527,7 @@ function buildFriendList(forUser) {
       lastFrom: summary.lastFrom,
       avatarId: friend?.avatarId || "",
       displayName: friend?.displayName || "",
+      lastSeenAt: friend?.lastSeenAt || "",
     };
   });
 
@@ -577,6 +581,7 @@ function emitStatusToFriends(username, isOnline) {
     io.to(friendSocket).emit("user_status", {
       username: user.username,
       online: isOnline,
+      lastSeenAt: user.lastSeenAt || null,
     });
   }
 }
@@ -741,6 +746,7 @@ io.on("connection", (socket) => {
     }
 
     user.username = username;
+    user.lastSeenAt = "";
 
     socket.data.userKey = userKey;
     socket.data.activeChatWith = null;
@@ -1141,10 +1147,13 @@ io.on("connection", (socket) => {
             });
           }
         }
+
+        user.lastSeenAt = nowIso();
       }
 
       onlineUsers.delete(userKey);
       emitStatusToFriends(userKey, false);
+      schedulePersist();
     }
   });
 });
