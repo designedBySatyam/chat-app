@@ -31,6 +31,8 @@ const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
 const sendButton        = messageForm.querySelector("button");
+const messageSearchToggle = document.getElementById("messageSearchToggle");
+const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
@@ -40,6 +42,7 @@ let activeFriend = "";
 let friends      = [];
 let requests     = [];
 let replyTo      = null;
+let searchPanelOpen = false;
 let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
 let conversationMessages = [];
 window._novynProfile = myProfile;
@@ -403,6 +406,35 @@ function getSearchQuery() {
   return normalizeSearchText(messageSearchInput ? messageSearchInput.value : "");
 }
 
+function syncMessageSearchUi() {
+  const queryActive = Boolean(getSearchQuery());
+
+  if (messageSearchPanel) {
+    messageSearchPanel.classList.toggle("hidden", !searchPanelOpen);
+  }
+
+  if (messageSearchToggle) {
+    messageSearchToggle.classList.toggle("active", queryActive || searchPanelOpen);
+    messageSearchToggle.setAttribute("aria-expanded", searchPanelOpen ? "true" : "false");
+    messageSearchToggle.title = queryActive ? "Search active" : "Search messages";
+  }
+}
+
+function openMessageSearchPanel() {
+  if (!messageSearchPanel) return;
+  searchPanelOpen = true;
+  syncMessageSearchUi();
+  if (messageSearchInput) {
+    messageSearchInput.focus();
+    messageSearchInput.select();
+  }
+}
+
+function closeMessageSearchPanel() {
+  searchPanelOpen = false;
+  syncMessageSearchUi();
+}
+
 function shouldAutoScrollForMessage(message, skipAnimation = false) {
   if (skipAnimation) return true;
   if (getSearchQuery()) return false;
@@ -419,6 +451,7 @@ function shouldAutoScrollForMessage(message, skipAnimation = false) {
 
 function resetMessageSearch() {
   if (messageSearchInput) messageSearchInput.value = "";
+  closeMessageSearchPanel();
   applyMessageSearch();
 }
 
@@ -460,6 +493,8 @@ function applyMessageSearch() {
       messageSearchCount.textContent = `${visibleCount}/${total} match${visibleCount === 1 ? "" : "es"}`;
     }
   }
+
+  syncMessageSearchUi();
 }
 
 // ─── Reply UI ─────────────────────────────────────────────────────────────────
@@ -1188,6 +1223,19 @@ messageInput.addEventListener("input", () => {
 if (messageSearchInput) {
   messageSearchInput.addEventListener("input", applyMessageSearch);
 }
+if (messageSearchToggle) {
+  messageSearchToggle.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (searchPanelOpen) {
+      closeMessageSearchPanel();
+    } else {
+      openMessageSearchPanel();
+    }
+  });
+}
+if (messageSearchPanel) {
+  messageSearchPanel.addEventListener("click", (e) => e.stopPropagation());
+}
 if (messageSearchClear) {
   messageSearchClear.addEventListener("click", () => {
     if (messageSearchInput) messageSearchInput.value = "";
@@ -1195,6 +1243,26 @@ if (messageSearchClear) {
     if (messageSearchInput) messageSearchInput.focus();
   });
 }
+document.addEventListener("click", () => {
+  if (searchPanelOpen) closeMessageSearchPanel();
+});
+document.addEventListener("keydown", (e) => {
+  const isFindShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f";
+  if (isFindShortcut) {
+    e.preventDefault();
+    openMessageSearchPanel();
+    return;
+  }
+
+  if (e.key === "Escape" && searchPanelOpen) {
+    if (getSearchQuery()) {
+      if (messageSearchInput) messageSearchInput.value = "";
+      applyMessageSearch();
+      return;
+    }
+    closeMessageSearchPanel();
+  }
+});
 
 // Stop typing indicator when input loses focus
 messageInput.addEventListener("blur", () => stopLocalTyping());
@@ -1475,6 +1543,7 @@ socket.on("message_deleted", (payload) => {
 setComposerEnabled(false);
 renderActiveFriendPresence();
 syncRemoveFriendButton();
+syncMessageSearchUi();
 if (messagesEl) {
   messagesEl.addEventListener("scroll", () => {
     scrollState.pinnedToBottom = isNearBottom();

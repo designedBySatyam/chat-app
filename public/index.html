@@ -7,7 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260223a" />
+    <link rel="stylesheet" href="styles.css?v=20260223b" />
   </head>
   <body>
     <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
@@ -218,6 +218,12 @@
               <h2 id="activeFriendLabel">Select a friend</h2>
               <p id="activeFriendPresenceLine" class="active-friend-presence">Select a friend to start chatting</p>
             </div>
+            <button id="messageSearchToggle" class="search-toggle-btn" type="button" title="Search messages" aria-label="Search messages" aria-expanded="false">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+            </button>
             <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Unfriend" aria-label="Unfriend">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -229,12 +235,8 @@
             <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
           </header>
 
-          <div class="chat-tools" aria-label="Conversation tools">
-            <div class="chat-search">
-              <svg class="chat-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
+          <div id="messageSearchPanel" class="chat-search-popover hidden" aria-label="Conversation search">
+            <div class="chat-search-popover-row">
               <input id="messageSearchInput" type="text" placeholder="Search in this chat" autocomplete="off" />
               <button id="messageSearchClear" type="button" aria-label="Clear search">Clear</button>
             </div>
@@ -351,7 +353,7 @@
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js?v=20260223a"></script>
+    <script src="app.js?v=20260223b"></script>
     <script src="chat-extras.js?v=20260223a"></script>
   </body>
 </html>
