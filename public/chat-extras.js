@@ -493,4 +493,3 @@
   // Expose avatar utils for app.js
   window._novynAvatarUtils = { getAvatarById: getAvatarById, applyAvatarToEl: applyAvatarToEl, AVATARS: AVATARS };
 })();
-

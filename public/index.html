@@ -6,12 +6,15 @@
     <title>Novyn — Where Moments Connect</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="styles.css?v=20260223d" />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Serif+Display:ital@0;1&display=swap" rel="stylesheet" />
+    <!-- Inline favicon using the Novyn logo SVG -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 42 42'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='42' y2='42' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%2300e5ff'/%3E%3Cstop offset='100%25' stop-color='%237c3aed'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='42' height='42' rx='13' fill='url(%23g)'/%3E%3Ccircle cx='21' cy='21' r='6' fill='none' stroke='white' stroke-width='2'/%3E%3Ccircle cx='21' cy='21' r='3' fill='white'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="bg-shape bg-shape-one" aria-hidden="true"></div>
     <div class="bg-shape bg-shape-two" aria-hidden="true"></div>
+    <div class="bg-shape bg-shape-three" aria-hidden="true"></div>
     <div class="grain-layer" aria-hidden="true"></div>
 
     <main class="app-shell">
@@ -22,17 +25,17 @@
           <svg class="brand-logo" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Novyn logo" role="img">
             <defs>
               <linearGradient id="lg1" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stop-color="#00e5ff"/>
-                <stop offset="100%" stop-color="#7c3aed"/>
+                <stop offset="0%" stop-color="#a78bfa"/>
+                <stop offset="100%" stop-color="#ec4899"/>
               </linearGradient>
             </defs>
             <rect width="42" height="42" rx="13" fill="url(#lg1)"/>
-            <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,8,15,0.52)"/>
-            <circle class="brand-logo-ring" cx="21" cy="21" r="6"  fill="none" stroke="#00e5ff" stroke-width="2"/>
-            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#00e5ff" stroke-width="1.5" opacity="0.7"/>
-            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#00e5ff" stroke-width="1"   opacity="0.4"/>
-            <circle cx="21" cy="21" r="3" fill="#00e5ff"/>
-            <circle cx="15" cy="13" r="2.5" fill="rgba(255,255,255,0.28)"/>
+            <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,4,15,0.55)"/>
+            <circle class="brand-logo-ring" cx="21" cy="21" r="6"  fill="none" stroke="#c4b5fd" stroke-width="2"/>
+            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#c4b5fd" stroke-width="1.5" opacity="0.6"/>
+            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#c4b5fd" stroke-width="1"   opacity="0.3"/>
+            <circle cx="21" cy="21" r="3" fill="#e9d5ff"/>
+            <circle cx="15" cy="13" r="2" fill="rgba(255,255,255,0.22)"/>
           </svg>
           <div>
             <p class="eyebrow">Where Moments Connect</p>
@@ -48,11 +51,11 @@
           <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
             <span class="theme-toggle-thumb">
               <svg class="icon-moon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#c8d7ff" stroke="#c8d7ff" stroke-width="0.5" stroke-linejoin="round"/>
+                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#c4b5fd" stroke="#c4b5fd" stroke-width="0.5" stroke-linejoin="round"/>
               </svg>
               <svg class="icon-sun" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="6" cy="6" r="2.5" fill="#f9a825"/>
-                <g stroke="#f9a825" stroke-width="1" stroke-linecap="round">
+                <circle cx="6" cy="6" r="2.5" fill="#f59e0b"/>
+                <g stroke="#f59e0b" stroke-width="1" stroke-linecap="round">
                   <line x1="6" y1="0.5" x2="6" y2="2"/><line x1="6" y1="10" x2="6" y2="11.5"/>
                   <line x1="0.5" y1="6" x2="2" y2="6"/><line x1="10" y1="6" x2="11.5" y2="6"/>
                   <line x1="2.05" y1="2.05" x2="3.1" y2="3.1"/><line x1="8.9" y1="8.9" x2="9.95" y2="9.95"/>
@@ -69,81 +72,117 @@
 
         <!-- Hero panel -->
         <div class="login-hero">
-          <p class="eyebrow">Where Moments Connect</p>
-          <h2>Chat faster, cleaner, and more personal.</h2>
-          <p>Novyn keeps your close circle in one place with realtime chat, reactions, and profile presence.</p>
+          <!-- Decorative orbs inside hero -->
+          <div class="hero-orb hero-orb-1" aria-hidden="true"></div>
+          <div class="hero-orb hero-orb-2" aria-hidden="true"></div>
 
-          <div class="hero-visual" aria-hidden="true">
-            <div class="hero-showcase">
-              <div class="hero-stat-grid">
-                <article class="hero-stat">
-                  <p class="hero-stat-label">Realtime</p>
-                  <p class="hero-stat-value">WebSocket Live</p>
-                  <p class="hero-stat-note">Messages sync instantly</p>
-                </article>
-                <article class="hero-stat">
-                  <p class="hero-stat-label">Presence</p>
-                  <p class="hero-stat-value">Online + Last Seen</p>
-                  <p class="hero-stat-note">Know who is around</p>
-                </article>
-                <article class="hero-stat">
-                  <p class="hero-stat-label">Profiles</p>
-                  <p class="hero-stat-value">Avatar + Bio</p>
-                  <p class="hero-stat-note">Personalized identity</p>
-                </article>
+          <div class="hero-top">
+            <p class="eyebrow hero-eyebrow">✦ Private &amp; Realtime</p>
+            <h2 class="hero-headline">
+              Chat that feels<br/>
+              <em>alive.</em>
+            </h2>
+            <p class="hero-sub">Your close circle, one place. Reactions, replies, live presence — no noise, no algorithms.</p>
+          </div>
+
+          <!-- Mock chat preview — the app, shown in the app -->
+          <div class="hero-chat-preview" aria-hidden="true">
+            <div class="hcp-bar">
+              <div class="hcp-avatar hcp-av-a">🦊</div>
+              <div class="hcp-bar-info">
+                <span class="hcp-name">Maya</span>
+                <span class="hcp-presence">● Online now</span>
               </div>
-              <div class="hero-flow" role="presentation">
-                <div class="hero-flow-step">
-                  <span class="hero-flow-dot"></span>
-                  Add friend
-                </div>
-                <span class="hero-flow-arrow">→</span>
-                <div class="hero-flow-step">
-                  <span class="hero-flow-dot"></span>
-                  Start chat
-                </div>
-                <span class="hero-flow-arrow">→</span>
-                <div class="hero-flow-step">
-                  <span class="hero-flow-dot"></span>
-                  React + reply
-                </div>
+            </div>
+            <div class="hcp-messages">
+              <div class="hcp-msg hcp-them">
+                <div class="hcp-bubble">you free tonight? 🌙</div>
+                <span class="hcp-time">8:42 PM</span>
               </div>
+              <div class="hcp-msg hcp-me">
+                <div class="hcp-bubble">yeah! what's the plan 👀</div>
+                <span class="hcp-time">8:43 PM ✓✓</span>
+              </div>
+              <div class="hcp-msg hcp-them">
+                <div class="hcp-bubble">rooftop + pizza. classic 🍕🔥</div>
+                <span class="hcp-time">8:43 PM</span>
+              </div>
+              <div class="hcp-msg hcp-me">
+                <div class="hcp-bubble">say less, I'm in 🙌</div>
+                <span class="hcp-time">8:44 PM ✓✓</span>
+              </div>
+              <div class="hcp-reaction-row">
+                <span class="hcp-reaction">🔥 2</span>
+                <span class="hcp-reaction hcp-reaction-mine">🙌 1</span>
+              </div>
+            </div>
+            <div class="hcp-typing">
+              <div class="hcp-typing-dots">
+                <span></span><span></span><span></span>
+              </div>
+              <span class="hcp-typing-label">Maya is typing</span>
             </div>
           </div>
 
-          <ul class="feature-list">
-            <li>Instant updates via WebSockets</li>
-            <li>Reactions, replies, and typing indicators</li>
-            <li>Dark &amp; light themes with profile presence</li>
-          </ul>
+          <!-- Feature pills at bottom -->
+          <div class="hero-pills">
+            <span class="hero-pill">⚡ Instant sync</span>
+            <span class="hero-pill">💬 Reactions &amp; replies</span>
+            <span class="hero-pill">👁 Live presence</span>
+            <span class="hero-pill">🎨 Custom profiles</span>
+          </div>
         </div>
 
         <!-- Login form panel -->
         <div class="login-panel">
-          <div class="login-panel-logo" aria-hidden="true">
-            <svg viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" width="48" height="48">
+          <div class="login-panel-header">
+            <svg class="login-logo-mark" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" width="40" height="40" aria-hidden="true">
               <defs>
                 <linearGradient id="lg2" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-                  <stop offset="0%" stop-color="#00e5ff"/>
-                  <stop offset="100%" stop-color="#7c3aed"/>
+                  <stop offset="0%" stop-color="#a78bfa"/>
+                  <stop offset="100%" stop-color="#ec4899"/>
                 </linearGradient>
               </defs>
               <rect width="42" height="42" rx="13" fill="url(#lg2)"/>
-              <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,8,15,0.52)"/>
-              <circle cx="21" cy="21" r="6"  fill="none" stroke="#00e5ff" stroke-width="2"/>
-              <circle cx="21" cy="21" r="10" fill="none" stroke="#00e5ff" stroke-width="1.5" opacity="0.7"/>
-              <circle cx="21" cy="21" r="3" fill="#00e5ff"/>
+              <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,4,15,0.52)"/>
+              <circle cx="21" cy="21" r="6"  fill="none" stroke="#c4b5fd" stroke-width="2"/>
+              <circle cx="21" cy="21" r="10" fill="none" stroke="#c4b5fd" stroke-width="1.5" opacity="0.7"/>
+              <circle cx="21" cy="21" r="3" fill="#e9d5ff"/>
             </svg>
+            <div>
+              <h3>Welcome to Novyn</h3>
+              <p class="login-panel-sub">New here? Just pick a username — we'll create your account.</p>
+            </div>
           </div>
-          <h3>Join Novyn</h3>
-          <p>New username creates an account. Existing username requires your password.</p>
+
           <form id="loginForm" novalidate>
-            <input id="usernameInput" type="text"     maxlength="24"        placeholder="Username"  autocomplete="username"          required/>
-            <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="Password" autocomplete="current-password" required/>
-            <button type="submit">Enter Novyn →</button>
+            <div class="input-group">
+              <label for="usernameInput" class="input-label">Username</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                <input id="usernameInput" type="text" maxlength="24" placeholder="your_username" autocomplete="username" required/>
+              </div>
+            </div>
+            <div class="input-group">
+              <label for="passwordInput" class="input-label">Password</label>
+              <div class="input-wrap">
+                <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="••••••••" autocomplete="current-password" required/>
+              </div>
+            </div>
+            <button type="submit" id="loginBtn" class="login-btn">
+              <span class="login-btn-text">Enter Novyn</span>
+              <svg class="login-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+              <span class="login-btn-spinner hidden" aria-hidden="true"></span>
+            </button>
           </form>
-          <p class="login-footnote">🔒 Encrypted password storage &amp; secure session handling.</p>
-          <p   id="usernameHint"        class="username-hint hidden"></p>
+
+          <p class="login-footnote">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            Passwords are encrypted. Sessions are secure.
+          </p>
+
+          <p id="usernameHint" class="username-hint hidden"></p>
           <div id="usernameSuggestions" class="username-suggestions hidden"></div>
         </div>
       </section>
@@ -182,8 +221,11 @@
           </div>
 
           <form id="addFriendForm" class="add-friend-form">
-            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username" autocomplete="off" required/>
-            <button type="submit">Add</button>
+            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username…" autocomplete="off" required/>
+            <button type="submit">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add
+            </button>
           </form>
 
           <div class="list-panel" aria-label="Friend requests">
@@ -218,26 +260,28 @@
               <h2 id="activeFriendLabel">Select a friend</h2>
               <p id="activeFriendPresenceLine" class="active-friend-presence">Select a friend to start chatting</p>
             </div>
-            <button id="messageSearchToggle" class="search-toggle-btn" type="button" title="Search messages" aria-label="Search messages" aria-expanded="false">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="7"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-            </button>
-            <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Unfriend" aria-label="Unfriend">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="8.5" cy="7" r="4"/>
-                <line x1="17" y1="11" x2="23" y2="11"/>
-              </svg>
-              <span>Unfriend</span>
-            </button>
-            <span id="onlineCount" class="mini-stat" aria-live="polite">0 online</span>
+            <div class="chat-header-actions">
+              <button id="messageSearchToggle" class="icon-btn" type="button" title="Search messages" aria-label="Search messages" aria-expanded="false">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="7"></circle>
+                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+              </button>
+              <button id="removeFriendBtn" class="remove-friend-btn hidden" type="button" title="Unfriend" aria-label="Unfriend">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="8.5" cy="7" r="4"/>
+                  <line x1="17" y1="11" x2="23" y2="11"/>
+                </svg>
+                <span>Unfriend</span>
+              </button>
+              <span id="onlineCount" class="online-count-pill" aria-live="polite">0 online</span>
+            </div>
           </header>
 
           <div id="messageSearchPanel" class="chat-search-popover hidden" aria-label="Conversation search">
             <div class="chat-search-popover-row">
-              <input id="messageSearchInput" type="text" placeholder="Search in this chat" autocomplete="off" />
+              <input id="messageSearchInput" type="text" placeholder="Search messages…" autocomplete="off" />
               <button id="messageSearchClear" type="button" aria-label="Clear search">Clear</button>
             </div>
             <span id="messageSearchCount" class="chat-search-count hidden" aria-live="polite"></span>
@@ -246,7 +290,15 @@
           <!-- Scroll container + FAB -->
           <div class="messages-wrap">
             <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Messages">
-              <div class="messages-empty">Choose a friend to load your conversation.</div>
+              <div class="messages-empty">
+                <div class="messages-empty-icon" aria-hidden="true">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </div>
+                <p class="messages-empty-title">No conversation open</p>
+                <p class="messages-empty-sub">Pick a friend from the sidebar to start chatting.</p>
+              </div>
             </div>
             <button class="scroll-btn" id="scrollBtn" aria-label="Scroll to latest messages">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
@@ -264,7 +316,7 @@
           </div>
 
           <div class="message-form-wrap">
-          <form id="messageForm" class="message-form" autocomplete="off">
+            <form id="messageForm" class="message-form" autocomplete="off">
               <input
                 id="messageInput"
                 name="chatMessage"
@@ -281,7 +333,7 @@
               />
               <button type="submit">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
-                Send
+                <span>Send</span>
               </button>
             </form>
             <div class="char-counter hidden" id="charCounter" aria-live="polite" aria-atomic="true">0 / 1000</div>
@@ -349,11 +401,27 @@
         </div>
       </div>
 
+      <!-- ─── Unfriend confirm modal ─────────────── -->
+      <div id="unfriendModal" class="confirm-modal" style="display:none;" role="dialog" aria-modal="true" aria-label="Confirm unfriend">
+        <div class="confirm-modal-backdrop"></div>
+        <div class="confirm-modal-card">
+          <div class="confirm-modal-icon" aria-hidden="true">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="17" y1="11" x2="23" y2="11"/></svg>
+          </div>
+          <h3 id="unfriendModalTitle">Unfriend?</h3>
+          <p id="unfriendModalDesc" class="confirm-modal-desc">This will also clear your chat history with this person.</p>
+          <div class="confirm-modal-btns">
+            <button class="confirm-modal-cancel" id="unfriendCancel">Cancel</button>
+            <button class="confirm-modal-confirm" id="unfriendConfirm">Yes, Unfriend</button>
+          </div>
+        </div>
+      </div>
+
       <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
     </main>
 
     <script src="/socket.io/socket.io.js"></script>
-    <script src="app.js?v=20260223c"></script>
-    <script src="chat-extras.js?v=20260223a"></script>
+    <script src="app.js"></script>
+    <script src="chat-extras.js"></script>
   </body>
 </html>

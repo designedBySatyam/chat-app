@@ -196,11 +196,11 @@ function setNetworkState(label, state) {
 
 function showToast(message, type = "info") {
   toast.textContent = message;
-  toast.classList.remove("hidden", "error");
-  if (type === "error") toast.classList.add("error");
+  toast.classList.remove("hidden", "error", "success");
+  if (type === "error")   toast.classList.add("error");
+  if (type === "success") toast.classList.add("success");
 
   clearTimeout(showToast._timer);
-  // Auto-hide after 2.8 s
   showToast._timer = setTimeout(() => {
     toast.classList.add("hidden");
   }, 2800);
@@ -315,7 +315,7 @@ function getFriendPresenceText(friend) {
 
 function showTypingIndicator(username) {
   if (!typingIndicator || !typingText) return;
-  typingText.textContent = `${username} is typing`;
+  const typingFriend = findFriend(username); typingText.textContent = `${typingFriend ? getFriendDisplayName(typingFriend) : username} is typing`;
   typingIndicator.classList.remove("hidden");
   // If user is near bottom, scroll down to keep typing dots visible
   if (isNearBottom()) scrollToBottom();
@@ -1138,12 +1138,27 @@ function renderFriends() {
 
 // ─── Form handlers ────────────────────────────────────────────────────────────
 
+// ─── Login button spinner helpers ────────────────────────────────────────────
+const loginBtn = document.getElementById("loginBtn");
+const loginBtnText = loginBtn ? loginBtn.querySelector(".login-btn-text") : null;
+const loginBtnArrow = loginBtn ? loginBtn.querySelector(".login-btn-arrow") : null;
+const loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") : null;
+
+function setLoginLoading(isLoading) {
+  if (!loginBtn) return;
+  loginBtn.disabled = isLoading;
+  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering…" : "Enter Novyn";
+  if (loginBtnArrow)   loginBtnArrow.classList.toggle("hidden", isLoading);
+  if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
+}
+
 loginForm.addEventListener("submit", (e) => {
   e.preventDefault();
   clearUsernameSuggestions();
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username || !password) return;
+  setLoginLoading(true);
   socket.emit("register", { username, password });
 });
 
@@ -1155,19 +1170,52 @@ addFriendForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const val = friendInput.value.trim();
   if (!val) return;
+  if (me && normalizeName(val) === normalizeName(me)) {
+    showToast("You can't add yourself!", "error");
+    return;
+  }
   socket.emit("add_friend", val);
   friendInput.value = "";
+});
+
+// ─── Custom unfriend confirm modal ────────────────────────────────────────────
+const unfriendModal  = document.getElementById("unfriendModal");
+const unfriendCancel  = document.getElementById("unfriendCancel");
+const unfriendConfirm = document.getElementById("unfriendConfirm");
+const unfriendModalTitle = document.getElementById("unfriendModalTitle");
+const unfriendModalDesc  = document.getElementById("unfriendModalDesc");
+let pendingUnfriendTarget = "";
+
+function showUnfriendModal(target) {
+  pendingUnfriendTarget = target;
+  if (unfriendModalTitle) unfriendModalTitle.textContent = `Unfriend @${target}?`;
+  if (unfriendModalDesc)  unfriendModalDesc.textContent  = `This will also clear your chat history with @${target}.`;
+  if (unfriendModal) unfriendModal.style.display = "flex";
+}
+function hideUnfriendModal() {
+  if (unfriendModal) unfriendModal.style.display = "none";
+  pendingUnfriendTarget = "";
+}
+
+if (unfriendCancel)  unfriendCancel.addEventListener("click", hideUnfriendModal);
+if (unfriendConfirm) unfriendConfirm.addEventListener("click", () => {
+  if (pendingUnfriendTarget) socket.emit("remove_friend", pendingUnfriendTarget);
+  hideUnfriendModal();
+});
+if (unfriendModal) {
+  unfriendModal.querySelector(".confirm-modal-backdrop")
+    ?.addEventListener("click", hideUnfriendModal);
+}
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && unfriendModal && unfriendModal.style.display !== "none") {
+    hideUnfriendModal();
+  }
 });
 
 if (removeFriendBtn) {
   removeFriendBtn.addEventListener("click", () => {
     if (!activeFriend) return;
-    const target = activeFriend;
-    const approved = window.confirm(
-      `Unfriend @${target}?\n\nThis also clears your chat history with this user.`
-    );
-    if (!approved) return;
-    socket.emit("remove_friend", target);
+    showUnfriendModal(activeFriend);
   });
 }
 
@@ -1268,7 +1316,7 @@ messageInput.addEventListener("blur", () => stopLocalTyping());
 
 // Allow Shift+Enter to send (optional quality-of-life)
 messageInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey) {
+  if (e.key === "Enter" && !e.shiftKey && !messageInput.disabled) {
     e.preventDefault();
     sendActiveMessage();
   }
@@ -1307,19 +1355,21 @@ socket.on("register_success", (data) => {
   chatLayout.classList.remove("hidden");
 
   clearUsernameSuggestions();
+  setLoginLoading(false);
   setComposerEnabled(false);
   renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
   setNetworkState("Connected", "connected");
 
   renderRequests();
   renderFriends();
-  showToast(`Welcome to Novyn, @${me}! ✨`);
+  showToast(`Welcome to Novyn, @${me}! ✨`, "success");
 });
 
 socket.on("username_unavailable", (data) => {
   const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
   showUsernameSuggestions(requested, suggestions);
+  setLoginLoading(false);
   showToast("Username already taken.", "error");
 });
 
@@ -1329,11 +1379,12 @@ socket.on("auth_failed", (data) => {
   if (Array.isArray(suggestions) && suggestions.length) {
     showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
   }
+  setLoginLoading(false);
   showToast(message, "error");
 });
 
 socket.on("friend_request_received", (data) => {
-  showToast(`${data.from} sent you a friend request`);
+  showToast(`💬 ${data.from} sent you a friend request`);
   if (!requests.includes(data.from)) {
     requests = [...requests, data.from];
     renderRequests();
@@ -1342,7 +1393,7 @@ socket.on("friend_request_received", (data) => {
 });
 
 socket.on("friend_request_sent", (data) => {
-  showToast(`Request sent to ${data.to}`);
+  showToast(`✓ Request sent to ${data.to}`, "success");
 });
 
 socket.on("requests_updated", (data) => {
@@ -1351,7 +1402,7 @@ socket.on("requests_updated", (data) => {
 });
 
 socket.on("friend_request_accepted", (data) => {
-  showToast(`${data.by} is now your friend 🎉`);
+  showToast(`🎉 ${data.by} is now your friend!`, "success");
 });
 
 socket.on("friend_list_updated", (data) => {
@@ -1510,7 +1561,7 @@ socket.on("profile_updated", (data) => {
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
-  showToast("Profile updated ✨");
+  showToast("Profile updated ✨", "success");
 });
 
 socket.on("friend_profile_updated", (data) => {
