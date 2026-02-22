@@ -55,6 +55,7 @@ const localTyping = {
 const scrollState = {
   pinnedToBottom: true,
 };
+const EMPTY_CONVERSATION_HINT = "Choose a friend to load your conversation.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -856,9 +857,7 @@ function setComposerEnabled(isEnabled) {
     hideTypingIndicator();
   }
 
-  messageInput.placeholder = isEnabled
-    ? "Type a message…"
-    : "Select a friend to start chatting";
+  messageInput.placeholder = "Type a message…";
 }
 
 function renderMessages(messages) {
@@ -1309,7 +1308,7 @@ socket.on("register_success", (data) => {
 
   clearUsernameSuggestions();
   setComposerEnabled(false);
-  renderMessagesEmptyState("Choose a friend to load your conversation.");
+  renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
   setNetworkState("Connected", "connected");
 
   renderRequests();
@@ -1368,7 +1367,7 @@ socket.on("friend_list_updated", (data) => {
       conversationMessages          = [];
       activeFriendLabel.textContent = "Select a friend";
       setComposerEnabled(false);
-      renderMessagesEmptyState("Choose a friend to load your conversation.");
+      renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
       resetMessageSearch();
       renderActiveFriendPresence();
       syncRemoveFriendButton();
@@ -1391,7 +1390,7 @@ socket.on("friend_removed", (data) => {
     activeFriendLabel.textContent = "Select a friend";
     setComposerEnabled(false);
     hideTypingIndicator();
-    renderMessagesEmptyState("Choose a friend to load your conversation.");
+    renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
     resetMessageSearch();
     renderActiveFriendPresence();
     syncRemoveFriendButton();
