@@ -1,0 +1,69 @@
+{
+  "users": [
+    {
+      "key": "satyam",
+      "username": "satyam",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "ca4f7fbda9aab9be49336fd1b1f57651",
+      "passwordHash": "f6dfa6d81d897e23f8ebe8326777574c8273617195e280c10c4a4a265adb71857526b42cb5a028925a869fb572994284d85a91a571d7a353a36e1cb67fea72d4",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-02-26T13:05:38.908Z"
+    },
+    {
+      "key": "test",
+      "username": "test",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "d426a406a481a70a338d334395c606fa",
+      "passwordHash": "ccca4037a9ba9c0b824f65d163590dde8de3ef2a89f8c8b62ad2e4c7302be0eddbb3566328953f6ad87126e2971d5d09f83d9d34a80fb426129174954df5d471",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-02-26T13:46:41.748Z"
+    },
+    {
+      "key": "sdas",
+      "username": "sdas",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "1bd8b23bb8c5c4bcac122d2ff4ecef2c",
+      "passwordHash": "7752563812ae1a341d3260bd7a501e40832319b4f24f1f4fd515c9e6d6dc37d8c9d2dbb9a48dfa5a871fdc5d66a8afa0d02d42b3219b315722b661d76972517a",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-02-26T13:48:05.752Z"
+    },
+    {
+      "key": "rewewe",
+      "username": "rewewe",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "4aeca583f13359910c7e3043200c4635",
+      "passwordHash": "65c8bcc015e3fc9623c563e3ab295986e0f77981e7f720e61d86023fc969910f46c3f24c05b5902de8847467363c7342e03655c62be69c2d4509725b27e39ec4",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-02-26T13:50:38.921Z"
+    }
+  ],
+  "conversations": []
+}
