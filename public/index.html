@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -6,13 +6,13 @@
     <meta name="theme-color" content="#020510" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <title>Novyn — Where Moments Connect</title>
+    <title>Novyn � Where Moments Connect</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
-    <link rel="icon" type="image/svg+xml" href="/icons/novyn-logo.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icons/novyn-icon.svg" />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -28,18 +28,10 @@
 
     <main class="app-shell">
 
-      <!-- ─── Top bar ──────────────────────────────── -->
+      <!-- --- Top bar -------------------------------- -->
       <header class="app-topbar">
         <div class="brand">
-          <!-- 3D logo mark -->
-          <div class="logo-3d" aria-label="Novyn logo" role="img">
-            <div class="logo-face logo-top"></div>
-            <div class="logo-face logo-front"></div>
-            <div class="logo-face logo-right"></div>
-            <div class="logo-core"></div>
-            <div class="logo-ring r1"></div>
-            <div class="logo-ring r2"></div>
-          </div>
+          <img class="brand-logo-img" src="/icons/novyn-icon.svg" alt="Novyn logo" />
           <div class="brand-text">
             <h1 class="brand-name">Novyn</h1>
             <p class="brand-tag">Where Moments Connect</p>
@@ -62,7 +54,7 @@
         <div class="topbar-right">
           <div id="networkPill" class="network-pill" role="status" aria-live="polite">
             <span class="signal-dot" aria-hidden="true"></span>
-            <span id="connectionLabel">Connecting…</span>
+            <span id="connectionLabel">Connecting�</span>
           </div>
           <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode">
             <span class="theme-icon moon">
@@ -75,7 +67,7 @@
         </div>
       </header>
 
-      <!-- ─── Login card ───────────────────────────── -->
+      <!-- --- Login card ----------------------------- -->
       <section id="loginCard" class="login-card" aria-label="Login">
 
         <!-- Left: hero panel -->
@@ -91,7 +83,7 @@
               Chat that feels<br/>
               <em class="headline-em">alive.</em>
             </h2>
-            <p class="hero-sub">Your close circle, one space. Reactions, replies, live presence — no noise, no algorithm.</p>
+            <p class="hero-sub">Your close circle, one space. Reactions, replies, live presence � no noise, no algorithm.</p>
 
             <!-- 3D feature icons row -->
             <div class="hero-features">
@@ -133,7 +125,7 @@
           <!-- Mock chat preview -->
           <div class="hero-chat-preview" aria-hidden="true">
             <div class="hcp-bar">
-              <div class="hcp-avatar">🦊</div>
+              <div class="hcp-avatar">??</div>
               <div class="hcp-info">
                 <span class="hcp-name">Maya</span>
                 <span class="hcp-presence">
@@ -143,11 +135,11 @@
               </div>
             </div>
             <div class="hcp-messages">
-              <div class="hcp-msg them"><div class="hcp-bubble">you free tonight? 🌙</div><span class="hcp-time">8:42 PM</span></div>
-              <div class="hcp-msg me"><div class="hcp-bubble">yeah! what's the plan 👀</div><span class="hcp-time">8:43 PM ✓✓</span></div>
-              <div class="hcp-msg them"><div class="hcp-bubble">rooftop + pizza. classic 🍕🔥</div><span class="hcp-time">8:43 PM</span></div>
-              <div class="hcp-msg me"><div class="hcp-bubble">say less, I'm in 🙌</div><span class="hcp-time">8:44 PM ✓✓</span></div>
-              <div class="hcp-reactions"><span class="hcp-react">🔥 2</span><span class="hcp-react mine">🙌 1</span></div>
+              <div class="hcp-msg them"><div class="hcp-bubble">you free tonight? ??</div><span class="hcp-time">8:42 PM</span></div>
+              <div class="hcp-msg me"><div class="hcp-bubble">yeah! what's the plan ??</div><span class="hcp-time">8:43 PM ??</span></div>
+              <div class="hcp-msg them"><div class="hcp-bubble">rooftop + pizza. classic ????</div><span class="hcp-time">8:43 PM</span></div>
+              <div class="hcp-msg me"><div class="hcp-bubble">say less, I'm in ??</div><span class="hcp-time">8:44 PM ??</span></div>
+              <div class="hcp-reactions"><span class="hcp-react">?? 2</span><span class="hcp-react mine">?? 1</span></div>
             </div>
             <div class="hcp-typing">
               <span></span><span></span><span></span>
@@ -161,12 +153,7 @@
           <div class="login-panel-inner">
             <div class="login-header">
               <div class="login-logo-wrap">
-                <div class="login-logo-3d">
-                  <div class="ll-face ll-top"></div>
-                  <div class="ll-face ll-front"></div>
-                  <div class="ll-face ll-right"></div>
-                  <div class="ll-core"></div>
-                </div>
+                <img class="login-logo-img" src="/icons/novyn-icon.svg" alt="Novyn logo" />
               </div>
               <h3 class="login-title">Welcome back</h3>
               <p class="login-subtitle">Sign in or create your account</p>
@@ -192,7 +179,7 @@
                   </span>
                   Password
                 </label>
-                <input id="passwordInput" class="field-input" type="password" placeholder="••••••••" autocomplete="current-password" required />
+                <input id="passwordInput" class="field-input" type="password" placeholder="��������" autocomplete="current-password" required />
               </div>
 
               <button type="submit" class="login-btn">
@@ -212,7 +199,7 @@
         </div>
       </section>
 
-      <!-- ─── Chat layout ──────────────────────────── -->
+      <!-- --- Chat layout ---------------------------- -->
       <section id="chatLayout" class="chat-layout hidden" aria-label="Chat">
 
         <!-- Sidebar -->
@@ -225,7 +212,7 @@
               <span class="me-status-dot"></span>
             </div>
             <div class="me-info">
-              <p class="me-name" id="meName">—</p>
+              <p class="me-name" id="meName">�</p>
               <p class="me-status">Online</p>
             </div>
             <div class="me-actions">
@@ -242,7 +229,7 @@
           <div class="sidebar-section">
             <p class="sidebar-label">Add Friend</p>
             <form id="addFriendForm" class="add-friend-form" autocomplete="off" novalidate>
-              <input id="friendInput" class="sidebar-input" type="text" placeholder="Username…" autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="30" />
+              <input id="friendInput" class="sidebar-input" type="text" placeholder="Username�" autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="30" />
               <button type="submit" class="add-btn" aria-label="Send friend request">
                 <svg viewBox="0 0 16 16" fill="none"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               </button>
@@ -280,7 +267,7 @@
             </button>
 
             <div class="chat-friend-info">
-              <div class="chat-friend-avatar" id="activeFriendAvatar">–</div>
+              <div class="chat-friend-avatar" id="activeFriendAvatar">�</div>
               <div class="chat-friend-meta">
                 <p class="chat-friend-name" id="activeFriendLabel">Select a friend</p>
                 <p class="chat-friend-presence" id="activeFriendPresenceLine">
@@ -301,7 +288,7 @@
 
           <!-- Search panel -->
           <div id="messageSearchPanel" class="search-panel hidden">
-            <input id="messageSearchInput" type="text" placeholder="Search messages…" autocomplete="off" />
+            <input id="messageSearchInput" type="text" placeholder="Search messages�" autocomplete="off" />
             <button id="messageSearchClear" class="search-clear">Clear</button>
             <span id="messageSearchCount" class="search-count hidden"></span>
           </div>
@@ -353,7 +340,7 @@
                 id="messageInput"
                 name="chatMessage"
                 type="text"
-                placeholder="Write something…"
+                placeholder="Write something�"
                 autocomplete="off"
                 inputmode="text"
                 enterkeyhint="send"
@@ -374,7 +361,7 @@
         </section>
       </section>
 
-      <!-- ─── Profile Modal ─────────────────────── -->
+      <!-- --- Profile Modal ----------------------- -->
       <div id="profileModal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Edit Profile">
         <div class="modal-backdrop"></div>
         <div class="modal-card profile-modal-card">
@@ -429,7 +416,7 @@
         </div>
       </div>
 
-      <!-- ─── Unfriend Modal ─────────────────────── -->
+      <!-- --- Unfriend Modal ----------------------- -->
       <div id="unfriendModal" class="modal-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Confirm unfriend">
         <div class="modal-backdrop"></div>
         <div class="modal-card confirm-modal-card">

@@ -24,7 +24,12 @@
 (function () {
   var btn = document.getElementById('logoutBtn');
   if (!btn) return;
-  btn.addEventListener('click', function () { window.location.reload(); });
+  btn.addEventListener('click', function () {
+    if (window._novynAuth && typeof window._novynAuth.clearSession === 'function') {
+      window._novynAuth.clearSession();
+    }
+    window.location.reload();
+  });
 })();
 
 /* ── Mobile panel switching ─────────────────────────────────────────────────── */

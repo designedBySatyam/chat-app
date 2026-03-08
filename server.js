@@ -103,6 +103,10 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+function createSessionToken() {
+  return crypto.randomBytes(32).toString("hex");
+}
+
 function createUserRecord(username) {
   return {
     username: toDisplayName(username),
@@ -112,6 +116,7 @@ function createUserRecord(username) {
     isRegistered: false,
     passwordSalt: "",
     passwordHash: "",
+    sessionToken: "",
     avatarId: "",
     age: "",
     gender: "",
@@ -132,6 +137,7 @@ function serializeState() {
       isRegistered: Boolean(user.isRegistered),
       passwordSalt: toDisplayName(user.passwordSalt),
       passwordHash: toDisplayName(user.passwordHash),
+      sessionToken: toDisplayName(user.sessionToken),
       avatarId: toDisplayName(user.avatarId),
       age: toDisplayName(user.age),
       gender: toDisplayName(user.gender),
@@ -242,6 +248,7 @@ function applyLoadedState(parsed) {
     user.isRegistered = Boolean(entry.isRegistered);
     user.passwordSalt = toDisplayName(entry.passwordSalt);
     user.passwordHash = toDisplayName(entry.passwordHash);
+    user.sessionToken = toDisplayName(entry.sessionToken);
     user.avatarId = toDisplayName(entry.avatarId);
     user.age = toDisplayName(entry.age);
     user.gender = toDisplayName(entry.gender);
@@ -701,6 +708,55 @@ function removeFriendship(userAKey, userBKey) {
   return true;
 }
 
+function completeLogin(socket, userKey, user, options = {}) {
+  const rotateSessionToken = Boolean(options.rotateSessionToken);
+  if (!socket || !userKey || !user) return;
+
+  user.lastSeenAt = "";
+  if (rotateSessionToken || !user.sessionToken) {
+    user.sessionToken = createSessionToken();
+  }
+
+  socket.data.userKey = userKey;
+  socket.data.activeChatWith = null;
+
+  const previousSocketId = onlineUsers.get(userKey);
+  onlineUsers.set(userKey, socket.id);
+
+  if (previousSocketId && previousSocketId !== socket.id) {
+    const previousSocket = io.sockets.sockets.get(previousSocketId);
+    if (previousSocket) {
+      previousSocket.emit("error_message", {
+        message: "You were signed out because this account logged in elsewhere.",
+      });
+      previousSocket.disconnect(true);
+    }
+  }
+
+  markUndeliveredAsDelivered(userKey);
+
+  socket.emit("register_success", {
+    username: user.username,
+    sessionToken: user.sessionToken,
+    friends: buildFriendList(userKey),
+    requests: Array.from(user.requests).map((requesterKey) => {
+      const requester = users.get(requesterKey);
+      return requester?.username || requesterKey;
+    }),
+    profile: {
+      avatarId: user.avatarId || "",
+      age: user.age || "",
+      gender: user.gender || "",
+      displayName: user.displayName || "",
+      bio: user.bio || "",
+    },
+  });
+
+  emitStatusToFriends(userKey, true);
+  emitFriendList(userKey);
+  schedulePersist();
+}
+
 io.on("connection", (socket) => {
   socket.on("register", (payload) => {
     const username =
@@ -755,45 +811,32 @@ io.on("connection", (socket) => {
     }
 
     user.username = username;
-    user.lastSeenAt = "";
+    completeLogin(socket, userKey, user, { rotateSessionToken: true });
+  });
 
-    socket.data.userKey = userKey;
-    socket.data.activeChatWith = null;
+  socket.on("resume_session", (payload) => {
+    const username = toDisplayName(payload?.username);
+    const userKey = normalizeName(username);
+    const sessionToken = toDisplayName(payload?.sessionToken);
 
-    const previousSocketId = onlineUsers.get(userKey);
-    onlineUsers.set(userKey, socket.id);
-
-    if (previousSocketId && previousSocketId !== socket.id) {
-      const previousSocket = io.sockets.sockets.get(previousSocketId);
-      if (previousSocket) {
-        previousSocket.emit("error_message", {
-          message: "You were signed out because this account logged in elsewhere.",
-        });
-        previousSocket.disconnect(true);
-      }
+    if (!userKey || !sessionToken) {
+      socket.emit("auth_failed", {
+        code: "session_invalid",
+        message: "Session expired. Please sign in again.",
+      });
+      return;
     }
 
-    markUndeliveredAsDelivered(userKey);
+    const user = users.get(userKey);
+    if (!user || !user.isRegistered || !user.sessionToken || user.sessionToken !== sessionToken) {
+      socket.emit("auth_failed", {
+        code: "session_invalid",
+        message: "Session expired. Please sign in again.",
+      });
+      return;
+    }
 
-    socket.emit("register_success", {
-      username: user.username,
-      friends: buildFriendList(userKey),
-      requests: Array.from(user.requests).map((requesterKey) => {
-        const requester = users.get(requesterKey);
-        return requester?.username || requesterKey;
-      }),
-      profile: {
-        avatarId: user.avatarId || "",
-        age: user.age || "",
-        gender: user.gender || "",
-        displayName: user.displayName || "",
-        bio: user.bio || "",
-      },
-    });
-
-    emitStatusToFriends(userKey, true);
-    emitFriendList(userKey);
-    schedulePersist();
+    completeLogin(socket, userKey, user);
   });
 
   socket.on("add_friend", (rawFriendName) => {

@@ -57,6 +57,56 @@ const scrollState = {
 };
 const EMPTY_CONVERSATION_HINT = "Choose a friend to load your conversation.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
+const AUTH_SESSION_KEY = "novyn-session";
+let authInFlightMode = "";
+
+function readStoredSession() {
+  try {
+    const raw = localStorage.getItem(AUTH_SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const username = String(parsed?.username || "").trim();
+    const sessionToken = String(parsed?.sessionToken || "").trim();
+    if (!username || !sessionToken) return null;
+    return { username, sessionToken };
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveStoredSession(username, sessionToken) {
+  const safeUsername = String(username || "").trim();
+  const safeSessionToken = String(sessionToken || "").trim();
+  if (!safeUsername || !safeSessionToken) return;
+  try {
+    localStorage.setItem(
+      AUTH_SESSION_KEY,
+      JSON.stringify({ username: safeUsername, sessionToken: safeSessionToken })
+    );
+  } catch (_) {
+    // Ignore storage quota/private mode failures.
+  }
+}
+
+function clearStoredSession() {
+  try {
+    localStorage.removeItem(AUTH_SESSION_KEY);
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function attemptSessionResume() {
+  if (!socketAvailable || authInFlightMode) return false;
+  const session = readStoredSession();
+  if (!session) return false;
+
+  authInFlightMode = "session";
+  if (usernameInput) usernameInput.value = session.username;
+  setLoginLoading(true);
+  socket.emit("resume_session", session);
+  return true;
+}
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -1158,6 +1208,7 @@ loginForm.addEventListener("submit", (e) => {
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username || !password) return;
+  authInFlightMode = "password";
   setLoginLoading(true);
   socket.emit("register", { username, password });
 });
@@ -1325,6 +1376,12 @@ messageInput.addEventListener("keydown", (e) => {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 socket.on("register_success", (data) => {
+  const wasSessionResume = authInFlightMode === "session";
+  authInFlightMode = "";
+  if (data?.sessionToken && data?.username) {
+    saveStoredSession(data.username, data.sessionToken);
+  }
+
   me           = data.username;
   friends      = data.friends  || [];
   requests     = data.requests || [];
@@ -1362,10 +1419,11 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
-  showToast(`Welcome to Novyn, @${me}! ✨`, "success");
+  showToast(wasSessionResume ? `Welcome back, @${me}!` : `Welcome to Novyn, @${me}! ✨`, "success");
 });
 
 socket.on("username_unavailable", (data) => {
+  authInFlightMode = "";
   const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
   showUsernameSuggestions(requested, suggestions);
@@ -1374,7 +1432,15 @@ socket.on("username_unavailable", (data) => {
 });
 
 socket.on("auth_failed", (data) => {
+  const wasSessionResume = authInFlightMode === "session";
+  authInFlightMode = "";
   const message     = data?.message     || "Authentication failed.";
+  if (wasSessionResume || data?.code === "session_invalid") {
+    clearStoredSession();
+    setLoginLoading(false);
+    showToast(message, "error");
+    return;
+  }
   const suggestions = data?.suggestions || [];
   if (Array.isArray(suggestions) && suggestions.length) {
     showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
@@ -1526,6 +1592,9 @@ socket.on("error_message", (data) => {
 
 socket.on("connect", () => {
   setNetworkState("Connected", "connected");
+  if (loginCard && !loginCard.classList.contains("hidden")) {
+    attemptSessionResume();
+  }
 });
 
 socket.on("disconnect", () => {
@@ -1608,8 +1677,13 @@ window._novynReply = { setReply };
 window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
+window._novynAuth = { clearSession: clearStoredSession };
 renderMyName();
 setTimeout(applyMyAvatar, 200);
+
+if (socketAvailable && socket.connected && loginCard && !loginCard.classList.contains("hidden")) {
+  attemptSessionResume();
+}
 
 if (!socketAvailable) {
   setNetworkState("Realtime unavailable", "offline");
