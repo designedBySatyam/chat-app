@@ -12,7 +12,7 @@
   "lang": "en",
   "icons": [
     {
-      "src": "/icons/novyn-icon.svg",
+      "src": "/icons/novyn-icon-bloom.svg",
       "sizes": "any",
       "type": "image/svg+xml",
       "purpose": "any"
@@ -46,5 +46,33 @@
     "social",
     "communication",
     "chat"
+  ],
+  "shortcuts": [
+    {
+      "name": "Open Chat",
+      "short_name": "Chat",
+      "description": "Jump straight into your conversations.",
+      "url": "/?view=chat",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "Open Friends",
+      "short_name": "Friends",
+      "description": "Check your friends list and requests.",
+      "url": "/?view=friends",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    }
   ]
 }

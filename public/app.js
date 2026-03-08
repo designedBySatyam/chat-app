@@ -58,7 +58,15 @@ const scrollState = {
 const EMPTY_CONVERSATION_HINT = "Choose a friend to load your conversation.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
 const AUTH_SESSION_KEY = "novyn-session";
+const TEMP_LOGIN_KEY = "novyn-login-cache";
 let authInFlightMode = "";
+let authRetryTimer = null;
+
+function clearAuthRetryTimer() {
+  if (!authRetryTimer) return;
+  clearTimeout(authRetryTimer);
+  authRetryTimer = null;
+}
 
 function readStoredSession() {
   try {
@@ -96,15 +104,78 @@ function clearStoredSession() {
   }
 }
 
+function readTemporaryLogin() {
+  try {
+    const raw = sessionStorage.getItem(TEMP_LOGIN_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const username = String(parsed?.username || "").trim();
+    const password = String(parsed?.password || "");
+    if (!username || !password) return null;
+    return { username, password };
+  } catch (_) {
+    return null;
+  }
+}
+
+function saveTemporaryLogin(username, password) {
+  const safeUsername = String(username || "").trim();
+  const safePassword = String(password || "");
+  if (!safeUsername || !safePassword) return;
+  try {
+    sessionStorage.setItem(
+      TEMP_LOGIN_KEY,
+      JSON.stringify({ username: safeUsername, password: safePassword })
+    );
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function clearTemporaryLogin() {
+  try {
+    sessionStorage.removeItem(TEMP_LOGIN_KEY);
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function attemptTemporaryLogin() {
+  if (!socketAvailable) return false;
+  if (authInFlightMode && authInFlightMode !== "session") return false;
+
+  const cached = readTemporaryLogin();
+  if (!cached) return false;
+
+  authInFlightMode = "cached_password";
+  if (usernameInput) usernameInput.value = cached.username;
+  if (passwordInput) passwordInput.value = cached.password;
+  setLoginLoading(true);
+  socket.emit("register", cached);
+  return true;
+}
+
 function attemptSessionResume() {
   if (!socketAvailable || authInFlightMode) return false;
   const session = readStoredSession();
-  if (!session) return false;
+  if (!session) return attemptTemporaryLogin();
 
   authInFlightMode = "session";
   if (usernameInput) usernameInput.value = session.username;
   setLoginLoading(true);
   socket.emit("resume_session", session);
+
+  clearAuthRetryTimer();
+  // Fallback for servers that don't yet support resume_session.
+  authRetryTimer = setTimeout(() => {
+    if (authInFlightMode !== "session") return;
+    authInFlightMode = "";
+    clearStoredSession();
+    if (!attemptTemporaryLogin()) {
+      setLoginLoading(false);
+    }
+  }, 1800);
+
   return true;
 }
 
@@ -1189,25 +1260,40 @@ function renderFriends() {
 // ─── Form handlers ────────────────────────────────────────────────────────────
 
 // ─── Login button spinner helpers ────────────────────────────────────────────
-const loginBtn = document.getElementById("loginBtn");
+const loginBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
 const loginBtnText = loginBtn ? loginBtn.querySelector(".login-btn-text") : null;
-const loginBtnArrow = loginBtn ? loginBtn.querySelector(".login-btn-arrow") : null;
-const loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") : null;
+const loginBtnArrow = loginBtn ? loginBtn.querySelector(".login-btn-arrow, .login-btn-icon") : null;
+let loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") : null;
+if (loginBtn && !loginBtnSpinner) {
+  loginBtnSpinner = document.createElement("span");
+  loginBtnSpinner.className = "login-btn-spinner hidden";
+  loginBtnSpinner.setAttribute("aria-hidden", "true");
+  const inner = loginBtn.querySelector(".login-btn-inner");
+  if (inner) inner.appendChild(loginBtnSpinner);
+}
+const loginBtnDefaultText = loginBtnText ? loginBtnText.textContent : "Enter Novyn";
 
 function setLoginLoading(isLoading) {
   if (!loginBtn) return;
   loginBtn.disabled = isLoading;
-  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering…" : "Enter Novyn";
+  loginBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
+  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering..." : loginBtnDefaultText;
   if (loginBtnArrow)   loginBtnArrow.classList.toggle("hidden", isLoading);
   if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
 }
 
 loginForm.addEventListener("submit", (e) => {
   e.preventDefault();
+  if (!socketAvailable) {
+    setLoginLoading(false);
+    showToast("Realtime unavailable. Reload from your server URL.", "error");
+    return;
+  }
   clearUsernameSuggestions();
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username || !password) return;
+  saveTemporaryLogin(username, password);
   authInFlightMode = "password";
   setLoginLoading(true);
   socket.emit("register", { username, password });
@@ -1254,7 +1340,7 @@ if (unfriendConfirm) unfriendConfirm.addEventListener("click", () => {
   hideUnfriendModal();
 });
 if (unfriendModal) {
-  unfriendModal.querySelector(".confirm-modal-backdrop")
+  unfriendModal.querySelector(".confirm-modal-backdrop, .modal-backdrop")
     ?.addEventListener("click", hideUnfriendModal);
 }
 document.addEventListener("keydown", (e) => {
@@ -1341,8 +1427,12 @@ if (messageSearchClear) {
     if (messageSearchInput) messageSearchInput.focus();
   });
 }
-document.addEventListener("click", () => {
-  if (searchPanelOpen) closeMessageSearchPanel();
+document.addEventListener("click", (e) => {
+  if (!searchPanelOpen) return;
+  const target = e.target;
+  if (messageSearchPanel && messageSearchPanel.contains(target)) return;
+  if (messageSearchToggle && messageSearchToggle.contains(target)) return;
+  closeMessageSearchPanel();
 });
 document.addEventListener("keydown", (e) => {
   const isFindShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f";
@@ -1376,10 +1466,13 @@ messageInput.addEventListener("keydown", (e) => {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 socket.on("register_success", (data) => {
-  const wasSessionResume = authInFlightMode === "session";
+  clearAuthRetryTimer();
+  const loginMode = authInFlightMode;
+  const wasSessionResume = loginMode === "session";
   authInFlightMode = "";
   if (data?.sessionToken && data?.username) {
     saveStoredSession(data.username, data.sessionToken);
+    clearTemporaryLogin();
   }
 
   me           = data.username;
@@ -1419,10 +1512,15 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
-  showToast(wasSessionResume ? `Welcome back, @${me}!` : `Welcome to Novyn, @${me}! ✨`, "success");
+  const welcomeText =
+    loginMode === "cached_password" || wasSessionResume
+      ? `Welcome back, @${me}!`
+      : `Welcome to Novyn, @${me}! ✨`;
+  showToast(welcomeText, "success");
 });
 
 socket.on("username_unavailable", (data) => {
+  clearAuthRetryTimer();
   authInFlightMode = "";
   const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
@@ -1432,14 +1530,21 @@ socket.on("username_unavailable", (data) => {
 });
 
 socket.on("auth_failed", (data) => {
-  const wasSessionResume = authInFlightMode === "session";
+  clearAuthRetryTimer();
+  const loginMode = authInFlightMode;
+  const wasSessionResume = loginMode === "session";
+  const wasCachedPasswordLogin = loginMode === "cached_password";
   authInFlightMode = "";
   const message     = data?.message     || "Authentication failed.";
   if (wasSessionResume || data?.code === "session_invalid") {
     clearStoredSession();
+    if (attemptTemporaryLogin()) return;
     setLoginLoading(false);
     showToast(message, "error");
     return;
+  }
+  if (wasCachedPasswordLogin) {
+    clearTemporaryLogin();
   }
   const suggestions = data?.suggestions || [];
   if (Array.isArray(suggestions) && suggestions.length) {
@@ -1677,7 +1782,10 @@ window._novynReply = { setReply };
 window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
-window._novynAuth = { clearSession: clearStoredSession };
+window._novynAuth = {
+  clearSession: clearStoredSession,
+  clearLoginCache: clearTemporaryLogin,
+};
 renderMyName();
 setTimeout(applyMyAvatar, 200);
 

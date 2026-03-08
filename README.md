@@ -51,3 +51,13 @@ After deployment, anyone can access your public URL and chat in real time.
 ## Important note
 
 This app prunes old messages automatically based on `CHAT_RETENTION_DAYS`. Friend lists and account data are preserved; only chat history older than your configured days is removed.
+
+## PWA cache versioning
+
+The service worker cache key is tied to `<meta name="novyn-build">` in [`public/index.html`](public/index.html).
+
+On each deploy:
+1. Bump `novyn-build` (example: `2026.03.08.2`).
+2. Deploy.
+
+This forces a new `sw.js?v=<build>` registration so users get fresh assets without hard-refreshing.

@@ -12,8 +12,8 @@
     t === 'light' ? root.classList.add('light') : root.classList.remove('light');
     try { localStorage.setItem(STORE, t); } catch(e) {}
   }
-  var saved = 'dark';
-  try { saved = localStorage.getItem(STORE) || 'dark'; } catch(e) {}
+  var saved = 'light';
+  try { saved = localStorage.getItem(STORE) || 'light'; } catch(e) {}
   applyTheme(saved);
   btn && btn.addEventListener('click', function () {
     applyTheme(root.classList.contains('light') ? 'dark' : 'light');
@@ -27,6 +27,9 @@
   btn.addEventListener('click', function () {
     if (window._novynAuth && typeof window._novynAuth.clearSession === 'function') {
       window._novynAuth.clearSession();
+    }
+    if (window._novynAuth && typeof window._novynAuth.clearLoginCache === 'function') {
+      window._novynAuth.clearLoginCache();
     }
     window.location.reload();
   });
@@ -212,7 +215,11 @@
 
   function sendReaction(msgEl, msgId, emoji) {
     var toUser = msgEl.dataset.messageFrom;
-    if (window._novynMe && window._novynMe() && toUser === window._novynMe()) {
+    var me = window._novynMe ? String(window._novynMe() || '').trim() : '';
+    if (
+      me &&
+      String(toUser || '').trim().toLowerCase() === me.toLowerCase()
+    ) {
       toUser = window._novynActiveFriend && window._novynActiveFriend();
     }
     if (!toUser) return;

@@ -1,4 +1,5 @@
-const CACHE_NAME = "novyn-shell-v4";
+const SW_VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+const CACHE_NAME = `novyn-shell-${SW_VERSION}`;
 const SHELL_ASSETS = [
   "/",
   "/index.html",
@@ -7,7 +8,8 @@ const SHELL_ASSETS = [
   "/chat-extras.js",
   "/pwa-register.js",
   "/manifest.json",
-  "/icons/novyn-icon.svg",
+  "/icons/novyn-icon-bloom.svg",
+  "/icons/novyn-logo-bloom.svg",
   "/icons/icon-192.png",
   "/icons/icon-192-maskable.png",
   "/icons/icon-512.png",
@@ -30,6 +32,12 @@ self.addEventListener("activate", (event) => {
       .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
       .then(() => self.clients.claim())
   );
+});
+
+self.addEventListener("message", (event) => {
+  if (event?.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener("fetch", (event) => {
