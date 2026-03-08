@@ -30,7 +30,7 @@ const networkPill       = document.getElementById("networkPill");
 const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
-const sendButton        = messageForm.querySelector("button");
+const sendButton        = messageForm ? messageForm.querySelector(".send-btn") : null;
 const messageSearchToggle = document.getElementById("messageSearchToggle");
 const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
@@ -308,18 +308,18 @@ function isNearBottom() {
 function setNetworkState(label, state) {
   if (!connectionLabel || !networkPill) return;
   connectionLabel.textContent = label;
-  networkPill.classList.remove("connected", "offline");
-  if (state === "connected") networkPill.classList.add("connected");
-  if (state === "offline")   networkPill.classList.add("offline");
+  networkPill.classList.remove("connected", "offline", "ok", "err");
+  if (state === "connected") networkPill.classList.add("connected", "ok");
+  if (state === "offline")   networkPill.classList.add("offline", "err");
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function showToast(message, type = "info") {
   toast.textContent = message;
-  toast.classList.remove("hidden", "error", "success");
-  if (type === "error")   toast.classList.add("error");
-  if (type === "success") toast.classList.add("success");
+  toast.classList.remove("hidden", "error", "success", "ok", "err");
+  if (type === "error")   toast.classList.add("error", "err");
+  if (type === "success") toast.classList.add("success", "ok");
 
   clearTimeout(showToast._timer);
   showToast._timer = setTimeout(() => {
@@ -348,7 +348,7 @@ function showUsernameSuggestions(requested, suggestions) {
   for (const suggestion of list) {
     const btn      = document.createElement("button");
     btn.type       = "button";
-    btn.className  = "suggestion-chip";
+    btn.className  = "suggestion-chip sug-chip";
     btn.textContent = suggestion;
     btn.addEventListener("click", () => {
       usernameInput.value = suggestion;
@@ -449,7 +449,7 @@ function hideTypingIndicator() {
 
 function emitTyping(isTyping, target = activeFriend) {
   if (!target) return;
-  socket.emit("typing", { to: target, isTyping });
+  socket.emit("typing", { to: target, isTyping, typing: isTyping });
 }
 
 function clearLocalTypingTimer() {
@@ -518,7 +518,7 @@ function appendDateSeparator(iso) {
   if (previousKey === dateKey) return;
 
   const separator = document.createElement("div");
-  separator.className = "message-date-separator";
+  separator.className = "message-date-separator date-sep";
   separator.dataset.dateKey = dateKey;
   separator.textContent = formatDateSeparatorLabel(iso);
   messagesEl.appendChild(separator);
@@ -579,7 +579,7 @@ function resetMessageSearch() {
 
 function applyMessageSearch() {
   const query = getSearchQuery();
-  const messageNodes = Array.from(messagesEl.querySelectorAll("article.message"));
+  const messageNodes = Array.from(messagesEl.querySelectorAll("article.message, article.msg"));
   let visibleCount = 0;
 
   for (const row of messageNodes) {
@@ -591,12 +591,19 @@ function applyMessageSearch() {
     if (match) visibleCount += 1;
   }
 
-  const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator"));
+  const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator, .date-sep"));
   for (const separator of separatorNodes) {
     let hasVisibleMessages = false;
     let cursor = separator.nextElementSibling;
-    while (cursor && !cursor.classList.contains("message-date-separator")) {
-      if (cursor.classList.contains("message") && !cursor.classList.contains("search-hidden")) {
+    while (
+      cursor &&
+      !cursor.classList.contains("message-date-separator") &&
+      !cursor.classList.contains("date-sep")
+    ) {
+      if (
+        (cursor.classList.contains("message") || cursor.classList.contains("msg")) &&
+        !cursor.classList.contains("search-hidden")
+      ) {
         hasVisibleMessages = true;
         break;
       }
@@ -654,7 +661,7 @@ function clearReply() {
 const messageContextMenu = (() => {
   const menu = document.createElement("div");
   menu.id = "messageContextMenu";
-  menu.className = "message-context-menu hidden";
+  menu.className = "message-context-menu ctx-menu hidden";
   menu.innerHTML = `
     <button type="button" data-action="copy">Copy</button>
     <button type="button" data-action="reply">Reply</button>
@@ -770,8 +777,9 @@ const messageContextMenu = (() => {
   messagesEl.addEventListener("scroll", close, { passive: true });
 
   messagesEl.addEventListener("contextmenu", (e) => {
-    const msgEl = e.target.closest("article.message");
+    const msgEl = e.target.closest("article.message, article.msg");
     if (!msgEl) return;
+    if (msgEl.classList.contains("ai-msg")) return;
     e.preventDefault();
     open(msgEl, e.clientX, e.clientY);
   });
@@ -788,8 +796,9 @@ const messageContextMenu = (() => {
   }
 
   messagesEl.addEventListener("pointerdown", (e) => {
-    const msgEl = e.target.closest("article.message");
+    const msgEl = e.target.closest("article.message, article.msg");
     if (!msgEl) return;
+    if (msgEl.classList.contains("ai-msg")) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     longPressTarget = msgEl;
     longPressStartX = e.clientX;
@@ -817,8 +826,13 @@ function renderMessagesEmptyState(text) {
   hideTypingIndicator();
 
   const empty       = document.createElement("div");
-  empty.className   = "messages-empty";
-  empty.textContent = text;
+  empty.className   = "messages-empty msgs-empty";
+  const heading = /loading/i.test(String(text || "")) ? "Loading conversation…" : "Nothing here yet";
+  empty.innerHTML = `
+    <div class="empty-ico" aria-hidden="true">💬</div>
+    <p class="empty-h">${heading}</p>
+    <p class="empty-s">${text || "Pick a friend — or open Novyn AI ✦"}</p>
+  `;
   messagesEl.appendChild(empty);
   applyMessageSearch();
 }
@@ -834,17 +848,8 @@ function renderMineMessageMeta(metaEl, timeText, statusKey) {
   time.textContent = timeText;
 
   const status = document.createElement("span");
-  status.className = `message-status message-status-${statusKey}`;
-
-  const tickA = document.createElement("span");
-  tickA.className = "tick";
-  tickA.textContent = "✓";
-
-  const tickB = document.createElement("span");
-  tickB.className = "tick";
-  tickB.textContent = "✓";
-
-  status.append(tickA, tickB);
+  status.className = `message-status message-status-${statusKey} status-icon${statusKey === "seen" ? " seen" : ""}`;
+  status.textContent = statusKey === "sent" ? "✓" : "✓✓";
   metaEl.append(time, status);
 }
 
@@ -864,7 +869,7 @@ function buildMessageElement(message, skipAnimation = false) {
   const fullTimestamp = formatFullTimestamp(message.timestamp);
 
   const row       = document.createElement("article");
-  row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
+  row.className   = `message msg ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
   row.dataset.dateKey = dateKey;
   row.dataset.timestamp = message.timestamp || "";
@@ -879,7 +884,7 @@ function buildMessageElement(message, skipAnimation = false) {
     message.replyTo?.from || "",
   ].join(" ");
   if (isDeleted) {
-    row.classList.add("message-deleted");
+    row.classList.add("message-deleted", "msg-deleted");
   }
 
   if (message.reactions && Object.keys(message.reactions).length) {
@@ -891,7 +896,7 @@ function buildMessageElement(message, skipAnimation = false) {
   }
 
   const meta        = document.createElement("span");
-  meta.className    = "message-meta";
+  meta.className    = "message-meta msg-meta";
   if (mine) {
     row.dataset.timeLabel = prettyTime(message.timestamp);
     renderMineMessageMeta(meta, row.dataset.timeLabel, getMessageStatusKey(message));
@@ -903,9 +908,9 @@ function buildMessageElement(message, skipAnimation = false) {
 
   if (message.replyTo && !isDeleted) {
     const rq      = document.createElement("div");
-    rq.className  = "reply-quote";
+    rq.className  = "reply-quote reply-q";
     const ra      = document.createElement("span");
-    ra.className  = "reply-quote-author";
+    ra.className  = "reply-quote-author rq-who";
     const replyAuthor = findFriend(message.replyTo.from);
     ra.textContent = replyAuthor
       ? getFriendDisplayName(replyAuthor)
@@ -926,16 +931,16 @@ function buildMessageElement(message, skipAnimation = false) {
   }
 
   const body        = document.createElement("div");
-  body.className    = "message-body";
+  body.className    = "message-body msg-body";
   body.textContent  = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
-  if (isDeleted) body.classList.add("message-body-deleted");
+  if (isDeleted) body.classList.add("message-body-deleted", "deleted");
 
   row.append(body);
   return row;
 }
 
 function appendMessage(message, skipAnimation = false, withSeparator = true) {
-  const emptyNode = messagesEl.querySelector(".messages-empty");
+  const emptyNode = messagesEl.querySelector(".messages-empty, .msgs-empty");
   if (emptyNode) emptyNode.remove();
   const preserveTop = messagesEl.scrollTop;
   const shouldAutoScroll = shouldAutoScrollForMessage(message, skipAnimation);
@@ -970,15 +975,18 @@ function updateStats() {
 }
 
 function setComposerEnabled(isEnabled) {
-  messageInput.disabled = !isEnabled;
-  if (sendButton) sendButton.disabled = !isEnabled;
+  // Keep composer interactive so users can always draft.
+  messageInput.disabled = false;
+  if (sendButton) sendButton.disabled = false;
 
   if (!isEnabled) {
     stopLocalTyping();
     hideTypingIndicator();
   }
 
-  messageInput.placeholder = "Type a message…";
+  messageInput.placeholder = isEnabled
+    ? "Write something… or @novyn for AI"
+    : "Select a friend or open Novyn AI ✦";
 }
 
 function renderMessages(messages) {
@@ -1016,23 +1024,23 @@ function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_T
   const row = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
   if (!row) return;
 
-  row.classList.add("message-deleted");
+  row.classList.add("message-deleted", "msg-deleted");
   row.dataset.messageText = replacementText;
   row.dataset.searchText = `${row.dataset.messageFrom || ""} ${replacementText}`;
 
-  const body = row.querySelector(".message-body");
+  const body = row.querySelector(".message-body, .msg-body");
   if (body) {
     body.textContent = replacementText;
-    body.classList.add("message-body-deleted");
+    body.classList.add("message-body-deleted", "deleted");
   }
 
-  const replyQuote = row.querySelector(".reply-quote");
+  const replyQuote = row.querySelector(".reply-quote, .reply-q");
   if (replyQuote) replyQuote.remove();
 
-  const actions = row.querySelector(".msg-actions");
+  const actions = row.querySelector(".msg-actions, .msg-acts");
   if (actions) actions.remove();
 
-  const reactions = row.querySelector(".message-reactions");
+  const reactions = row.querySelector(".message-reactions, .msg-reacts");
   if (reactions) reactions.innerHTML = "";
 }
 
@@ -1044,7 +1052,7 @@ function renderRequests() {
 
   if (!requests.length) {
     const empty       = document.createElement("li");
-    empty.className   = "item-card";
+    empty.className   = "req-row";
     empty.textContent = "No pending requests";
     requestList.appendChild(empty);
     return;
@@ -1052,7 +1060,7 @@ function renderRequests() {
 
   for (const username of requests) {
     const li      = document.createElement("li");
-    li.className  = "item-card request-row";
+    li.className  = "request-row req-row";
 
     const name        = document.createElement("span");
     name.textContent  = username;
@@ -1095,12 +1103,12 @@ function renderActiveFriendPresence() {
 
   if (!activeFriend) {
     activePresence.classList.add("hidden");
-    activeFriendAvatar.classList.remove("online");
+    activeFriendAvatar.classList.remove("online", "on");
     activeFriendAvatar.textContent = "?";
     activeFriendAvatar.style.background = "";
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Select a friend to start chatting";
-      activeFriendPresenceLine.classList.remove("online");
+      activeFriendPresenceLine.classList.remove("online", "on");
     }
     return;
   }
@@ -1110,7 +1118,7 @@ function renderActiveFriendPresence() {
     activePresence.classList.add("hidden");
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Loading contact status...";
-      activeFriendPresenceLine.classList.remove("online");
+      activeFriendPresenceLine.classList.remove("online", "on");
     }
     return;
   }
@@ -1132,6 +1140,7 @@ function renderActiveFriendPresence() {
   }
 
   activeFriendAvatar.classList.toggle("online", !!friend.online);
+  activeFriendAvatar.classList.toggle("on", !!friend.online);
   activeFriendAvatar.title = friend.online
     ? `${friend.username} is online`
     : `${friend.username} is offline`;
@@ -1139,12 +1148,14 @@ function renderActiveFriendPresence() {
   if (activeFriendPresenceLine) {
     activeFriendPresenceLine.textContent = getFriendPresenceText(friend);
     activeFriendPresenceLine.classList.toggle("online", !!friend.online);
+    activeFriendPresenceLine.classList.toggle("on", !!friend.online);
   }
 }
 
 function syncRemoveFriendButton() {
   if (!removeFriendBtn) return;
   const hasActive = Boolean(activeFriend);
+  removeFriendBtn.style.display = hasActive ? "" : "none";
   removeFriendBtn.classList.toggle("hidden", !hasActive);
   removeFriendBtn.disabled = !hasActive;
   if (hasActive) {
@@ -1183,7 +1194,7 @@ function renderFriends() {
 
   if (!friends.length) {
     const empty       = document.createElement("li");
-    empty.className   = "item-card";
+    empty.className   = "req-row";
     empty.textContent = "No friends yet — add one above";
     friendList.appendChild(empty);
     renderActiveFriendPresence();
@@ -1193,16 +1204,16 @@ function renderFriends() {
 
   for (const friend of friends) {
     const li      = document.createElement("li");
-    li.className  = "item-card";
+    li.className  = "";
 
     const btn         = document.createElement("button");
     btn.type          = "button";
-    btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
+    btn.className     = `friend-btn friend-row${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
     // Avatar with initials + online dot
     const avatar        = document.createElement("div");
-    avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
+    avatar.className    = `friend-avatar fr-av${friend.online ? " online on" : ""}`;
     if (friend.avatarId && window._novynAvatarUtils) {
       window._novynAvatarUtils.applyAvatarToEl(avatar, friend.avatarId, friend.username.slice(0, 2).toUpperCase());
     } else {
@@ -1211,10 +1222,10 @@ function renderFriends() {
     btn.appendChild(avatar);
 
     const main      = document.createElement("div");
-    main.className  = "friend-main";
+    main.className  = "friend-main fr-main";
 
     const name        = document.createElement("span");
-    name.className    = "friend-name";
+    name.className    = "friend-name fr-name";
     name.textContent  = getFriendDisplayName(friend);
     if (displayDiffersFromUsername(friend)) {
       name.title = `${getFriendDisplayName(friend)} (@${friend.username})`;
@@ -1223,7 +1234,7 @@ function renderFriends() {
     }
 
     const preview       = document.createElement("span");
-    preview.className   = "friend-preview";
+    preview.className   = "friend-preview fr-prev";
     const previewBase = friendPreview(friend);
     preview.textContent = displayDiffersFromUsername(friend)
       ? `@${friend.username} · ${previewBase}`
@@ -1232,10 +1243,10 @@ function renderFriends() {
     main.append(name, preview);
 
     const side      = document.createElement("div");
-    side.className  = "friend-side";
+    side.className  = "friend-side fr-side";
 
     const status        = document.createElement("span");
-    status.className    = `status${friend.online ? " online" : ""}`;
+    status.className    = `status fr-time${friend.online ? " online on" : ""}`;
     status.textContent  = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
     status.title = status.textContent;
     side.appendChild(status);
@@ -1243,7 +1254,7 @@ function renderFriends() {
     const unreadCount = Number(friend.unreadCount) || 0;
     if (unreadCount > 0) {
       const unread        = document.createElement("span");
-      unread.className    = "unread-badge";
+      unread.className    = "unread-badge unread";
       unread.textContent  = unreadCount > 99 ? "99+" : String(unreadCount);
       side.appendChild(unread);
     }
@@ -1677,7 +1688,10 @@ socket.on("message_status", (payload) => {
   renderMineMessageMeta(metaEl, timeText, statusKey);
 });
 
-socket.on("typing", ({ from, isTyping }) => {
+socket.on("typing", (payload = {}) => {
+  const from = String(payload.from || payload.username || payload.user || "").trim();
+  const isTyping = payload.isTyping === undefined ? Boolean(payload.typing) : Boolean(payload.isTyping);
+  if (!from) return;
   if (!activeFriend || normalizeName(from) !== normalizeName(activeFriend)) return;
   isTyping ? showTypingIndicator(from) : hideTypingIndicator();
 });
