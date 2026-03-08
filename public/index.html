@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#08050e" />
+    <meta name="theme-color" content="#0b1220" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Novyn Dashboard</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&family=DM+Serif+Display:ital@0;1&family=Sora:wght@200;300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <link rel="manifest" href="/manifest.json" />
@@ -27,20 +27,20 @@
           <svg class="brand-logo" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Novyn logo" role="img">
             <defs>
               <linearGradient id="lg1" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stop-color="#a78bfa" />
-                <stop offset="100%" stop-color="#ec4899" />
+                <stop offset="0%" stop-color="#4f8cff" />
+                <stop offset="100%" stop-color="#93c5fd" />
               </linearGradient>
             </defs>
             <rect width="42" height="42" rx="13" fill="url(#lg1)" />
-            <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(5,4,15,0.55)" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="6" fill="none" stroke="#c4b5fd" stroke-width="2" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#c4b5fd" stroke-width="1.5" opacity="0.6" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#c4b5fd" stroke-width="1" opacity="0.3" />
-            <circle cx="21" cy="21" r="3" fill="#e9d5ff" />
+            <rect x="4" y="4" width="34" height="34" rx="9" fill="rgba(11,18,32,0.38)" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="6" fill="none" stroke="#dbeafe" stroke-width="2" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#dbeafe" stroke-width="1.5" opacity="0.6" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#dbeafe" stroke-width="1" opacity="0.3" />
+            <circle cx="21" cy="21" r="3" fill="#eff6ff" />
             <circle cx="15" cy="13" r="2" fill="rgba(255,255,255,0.22)" />
           </svg>
           <div>
-            <p class="eyebrow">Where Moments Connect</p>
+            <p class="eyebrow">Private and realtime</p>
             <h1>Novyn</h1>
           </div>
         </div>
@@ -53,7 +53,7 @@
           <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
             <span class="theme-toggle-thumb">
               <svg class="icon-moon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#c4b5fd" stroke="#c4b5fd" stroke-width="0.5" stroke-linejoin="round" />
+                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#cbd5e1" stroke="#cbd5e1" stroke-width="0.5" stroke-linejoin="round" />
               </svg>
               <svg class="icon-sun" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
                 <circle cx="6" cy="6" r="2.5" fill="#f59e0b" />
@@ -74,7 +74,7 @@
       </header>
 
       <section id="chatLayout" class="chat-layout" aria-label="Chat">
-        <aside class="sidebar card" id="mobileSidebar" aria-label="Friends &amp; requests">
+        <aside class="sidebar card" id="mobileSidebar" aria-label="Friends and requests">
           <div class="me-row">
             <div class="me-row-info">
               <div class="me-avatar-wrap">
@@ -102,8 +102,17 @@
             </div>
           </div>
 
+          <div class="sidebar-overview" aria-hidden="true">
+            <div class="sidebar-overview-copy">
+              <p class="sidebar-kicker">Inbox</p>
+              <h2>Direct messages</h2>
+              <p class="sidebar-note">Friends, requests, and live presence in one list.</p>
+            </div>
+            <span class="sidebar-overview-badge">DM</span>
+          </div>
+
           <form id="addFriendForm" class="add-friend-form">
-            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username…" autocomplete="off" required />
+            <input id="friendInput" type="text" maxlength="24" placeholder="Add friend by username..." autocomplete="off" required />
             <button type="submit">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -143,7 +152,7 @@
             <div class="chat-header-info">
               <p class="eyebrow">Conversation</p>
               <h2 id="activeFriendLabel">Select a friend</h2>
-              <p id="activeFriendPresenceLine" class="active-friend-presence">Select a friend to start chatting</p>
+              <p id="activeFriendPresenceLine" class="active-friend-presence">Choose a conversation to start messaging.</p>
             </div>
             <div class="chat-header-actions">
               <button id="messageSearchToggle" class="icon-btn" type="button" title="Search messages" aria-label="Search messages" aria-expanded="false">
@@ -166,7 +175,7 @@
 
           <div id="messageSearchPanel" class="chat-search-popover hidden" aria-label="Conversation search">
             <div class="chat-search-popover-row">
-              <input id="messageSearchInput" type="text" placeholder="Search messages…" autocomplete="off" />
+              <input id="messageSearchInput" type="text" placeholder="Search messages..." autocomplete="off" />
               <button id="messageSearchClear" type="button" aria-label="Clear search">Clear</button>
             </div>
             <span id="messageSearchCount" class="chat-search-count hidden" aria-live="polite"></span>
@@ -180,8 +189,8 @@
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <p class="messages-empty-title">No conversation open</p>
-                <p class="messages-empty-sub">Pick a friend from the sidebar to start chatting.</p>
+                <p class="messages-empty-title">Your inbox is ready</p>
+                <p class="messages-empty-sub">Choose a conversation to start messaging.</p>
               </div>
             </div>
             <button class="scroll-btn" id="scrollBtn" aria-label="Scroll to latest messages">
@@ -207,7 +216,7 @@
                 id="messageInput"
                 name="chatMessage"
                 type="text"
-                placeholder="Type a message…"
+                placeholder="Type a message..."
                 autocomplete="off"
                 inputmode="text"
                 enterkeyhint="send"
@@ -225,7 +234,10 @@
                 <span>Send</span>
               </button>
             </form>
-            <div class="char-counter hidden" id="charCounter" aria-live="polite" aria-atomic="true">0 / 1000</div>
+            <div class="composer-meta">
+              <span class="composer-hint">Press Enter to send</span>
+              <div class="char-counter hidden" id="charCounter" aria-live="polite" aria-atomic="true">0 / 1000</div>
+            </div>
           </div>
         </section>
       </section>
@@ -235,9 +247,9 @@
         <div class="profile-modal-card">
           <div class="profile-modal-header">
             <div class="profile-modal-heading">
-              <p class="profile-modal-eyebrow">Profile Studio</p>
+              <p class="profile-modal-eyebrow">Profile</p>
               <h3>Edit Profile</h3>
-              <p class="profile-modal-subtitle">Customize how friends see you across Novyn.</p>
+              <p class="profile-modal-subtitle">Update how you appear in chats, replies, and friend list cards.</p>
             </div>
             <button class="profile-modal-close" id="profileModalClose" aria-label="Close profile editor" title="Close">
               <svg class="profile-modal-close-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -253,7 +265,7 @@
             </div>
             <div class="profile-identity-copy">
               <p class="profile-identity-title">Public identity</p>
-              <p class="profile-identity-desc">Avatar + display name are shown in chats, replies, and friend list cards.</p>
+              <p class="profile-identity-desc">Avatar and display name are shown in chats, replies, and friend list cards.</p>
             </div>
           </div>
           <div class="profile-avatar-grid-wrap">
@@ -267,8 +279,8 @@
             </div>
             <div class="profile-field">
               <label for="profileBio">Bio / Status</label>
-              <input id="profileBio" type="text" maxlength="120" placeholder="What's on your mind?" autocomplete="off" />
-              <p class="profile-field-help">Shown to your friends in chat list and profile presence.</p>
+              <input id="profileBio" type="text" maxlength="120" placeholder="What are you up to?" autocomplete="off" />
+              <p class="profile-field-help">Shown to friends in the chat list and profile presence.</p>
             </div>
             <div class="profile-field-row">
               <div class="profile-field">

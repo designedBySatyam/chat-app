@@ -1,4 +1,4 @@
-﻿const socketAvailable = typeof io === "function";
+const socketAvailable = typeof io === "function";
 const socket = socketAvailable ? io() : { on() {}, emit() {} };
 
 const loginCard         = document.getElementById("loginCard");
@@ -58,7 +58,7 @@ const localTyping = {
 const scrollState = {
   pinnedToBottom: true,
 };
-const EMPTY_CONVERSATION_HINT = "Choose a friend to load your conversation.";
+const EMPTY_CONVERSATION_HINT = "Choose a conversation to start messaging.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
@@ -755,9 +755,36 @@ function renderMessagesEmptyState(text) {
   clearMessages();
   hideTypingIndicator();
 
-  const empty       = document.createElement("div");
-  empty.className   = "messages-empty";
-  empty.textContent = text;
+  const hint = text || EMPTY_CONVERSATION_HINT;
+  let title = "Your inbox is ready";
+
+  if (/loading conversation/i.test(hint)) {
+    title = "Opening conversation";
+  } else if (/no messages yet/i.test(hint) && activeFriend) {
+    title = `Start chatting with @${activeFriend}`;
+  }
+
+  const empty = document.createElement("div");
+  empty.className = "messages-empty";
+
+  const icon = document.createElement("div");
+  icon.className = "messages-empty-icon";
+  icon.setAttribute("aria-hidden", "true");
+  icon.innerHTML = `
+    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  `;
+
+  const titleEl = document.createElement("p");
+  titleEl.className = "messages-empty-title";
+  titleEl.textContent = title;
+
+  const sub = document.createElement("p");
+  sub.className = "messages-empty-sub";
+  sub.textContent = hint;
+
+  empty.append(icon, titleEl, sub);
   messagesEl.appendChild(empty);
   applyMessageSearch();
 }
