@@ -3,24 +3,32 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#04020f"/>
+  <meta name="theme-color" content="#f0ede8"/>
   <meta name="apple-mobile-web-app-capable" content="yes"/>
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-  <meta name="description" content="Novyn — private realtime chat with AI built in."/>
-  <title>Novyn · Where Moments Connect</title>
+  <meta name="description" content="IriSync organic chat shell with AI-ready modular architecture."/>
+  <meta name="novyn-build" content="2026.03.08.9"/>
+  <title>IriSync - Organic Chat</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
 
   <link rel="manifest"         href="/manifest.json"/>
   <link rel="apple-touch-icon" href="/icons/icon-192.png"/>
-  <link rel="icon" type="image/svg+xml" href="/icons/novyn-icon-bloom.svg"/>
+  <link rel="icon" type="image/svg+xml" href="/icons/irisync-icon.svg"/>
+  <link rel="stylesheet" href="/src/theme/tokens.css"/>
+  <link rel="stylesheet" href="/src/theme/iris-dark.css"/>
+  <link rel="stylesheet" href="/src/theme/iris-light.css"/>
+  <link rel="stylesheet" href="/src/theme/motion.css"/>
+  <link rel="stylesheet" href="/src/styles/base.css"/>
+  <link rel="stylesheet" href="/src/styles/layout.css"/>
+  <link rel="stylesheet" href="/src/styles/components.css"/>
   <link rel="stylesheet" href="styles.css"/>
 </head>
 <body>
 
-<!-- ░ Ambient background ░ -->
+<!-- â–‘ Ambient background â–‘ -->
 <div class="orb-stage" aria-hidden="true">
   <div class="orb orb-a"></div>
   <div class="orb orb-b"></div>
@@ -30,20 +38,20 @@
 
 <div class="app">
 
-  <!-- ══════════════════════════════
+  <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        TOP BAR
-       ══════════════════════════════ -->
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
   <header class="topbar">
     <div class="brand">
-      <img class="brand-ico" src="/icons/novyn-icon-bloom.svg" alt="Novyn" width="33" height="33"/>
-      <span class="brand-name">Novyn</span>
+      <img class="brand-ico" src="/icons/irisync-icon.svg" alt="IriSync" width="33" height="33"/>
+      <span class="brand-name">IriSync</span>
     </div>
 
     <div class="topbar-gap"></div>
 
     <div id="networkPill" class="net-pill" role="status" aria-live="polite">
       <span class="sig" aria-hidden="true"></span>
-      <span id="connectionLabel">Connecting…</span>
+      <span id="connectionLabel">Connectingâ€¦</span>
     </div>
 
     <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle theme">
@@ -69,48 +77,42 @@
   </header>
 
 
-  <!-- ══════════════════════════════
-       LOGIN — full split
-       ══════════════════════════════ -->
-  <section id="loginCard" class="login-wrap" aria-label="Sign in to Novyn">
+  <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+       LOGIN â€” full split
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+  <section id="loginCard" class="login-wrap" aria-label="Sign in to IriSync">
 
     <!-- Left: hero -->
     <div class="login-hero">
+      <div class="hero-three-layer" aria-hidden="true">
+        <canvas id="heroThreeCanvas" class="hero-three-canvas"></canvas>
+      </div>
       <div class="hero-grid"  aria-hidden="true"></div>
       <div class="hero-halo"  aria-hidden="true"></div>
 
       <div class="hero-copy">
         <p class="hero-eye">
           <span class="eye-dot" aria-hidden="true"></span>
-          Private · Realtime · Intelligent
+          Private Â· Fast Â· Focused
         </p>
 
         <h2 class="hero-h1">
-          Chat that<br/>
-          <em class="hero-em">thinks with you.</em>
+          Talk less.<br/>
+          <em class="hero-em">Connect more.</em>
         </h2>
 
         <p class="hero-sub">
-          Your close circle, one space. AI-powered smart replies,
-          message polish, and a built-in Claude assistant — always present.
+          Realtime chat with built-in AI, designed for daily conversations.
         </p>
 
         <div class="feat-list">
           <div class="feat-row">
-            <div class="feat-ico feat-ico-v">⚡</div>
-            <span>Instant realtime sync across all devices</span>
+            <div class="feat-ico feat-ico-v">âš¡</div>
+            <span>Instant sync</span>
           </div>
           <div class="feat-row">
-            <div class="feat-ico feat-ico-ai">✦</div>
-            <span>AI smart replies — 3 suggestions after every message</span>
-          </div>
-          <div class="feat-row">
-            <div class="feat-ico feat-ico-ai">🪄</div>
-            <span>Polish button — AI rewrites your draft</span>
-          </div>
-          <div class="feat-row">
-            <div class="feat-ico feat-ico-v">👁</div>
-            <span>Live presence, reactions & reply threads</span>
+            <div class="feat-ico feat-ico-ai">âœ¦</div>
+            <span>AI assist ready</span>
           </div>
         </div>
       </div>
@@ -118,7 +120,7 @@
       <!-- Chat preview card -->
       <div class="preview-card" aria-hidden="true" role="presentation">
         <div class="pv-head">
-          <div class="pv-av">🌙</div>
+          <div class="pv-av">ðŸŒ™</div>
           <div>
             <p class="pv-name">Maya</p>
             <p class="pv-online"><span class="pv-dot"></span>Online now</p>
@@ -127,31 +129,22 @@
 
         <div class="pv-msgs">
           <div class="pv-row them">
-            <div class="pv-bub">you free tonight? 🌙</div>
+            <div class="pv-bub">free for a quick call?</div>
             <span class="pv-time">8:42 PM</span>
           </div>
           <div class="pv-row me">
-            <div class="pv-bub">yeah what's the plan 👀</div>
-            <span class="pv-time">8:43 PM ✓✓</span>
-          </div>
-          <div class="pv-row them">
-            <div class="pv-bub">rooftop + pizza. classic ✨</div>
-            <span class="pv-time">8:43 PM</span>
-          </div>
-          <div class="pv-reacts">
-            <span class="pv-r">🔥 2</span>
-            <span class="pv-r mine">💜 1</span>
+            <div class="pv-bub">yes, in 10 mins works</div>
+            <span class="pv-time">8:43 PM âœ“âœ“</span>
           </div>
         </div>
 
         <div class="pv-ai-bar">
           <span class="pv-ai-dot" aria-hidden="true"></span>
-          ✦ novyn ai suggests
+          âœ¦ novyn ai suggests
         </div>
         <div class="pv-chips">
-          <span class="pv-chip">I'm so in 🚀</span>
-          <span class="pv-chip">What time?</span>
-          <span class="pv-chip">Count me in!</span>
+          <span class="pv-chip">Works for me.</span>
+          <span class="pv-chip">Call now?</span>
         </div>
 
         <div class="bd"><span></span><span></span><span></span></div>
@@ -164,9 +157,9 @@
       <div class="login-box">
 
         <div class="login-top">
-          <img class="login-logo" src="/icons/novyn-icon-bloom.svg" alt="Novyn logo" width="64" height="64"/>
-          <h3 class="login-title">Welcome back</h3>
-          <p class="login-sub">Sign in or create your account below</p>
+          <img class="login-logo" src="/icons/irisync-icon.svg" alt="IriSync logo" width="64" height="64"/>
+          <h3 class="login-title">Sign in</h3>
+          <p class="login-sub">Use your username and password</p>
         </div>
 
         <form id="loginForm" class="form-stack" autocomplete="off" novalidate>
@@ -199,13 +192,13 @@
               </span>
               Password
             </label>
-            <input id="passwordInput" class="fi" type="password" placeholder="••••••••"
+            <input id="passwordInput" class="fi" type="password" placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               autocomplete="current-password" required/>
           </div>
 
           <button id="loginBtn" type="submit" class="login-btn">
             <span class="login-btn-inner">
-              <span class="login-btn-text">Enter Novyn</span>
+              <span class="login-btn-text">Continue</span>
               <span class="login-btn-arrow">
                 <svg viewBox="0 0 16 16" fill="none">
                   <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8"
@@ -225,7 +218,7 @@
           <p id="loginError" class="login-err hidden"></p>
         </form>
 
-        <p class="login-foot">New here? Just enter a username &amp; password — your account is created automatically.</p>
+        <p class="login-foot">First time? Your account is created automatically.</p>
 
       </div>
     </div><!-- /login-panel -->
@@ -233,12 +226,12 @@
   </section><!-- /loginCard -->
 
 
-  <!-- ══════════════════════════════
+  <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        CHAT LAYOUT
-       ══════════════════════════════ -->
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
   <section id="chatLayout" class="chat-layout hidden" aria-label="Chat">
 
-    <!-- ── Sidebar ── -->
+    <!-- â”€â”€ Sidebar â”€â”€ -->
     <aside class="sidebar" id="mobileSidebar" aria-label="Contacts">
 
       <!-- Me row -->
@@ -248,7 +241,7 @@
           <span class="me-dot" aria-hidden="true"></span>
         </div>
         <div class="me-info">
-          <p class="me-name" id="meName">…</p>
+          <p class="me-name" id="meName">â€¦</p>
           <p class="me-label">Online</p>
         </div>
         <div class="me-acts">
@@ -267,7 +260,7 @@
       <div class="sb-sec">
         <p class="sb-lbl">Add Friend</p>
         <form id="addFriendForm" class="add-form" autocomplete="off" novalidate>
-          <input id="friendInput" class="sb-inp" type="text" placeholder="Username…"
+          <input id="friendInput" class="sb-inp" type="text" placeholder="Usernameâ€¦"
             autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="30"/>
           <button type="submit" class="add-btn" aria-label="Send friend request">
             <svg viewBox="0 0 16 16" fill="none">
@@ -294,12 +287,12 @@
           <span class="ob"    id="onlineCount" aria-label="Online friends"></span>
         </p>
 
-        <!-- ✦ Novyn AI — always pinned first -->
+        <!-- âœ¦ Novyn AI â€” always pinned first -->
         <button class="ai-friend" type="button" aria-label="Chat with Novyn AI">
-          <div class="ai-av" aria-hidden="true">✦</div>
+          <div class="ai-av" aria-hidden="true">âœ¦</div>
           <div>
             <p class="ai-fname">Novyn AI</p>
-            <p class="ai-ftag">✦ Always here · Powered by Claude</p>
+            <p class="ai-ftag">âœ¦ Always here Â· Powered by Claude</p>
           </div>
           <span class="ai-pill">AI</span>
         </button>
@@ -310,7 +303,7 @@
     </aside><!-- /sidebar -->
 
 
-    <!-- ── Chat main ── -->
+    <!-- â”€â”€ Chat main â”€â”€ -->
     <section class="chat-main" id="mobileChat" aria-label="Conversation">
 
       <!-- Chat header -->
@@ -352,7 +345,7 @@
 
       <!-- Search bar -->
       <div id="messageSearchPanel" class="search-bar hidden" role="search">
-        <input id="messageSearchInput" type="text" placeholder="Search messages…"
+        <input id="messageSearchInput" type="text" placeholder="Search messagesâ€¦"
           autocomplete="off" aria-label="Search messages"/>
         <button id="messageSearchClear" class="s-clear" type="button">Clear</button>
         <span id="messageSearchCount" class="s-count hidden" aria-live="polite"></span>
@@ -362,9 +355,9 @@
       <div class="msgs-wrap">
         <div id="messages" class="messages" role="log" aria-live="polite" aria-label="Messages">
           <div class="msgs-empty">
-            <div class="empty-ico" aria-hidden="true">💬</div>
+            <div class="empty-ico" aria-hidden="true">ðŸ’¬</div>
             <p class="empty-h">Nothing here yet</p>
-            <p class="empty-s">Pick a friend — or open Novyn AI ✦</p>
+            <p class="empty-s">Pick a friend â€” or open Novyn AI âœ¦</p>
           </div>
         </div>
 
@@ -382,7 +375,7 @@
         <span id="typingText">Someone is typing</span>
       </div>
 
-      <!-- ✦ AI Smart Replies bar -->
+      <!-- âœ¦ AI Smart Replies bar -->
       <div id="smartRepliesBar" class="smart-bar hidden"
         aria-label="AI suggested replies" role="group"></div>
 
@@ -391,7 +384,7 @@
 
         <!-- Reply context strip -->
         <div id="replyBar" class="reply-strip hidden" aria-label="Replying to">
-          <span class="reply-strip-lbl">↩ Replying to</span>
+          <span class="reply-strip-lbl">â†© Replying to</span>
           <span id="replyPreview" class="reply-strip-txt"></span>
           <button id="cancelReplyBtn" class="reply-x" type="button" aria-label="Cancel reply">
             <svg viewBox="0 0 12 12" fill="none">
@@ -413,16 +406,16 @@
           </button>
 
           <input id="messageInput" name="chatMessage" type="text"
-            placeholder="Write something… or @novyn for AI"
+            placeholder="Write somethingâ€¦ or @novyn for AI"
             autocomplete="off" inputmode="text" enterkeyhint="send"
             autocapitalize="sentences" autocorrect="on" spellcheck="true"
             maxlength="1000" aria-label="Message"/>
 
-          <!-- ✦ AI Polish -->
+          <!-- âœ¦ AI Polish -->
           <button type="button" class="ai-polish" id="aiPolishBtn"
             aria-label="Polish with AI">
-            ✦
-            <span class="ap-tip">✦ Polish with AI</span>
+            âœ¦
+            <span class="ap-tip">âœ¦ Polish with AI</span>
           </button>
 
           <!-- Send -->
@@ -442,9 +435,9 @@
   </section><!-- /chatLayout -->
 
 
-  <!-- ══════════════════════════════
+  <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        PROFILE MODAL
-       ══════════════════════════════ -->
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
   <div id="profileModal" class="modal" style="display:none"
     role="dialog" aria-modal="true" aria-labelledby="profileModalTitle">
     <div class="modal-veil profile-modal-backdrop"></div>
@@ -508,9 +501,9 @@
   </div><!-- /profileModal -->
 
 
-  <!-- ══════════════════════════════
+  <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
        UNFRIEND CONFIRM MODAL
-       ══════════════════════════════ -->
+       â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
   <div id="unfriendModal" class="modal" style="display:none"
     role="dialog" aria-modal="true" aria-labelledby="unfriendModalTitle">
     <div class="modal-veil confirm-modal-backdrop"></div>
@@ -542,12 +535,10 @@
 </div><!-- /app -->
 
 
-<!-- ── Scripts ── -->
+<!-- â”€â”€ Scripts â”€â”€ -->
 <script src="/socket.io/socket.io.js"></script>
-<script src="app.js"></script>
-<script src="chat-extras.js"></script>
-<script src="novyn-ai.js"></script>
 <script src="pwa-register.js"></script>
+<script type="module" src="/src/main.js"></script>
 
 <script>
   /* Spinner keyframe */
@@ -558,3 +549,6 @@
 
 </body>
 </html>
+
+
+

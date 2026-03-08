@@ -1,0 +1,14 @@
+﻿@keyframes iris-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+[data-iris-animate='up'] {
+  animation: iris-fade-up 260ms ease both;
+}

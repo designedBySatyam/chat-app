@@ -183,7 +183,10 @@ JSON:`;
 
   // Hide chips while user types their own message
   const inp = document.getElementById('messageInput');
-  if (inp) inp.addEventListener('input', () => { if (inp.value.trim()) srHide() });
+  if (inp) {
+    inp.disabled = false;
+    inp.addEventListener('input', () => { if (inp.value.trim()) srHide() });
+  }
 
   /* ══════════════════════════════════════════════════════════
      2. ✦ POLISH BUTTON
@@ -231,6 +234,7 @@ Rewritten:`
      and sends it as the user's message
      ══════════════════════════════════════════════════════════ */
   const msgForm = document.getElementById('messageForm');
+  let inlineCommandBusy = false;
 
   async function answerCommand(query) {
     const data = await ai({
@@ -249,15 +253,20 @@ ${query}`
   if (msgForm && inp) {
     msgForm.addEventListener('submit', async e => {
       const val = inp.value.trim();
-      if (!val.toLowerCase().startsWith('@novyn ') || window._novynAiChatOpen) return;
+      if (!val.toLowerCase().startsWith('@novyn ') || window._novynAiChatOpen || inlineCommandBusy) return;
       e.preventDefault();
       e.stopImmediatePropagation();
       const query = val.slice(7).trim();
       if (!query) return;
-      inp.disabled = true;
+      inlineCommandBusy = true;
       inp.value    = '✦ novyn ai is thinking…';
-      const answer = await answerCommand(query);
-      inp.disabled = false;
+      let answer = null;
+      try {
+        answer = await answerCommand(query);
+      } catch (_) {
+        answer = null;
+      }
+      inlineCommandBusy = false;
       if (answer) {
         inp.value = answer;
         inp.focus();

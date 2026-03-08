@@ -16,6 +16,10 @@ const io = new Server(server, {
   },
 });
 
+app.use(express.json({ limit: "1mb" }));
+
+app.use("/src", express.static(path.join(__dirname, "src")));
+
 app.use(
   express.static(path.join(__dirname, "public"), {
     etag: false,
@@ -28,6 +32,108 @@ app.use(
     },
   })
 );
+
+const DEFAULT_AI_MODEL = "claude-sonnet-4-20250514";
+const AI_MAX_TOKENS_LIMIT = 4096;
+const AI_REQUEST_TIMEOUT_MS = 30000;
+
+function sanitizeAiMessages(rawMessages) {
+  if (!Array.isArray(rawMessages)) return [];
+  return rawMessages
+    .map((message) => {
+      const role = toDisplayName(message?.role);
+      if (role !== "user" && role !== "assistant") return null;
+
+      if (typeof message?.content === "string") {
+        const trimmed = message.content.trim();
+        if (!trimmed) return null;
+        return { role, content: trimmed };
+      }
+
+      if (Array.isArray(message?.content)) {
+        return { role, content: message.content };
+      }
+
+      return null;
+    })
+    .filter(Boolean)
+    .slice(-30);
+}
+
+app.post("/api/ai", async (req, res) => {
+  const apiKey = toDisplayName(process.env.ANTHROPIC_API_KEY);
+  if (!apiKey) {
+    return res.status(503).json({
+      error: "AI is not configured. Set ANTHROPIC_API_KEY on the server.",
+    });
+  }
+
+  const model = toDisplayName(req.body?.model) || DEFAULT_AI_MODEL;
+  const parsedTokens = Number(req.body?.max_tokens);
+  const maxTokens = Number.isFinite(parsedTokens)
+    ? Math.max(64, Math.min(AI_MAX_TOKENS_LIMIT, Math.floor(parsedTokens)))
+    : 600;
+  const messages = sanitizeAiMessages(req.body?.messages);
+  const systemPrompt = typeof req.body?.system === "string"
+    ? req.body.system.trim()
+    : "";
+
+  if (!messages.length) {
+    return res.status(400).json({ error: "messages array is required." });
+  }
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
+
+  try {
+    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+      body: JSON.stringify({
+        model,
+        max_tokens: maxTokens,
+        messages,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+      }),
+      signal: controller.signal,
+    });
+
+    const rawText = await upstream.text();
+    let payload = {};
+    if (rawText) {
+      try {
+        payload = JSON.parse(rawText);
+      } catch (err) {
+        payload = {
+          error: "Invalid JSON response from AI provider.",
+          raw: rawText.slice(0, 500),
+        };
+      }
+    }
+
+    if (!upstream.ok) {
+      const detailMessage = toDisplayName(payload?.error?.message || payload?.error);
+      return res.status(upstream.status).json({
+        error: detailMessage || `AI provider request failed (${upstream.status}).`,
+        details: payload,
+      });
+    }
+
+    return res.json(payload);
+  } catch (err) {
+    if (err?.name === "AbortError") {
+      return res.status(504).json({ error: "AI request timed out." });
+    }
+    console.error("AI proxy request failed:", err);
+    return res.status(502).json({ error: "Could not reach AI provider." });
+  } finally {
+    clearTimeout(timeout);
+  }
+});
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "chat-state.json");

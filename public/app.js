@@ -1,5 +1,6 @@
 ﻿const socketAvailable = typeof io === "function";
 const socket = socketAvailable ? io() : { on() {}, emit() {} };
+window.__novynSocket = socketAvailable ? socket : null;
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -36,6 +37,7 @@ const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
+const composerRow = document.querySelector(".composer-row");
 
 let me           = "";
 let activeFriend = "";
@@ -61,6 +63,26 @@ const AUTH_SESSION_KEY = "novyn-session";
 const TEMP_LOGIN_KEY = "novyn-login-cache";
 let authInFlightMode = "";
 let authRetryTimer = null;
+
+function ensureComposerInteractive() {
+  if (!messageInput) return;
+  if (messageInput.disabled) messageInput.disabled = false;
+  messageInput.readOnly = false;
+}
+
+ensureComposerInteractive();
+if (messageForm && messageInput) {
+  messageForm.addEventListener("pointerdown", () => {
+    ensureComposerInteractive();
+  });
+}
+if (composerRow && messageInput) {
+  composerRow.addEventListener("click", (e) => {
+    if (e.target.closest("button")) return;
+    ensureComposerInteractive();
+    keepComposerFocused();
+  });
+}
 
 function clearAuthRetryTimer() {
   if (!authRetryTimer) return;
@@ -976,7 +998,7 @@ function updateStats() {
 
 function setComposerEnabled(isEnabled) {
   // Keep composer interactive so users can always draft.
-  messageInput.disabled = false;
+  ensureComposerInteractive();
   if (sendButton) sendButton.disabled = false;
 
   if (!isEnabled) {
@@ -1811,3 +1833,4 @@ if (!socketAvailable) {
   setNetworkState("Realtime unavailable", "offline");
   showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
 }
+

@@ -1,0 +1,12 @@
+﻿.composer-row,
+#messageInput,
+.emoji-btn,
+.ai-polish,
+.send-btn {
+  pointer-events: auto;
+}
+
+#messageInput {
+  position: relative;
+  z-index: 2;
+}

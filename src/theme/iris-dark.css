@@ -1,0 +1,7 @@
+﻿:root,
+:root.dark {
+  --app-bg: var(--iris-void);
+  --app-panel: rgba(12, 8, 28, 0.94);
+  --app-text: var(--iris-text-dark);
+  --app-accent: var(--iris-brand);
+}

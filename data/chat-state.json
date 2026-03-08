@@ -94,13 +94,13 @@
       "isRegistered": true,
       "passwordSalt": "dbbcddaefb26b74ca09023ab64222e58",
       "passwordHash": "e6191fa8e67124f47406d69335cd446408055337e018e6c2eb48627b7c4ecae557952c7e103d05540d8127a2c960bd1f2571937c2be7443b56509a12a203f3bc",
-      "sessionToken": "255db423eb34f08ed34decfbf5777e68b50fc6fbca598a9de2220850ddfbd5de",
+      "sessionToken": "f639c743e39c9e289449c1ccfad8fb595112a4ebce14a74af063360304318d79",
       "avatarId": "",
       "age": "",
       "gender": "",
       "displayName": "",
       "bio": "",
-      "lastSeenAt": ""
+      "lastSeenAt": "2026-03-08T13:05:14.023Z"
     }
   ],
   "conversations": []

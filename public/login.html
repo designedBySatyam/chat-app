@@ -1,0 +1,137 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#f0ede8" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="description" content="IriSync login" />
+  <title>IriSync - Sign In</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,500;0,700;1,500;1,700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <link rel="manifest" href="/manifest.json" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="icon" type="image/svg+xml" href="/icons/irisync-icon.svg" />
+  <link rel="stylesheet" href="/src/theme/tokens.css" />
+  <link rel="stylesheet" href="/src/theme/iris-dark.css" />
+  <link rel="stylesheet" href="/src/theme/iris-light.css" />
+  <link rel="stylesheet" href="/login.css" />
+</head>
+<body>
+  <div class="login-root">
+    <canvas id="heroThreeCanvas" class="hero-three-canvas" aria-hidden="true"></canvas>
+    <div class="circle-bg" aria-hidden="true"></div>
+    <div class="blob blob-a" aria-hidden="true"></div>
+    <div class="blob blob-b" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
+
+    <header class="login-topbar">
+      <div class="brand" aria-label="IriSync">
+        <img class="brand-ico" src="/icons/irisync-icon.svg" alt="IriSync" width="32" height="32" />
+        <span class="brand-name">IriSync</span>
+      </div>
+
+      <div class="top-actions">
+        <div id="networkPill" class="net-pill" role="status" aria-live="polite">
+          <span class="sig" aria-hidden="true"></span>
+          <span id="connectionLabel">Connecting...</span>
+        </div>
+
+        <button class="theme-btn" id="themeToggle" type="button" aria-label="Toggle theme">
+          <span class="t-ico moon" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none">
+              <path d="M14 10.5a7 7 0 0 1-8.5-8.5A6 6 0 1 0 14 10.5z" fill="currentColor" />
+            </svg>
+          </span>
+          <span class="t-ico sun" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="none">
+              <circle cx="8" cy="8" r="3" fill="currentColor" />
+              <g stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+                <line x1="8" y1="1" x2="8" y2="3" />
+                <line x1="8" y1="13" x2="8" y2="15" />
+                <line x1="1" y1="8" x2="3" y2="8" />
+                <line x1="13" y1="8" x2="15" y2="8" />
+                <line x1="3.05" y1="3.05" x2="4.46" y2="4.46" />
+                <line x1="11.54" y1="11.54" x2="12.95" y2="12.95" />
+                <line x1="12.95" y1="3.05" x2="11.54" y2="4.46" />
+                <line x1="4.46" y1="11.54" x2="3.05" y2="12.95" />
+              </g>
+            </svg>
+          </span>
+        </button>
+      </div>
+    </header>
+
+    <main id="loginCard" class="login-shell" aria-label="Sign in to IriSync">
+      <section class="left-content" aria-hidden="true">
+        <div class="tag">Organic communication</div>
+        <h1>Where ideas<br />feel <em>alive.</em></h1>
+        <p>A calmer chat space for people and AI to work together without noise.</p>
+
+        <div class="avatars">
+          <div class="avatar-stack">
+            <span class="avatar av1">S</span>
+            <span class="avatar av2">M</span>
+            <span class="avatar av3">A</span>
+            <span class="avatar av4">+</span>
+          </div>
+          <span class="avatar-text"><strong>8,200+</strong> conversations today</span>
+        </div>
+      </section>
+
+      <section class="auth-panel">
+        <article class="auth-card">
+          <p class="card-tag">Welcome back</p>
+          <h2>Good to<br />see <em>you.</em></h2>
+
+          <form id="loginForm" class="form-stack" autocomplete="off" novalidate>
+            <div class="fl">
+              <label class="fl-label" for="usernameInput">Username</label>
+              <input id="usernameInput" class="fi" type="text" placeholder="your_username" autocomplete="off" spellcheck="false" autocapitalize="none" maxlength="30" required />
+              <p id="usernameHint" class="hint hidden"></p>
+              <div id="usernameSuggestions" class="suggests hidden"></div>
+            </div>
+
+            <div class="fl">
+              <label class="fl-label" for="passwordInput">Password</label>
+              <div class="pw-wrap">
+                <input id="passwordInput" class="fi" type="password" placeholder="........" autocomplete="current-password" required />
+                <button id="passwordToggle" class="pw-toggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+              </div>
+              <p id="capsLockHint" class="hint hidden">Caps Lock is on</p>
+            </div>
+
+            <button id="loginBtn" type="submit" class="login-btn" aria-label="Sign in to IriSync">
+              <span class="login-btn-inner">
+                <span class="login-btn-text">Continue</span>
+                <span class="login-btn-arrow" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                  </svg>
+                </span>
+                <span class="login-btn-spinner hidden" aria-hidden="true">
+                  <svg viewBox="0 0 16 16" fill="none">
+                    <circle cx="8" cy="8" r="6" stroke="currentColor" stroke-width="2" stroke-dasharray="28" stroke-dashoffset="10" stroke-linecap="round" />
+                  </svg>
+                </span>
+              </span>
+            </button>
+
+            <p id="loginError" class="login-err hidden"></p>
+          </form>
+
+          <p class="login-foot">First time here? Your account is created automatically.</p>
+        </article>
+      </section>
+    </main>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/pwa-register.js"></script>
+  <script type="module" src="/src/login-main.js"></script>
+</body>
+</html>
