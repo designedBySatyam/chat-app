@@ -28,9 +28,6 @@
     if (window._novynAuth && typeof window._novynAuth.clearSession === 'function') {
       window._novynAuth.clearSession();
     }
-    if (window._novynAuth && typeof window._novynAuth.clearLoginCache === 'function') {
-      window._novynAuth.clearLoginCache();
-    }
     window.location.reload();
   });
 })();
@@ -215,11 +212,7 @@
 
   function sendReaction(msgEl, msgId, emoji) {
     var toUser = msgEl.dataset.messageFrom;
-    var me = window._novynMe ? String(window._novynMe() || '').trim() : '';
-    if (
-      me &&
-      String(toUser || '').trim().toLowerCase() === me.toLowerCase()
-    ) {
+    if (window._novynMe && window._novynMe() && toUser === window._novynMe()) {
       toUser = window._novynActiveFriend && window._novynActiveFriend();
     }
     if (!toUser) return;
