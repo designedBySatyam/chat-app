@@ -1,9 +1,0 @@
-﻿html,
-body {
-  background: var(--app-bg, #04020f);
-  color: var(--app-text, #efe9ff);
-}
-
-* {
-  -webkit-tap-highlight-color: transparent;
-}

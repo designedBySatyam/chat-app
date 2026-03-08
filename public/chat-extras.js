@@ -1,9 +1,9 @@
-/* Novyn Chat Extras
+/* ─── Novyn Chat Extras ─────────────────────────────────────────────────────
    Handles: theme, logout, mobile panels, scroll FAB, char counter,
-   typing indicator hooks, emoji reactions, reply UI, and profile modal.
-*/
+            snap typing, emoji reactions + server sync, reply UI, profile modal
+   ─────────────────────────────────────────────────────────────────────────── */
 
-/* Theme toggle */
+/* ── Theme toggle ───────────────────────────────────────────────────────────── */
 (function () {
   var root  = document.documentElement;
   var btn   = document.getElementById('themeToggle');
@@ -12,27 +12,22 @@
     t === 'light' ? root.classList.add('light') : root.classList.remove('light');
     try { localStorage.setItem(STORE, t); } catch(e) {}
   }
-  var saved = 'light';
-  try { saved = localStorage.getItem(STORE) || 'light'; } catch(e) {}
+  var saved = 'dark';
+  try { saved = localStorage.getItem(STORE) || 'dark'; } catch(e) {}
   applyTheme(saved);
   btn && btn.addEventListener('click', function () {
     applyTheme(root.classList.contains('light') ? 'dark' : 'light');
   });
 })();
 
-/* Logout */
+/* ── Logout ─────────────────────────────────────────────────────────────────── */
 (function () {
   var btn = document.getElementById('logoutBtn');
   if (!btn) return;
-  btn.addEventListener('click', function () {
-    if (window._novynAuth && typeof window._novynAuth.clearSession === 'function') {
-      window._novynAuth.clearSession();
-    }
-    window.location.reload();
-  });
+  btn.addEventListener('click', function () { window.location.reload(); });
 })();
 
-/* Mobile panel switching */
+/* ── Mobile panel switching ─────────────────────────────────────────────────── */
 (function () {
   var BP      = 768;
   var sidebar = document.getElementById('mobileSidebar');
@@ -53,7 +48,7 @@
   }
   document.addEventListener('click', function (e) {
     if (!isMobile()) return;
-    if (e.target.closest('.friend-btn, .friend-row, .ai-friend')) showPanel('chat');
+    if (e.target.closest('.friend-btn')) showPanel('chat');
   });
   backBtn && backBtn.addEventListener('click', function () {
     if (isMobile()) showPanel('friends');
@@ -70,7 +65,7 @@
   }).observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
 })();
 
-/* Scroll-to-bottom FAB */
+/* ── Scroll-to-bottom FAB ───────────────────────────────────────────────────── */
 (function () {
   var messagesEl = document.getElementById('messages');
   var scrollBtn  = document.getElementById('scrollBtn');
@@ -83,7 +78,6 @@
   function checkFAB() {
     if (!scrollBtn) return;
     scrollBtn.classList.toggle('visible', !atBottom());
-    scrollBtn.classList.toggle('show', !atBottom());
     if (atBottom()) {
       unread = 0;
       if (badge) { badge.textContent = ''; badge.classList.add('hidden'); }
@@ -112,7 +106,7 @@
   };
 })();
 
-/* Character counter */
+/* ── Character counter ──────────────────────────────────────────────────────── */
 (function () {
   var input   = document.getElementById('messageInput');
   var counter = document.getElementById('charCounter');
@@ -121,116 +115,14 @@
   input.addEventListener('input', function () {
     var len = input.value.length;
     if (len === 0) { counter.classList.add('hidden'); return; }
-    counter.classList.remove('hidden', 'warn', 'limit', 'over');
+    counter.classList.remove('hidden', 'warn', 'limit');
     counter.textContent = len + ' / ' + MAX;
-    if (len >= MAX) counter.classList.add('over');
+    if (len >= MAX) counter.classList.add('limit');
     else if (len >= WARN) counter.classList.add('warn');
   });
 })();
-/* Composer emoji picker */
-(function () {
-  var toggle = document.getElementById('emojiToggle');
-  var input = document.getElementById('messageInput');
-  if (!toggle || !input) return;
 
-  var picker = null;
-  // Use code points directly to avoid source-encoding glitches.
-  var EMOJIS = [
-    "\u{1F600}", "\u{1F601}", "\u{1F602}", "\u{1F923}", "\u{1F60A}", "\u{1F60D}", "\u{1F970}", "\u{1F618}",
-    "\u{1F609}", "\u{1F60E}", "\u{1F929}", "\u{1F914}", "\u{1F634}", "\u{1F973}", "\u{1F64C}", "\u{1F44F}",
-    "\u{1F44D}", "\u{1F44E}", "\u{1F525}", "\u2728", "\u{1F49C}", "\u2764\uFE0F", "\u{1F4AF}", "\u{1F389}",
-    "\u{1F680}", "\u{1F319}", "\u{1F31F}", "\u{1F605}", "\u{1F91D}", "\u{1F64F}", "\u{1F440}", "\u{1F4AC}"
-  ];
-
-  function insertEmoji(emoji) {
-    var start = Number.isFinite(input.selectionStart) ? input.selectionStart : input.value.length;
-    var end = Number.isFinite(input.selectionEnd) ? input.selectionEnd : input.value.length;
-    var before = input.value.slice(0, start);
-    var after = input.value.slice(end);
-    input.value = before + emoji + after;
-    input.focus();
-    var nextPos = start + emoji.length;
-    if (typeof input.setSelectionRange === 'function') {
-      input.setSelectionRange(nextPos, nextPos);
-    }
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-  }
-
-  function closePicker() {
-    if (!picker) return;
-    picker.remove();
-    picker = null;
-    toggle.setAttribute('aria-expanded', 'false');
-  }
-
-  function openPicker() {
-    if (picker) return;
-    picker = document.createElement('div');
-    picker.className = 'composer-emoji-picker';
-    picker.setAttribute('role', 'dialog');
-    picker.setAttribute('aria-label', 'Emoji picker');
-
-    EMOJIS.forEach(function (emoji) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'composer-emoji-btn';
-      b.textContent = emoji;
-      b.title = emoji;
-      b.addEventListener('click', function (e) {
-        e.preventDefault();
-        e.stopPropagation();
-        insertEmoji(emoji);
-      });
-      picker.appendChild(b);
-    });
-
-    document.body.appendChild(picker);
-
-    var rect = toggle.getBoundingClientRect();
-    var pickerRect = picker.getBoundingClientRect();
-    var margin = 8;
-
-    var left = rect.left;
-    if (left + pickerRect.width > window.innerWidth - margin) {
-      left = window.innerWidth - pickerRect.width - margin;
-    }
-    if (left < margin) left = margin;
-
-    var top = rect.top - pickerRect.height - 8;
-    if (top < margin) top = rect.bottom + 8;
-    if (top + pickerRect.height > window.innerHeight - margin) {
-      top = Math.max(margin, window.innerHeight - pickerRect.height - margin);
-    }
-
-    picker.style.left = left + 'px';
-    picker.style.top = top + 'px';
-    toggle.setAttribute('aria-expanded', 'true');
-  }
-
-  toggle.addEventListener('click', function (e) {
-    e.preventDefault();
-    e.stopPropagation();
-    if (picker) closePicker();
-    else openPicker();
-  });
-
-  document.addEventListener('click', function (e) {
-    if (!picker) return;
-    if (e.target.closest('.composer-emoji-picker')) return;
-    if (e.target.closest('#emojiToggle')) return;
-    closePicker();
-  });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') closePicker();
-  });
-
-  window.addEventListener('resize', closePicker, { passive: true });
-  window.addEventListener('scroll', closePicker, { passive: true });
-})();
-
-
-/* Emoji reactions + reply button */
+/* ── Emoji Reactions + Reply button ─────────────────────────────────────────── */
 (function () {
     var EMOJIS     = [
     "\u{1F44D}", "\u2764\uFE0F", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F525}",
@@ -244,18 +136,16 @@
   var reactionStore    = {};
   var activePickerMsgEl = null;
 
-  function getMeUser() {
-    if (typeof window._novynMe !== 'function') return '';
-    return String(window._novynMe() || '');
-  }
-
   function getStore(id) {
     if (!reactionStore[id]) reactionStore[id] = {};
     return reactionStore[id];
   }
 
   function normalizePayloadReactions(raw) {
-    var meKey = getMeUser().trim().toLowerCase();
+    var meKey = '';
+    if (window._novynMe) {
+      meKey = String(window._novynMe() || '').trim().toLowerCase();
+    }
     var input = raw && typeof raw === 'object' ? raw : {};
     var normalized = {};
     Object.keys(input).forEach(function (emoji) {
@@ -287,19 +177,19 @@
   }
 
   function closePicker() {
-    var open = document.querySelector('.reaction-picker, .react-picker');
+    var open = document.querySelector('.reaction-picker');
     if (open) open.remove();
     activePickerMsgEl = null;
   }
 
   document.addEventListener('click', function (e) {
-    if (!e.target.closest('.reaction-picker, .react-picker') && !e.target.closest('.msg-action-btn, .mab')) {
+    if (!e.target.closest('.reaction-picker') && !e.target.closest('.msg-action-btn')) {
       closePicker();
     }
   });
 
   function renderReactions(msgEl, msgId) {
-    var wrap = msgEl.querySelector('.message-reactions, .msg-reacts');
+    var wrap = msgEl.querySelector('.message-reactions');
     if (!wrap) return;
     wrap.innerHTML = '';
     var store = getStore(msgId);
@@ -307,9 +197,9 @@
       var entry = store[emoji];
       if (!entry || entry.count <= 0) return;
       var btn = document.createElement('button');
-      btn.className = 'reaction-btn react-btn' + (entry.mine ? ' mine' : '');
+      btn.className = 'reaction-btn' + (entry.mine ? ' mine' : '');
       btn.dataset.emoji = emoji;
-      btn.innerHTML = emoji + '<span class="r-count rc">' + entry.count + '</span>';
+      btn.innerHTML = emoji + '<span class="r-count">' + entry.count + '</span>';
       btn.addEventListener('click', function () { sendReaction(msgEl, msgId, emoji); });
       wrap.appendChild(btn);
     });
@@ -317,8 +207,7 @@
 
   function sendReaction(msgEl, msgId, emoji) {
     var toUser = msgEl.dataset.messageFrom;
-    var meUser = getMeUser();
-    if (meUser && toUser === meUser) {
+    if (window._novynMe && window._novynMe() && toUser === window._novynMe()) {
       toUser = window._novynActiveFriend && window._novynActiveFriend();
     }
     if (!toUser) return;
@@ -348,11 +237,7 @@
   }
 
   function addActionsUI(msgEl) {
-    if (
-      msgEl.classList.contains('message-deleted') ||
-      msgEl.classList.contains('msg-deleted') ||
-      msgEl.classList.contains('ai-msg')
-    ) return;
+    if (msgEl.classList.contains('message-deleted')) return;
     var msgId = msgEl.dataset.messageId || ('tmp-' + Date.now() + '-' + Math.random());
     if (!msgEl.dataset.messageId) msgEl.dataset.messageId = msgId;
     if ((!reactionStore[msgId] || !Object.keys(reactionStore[msgId]).length) && msgEl.dataset.messageReactions) {
@@ -362,11 +247,11 @@
     }
 
     var actions = document.createElement('div');
-    actions.className = 'msg-actions msg-acts';
+    actions.className = 'msg-actions';
 
     // Reply button
     var replyBtn = document.createElement('button');
-    replyBtn.className = 'msg-action-btn mab';
+    replyBtn.className = 'msg-action-btn';
     replyBtn.dataset.msgAction = 'reply';
     replyBtn.title     = 'Reply';
     replyBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>';
@@ -383,7 +268,7 @@
 
     // Emoji button
     var emojiBtn = document.createElement('button');
-    emojiBtn.className = 'msg-action-btn mab';
+    emojiBtn.className = 'msg-action-btn';
     emojiBtn.dataset.msgAction = 'react';
     emojiBtn.title     = 'React';
     emojiBtn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>';
@@ -394,7 +279,7 @@
       activePickerMsgEl = msgEl;
 
       var picker = document.createElement('div');
-      picker.className = 'reaction-picker react-picker';
+      picker.className = 'reaction-picker';
       var expanded = false;
       function renderPickerEmojiButtons() {
         picker.innerHTML = '';
@@ -453,7 +338,7 @@
     msgEl.appendChild(actions);
 
     var reactWrap = document.createElement('div');
-    reactWrap.className = 'message-reactions msg-reacts';
+    reactWrap.className = 'message-reactions';
     msgEl.appendChild(reactWrap);
 
     renderReactions(msgEl, msgId);
@@ -462,7 +347,7 @@
   var observer = new MutationObserver(function (mutations) {
     mutations.forEach(function (m) {
       m.addedNodes.forEach(function (node) {
-        if (node.nodeType === 1 && node.tagName === 'ARTICLE' && (node.classList.contains('message') || node.classList.contains('msg'))) {
+        if (node.nodeType === 1 && node.tagName === 'ARTICLE' && node.classList.contains('message')) {
           addActionsUI(node);
         }
       });
@@ -476,33 +361,33 @@
   };
 })();
 
-/* Profile modal */
+/* ── Profile Modal ──────────────────────────────────────────────────────────── */
 (function () {
   var AVATARS = [
-    { id: 'av-ghost',     bg: 'linear-gradient(135deg,#667eea,#764ba2)', emoji: '\u{1F47B}' },
-    { id: 'av-alien',     bg: 'linear-gradient(135deg,#11998e,#38ef7d)', emoji: '\u{1F47D}' },
-    { id: 'av-robot',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', emoji: '\u{1F916}' },
-    { id: 'av-cat',       bg: 'linear-gradient(135deg,#4338ca,#5b21b6)', emoji: '\u{1F431}' },
-    { id: 'av-fox',       bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '\u{1F98A}' },
-    { id: 'av-bear',      bg: 'linear-gradient(135deg,#8B5E3C,#d4a96a)', emoji: '\u{1F43B}' },
-    { id: 'av-panda',     bg: 'linear-gradient(135deg,#2c3e50,#bdc3c7)', emoji: '\u{1F43C}' },
-    { id: 'av-wolf',      bg: 'linear-gradient(135deg,#4b6cb7,#182848)', emoji: '\u{1F43A}' },
-    { id: 'av-dragon',    bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', emoji: '\u{1F432}' },
-    { id: 'av-ninja',     bg: 'linear-gradient(135deg,#1a1a2e,#16213e)', emoji: '\u{1F977}' },
-    { id: 'av-wizard',    bg: 'linear-gradient(135deg,#6a11cb,#2575fc)', emoji: '\u{1F9D9}' },
-    { id: 'av-astronaut', bg: 'linear-gradient(135deg,#0f0c29,#302b63)', emoji: '\u{1F468}\u200D\u{1F680}' },
-    { id: 'av-angel',     bg: 'linear-gradient(135deg,#6366f1,#8b5cf6)', emoji: '\u{1F607}' },
-    { id: 'av-demon',     bg: 'linear-gradient(135deg,#870000,#190a05)', emoji: '\u{1F608}' },
-    { id: 'av-cool',      bg: 'linear-gradient(135deg,#00b09b,#96c93d)', emoji: '\u{1F60E}' },
-    { id: 'av-fire',      bg: 'linear-gradient(135deg,#f12711,#f5af19)', emoji: '\u{1F525}' },
-    { id: 'av-snow',      bg: 'linear-gradient(135deg,#a1c4fd,#c2e9fb)', emoji: '\u2744\uFE0F' },
-    { id: 'av-star',      bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '\u2B50' },
-    { id: 'av-diamond',   bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', emoji: '\u{1F48E}' },
-    { id: 'av-crown',     bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '\u{1F451}' },
-    { id: 'av-skull',     bg: 'linear-gradient(135deg,#232526,#414345)', emoji: '\u{1F480}' },
-    { id: 'av-clown',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', emoji: '\u{1F921}' },
-    { id: 'av-sunflower', bg: 'linear-gradient(135deg,#f59e0b,#d97706)', emoji: '\u{1F33B}' },
-    { id: 'av-planet',    bg: 'linear-gradient(135deg,#141e30,#243b55)', emoji: '\u{1FA90}' },
+    { id: 'av-ghost',     bg: 'linear-gradient(135deg,#667eea,#764ba2)', emoji: '👻' },
+    { id: 'av-alien',     bg: 'linear-gradient(135deg,#11998e,#38ef7d)', emoji: '👽' },
+    { id: 'av-robot',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', emoji: '🤖' },
+    { id: 'av-cat',       bg: 'linear-gradient(135deg,#f953c6,#b91d73)', emoji: '🐱' },
+    { id: 'av-fox',       bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '🦊' },
+    { id: 'av-bear',      bg: 'linear-gradient(135deg,#8B5E3C,#d4a96a)', emoji: '🐻' },
+    { id: 'av-panda',     bg: 'linear-gradient(135deg,#2c3e50,#bdc3c7)', emoji: '🐼' },
+    { id: 'av-wolf',      bg: 'linear-gradient(135deg,#4b6cb7,#182848)', emoji: '🐺' },
+    { id: 'av-dragon',    bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', emoji: '🐲' },
+    { id: 'av-ninja',     bg: 'linear-gradient(135deg,#1a1a2e,#16213e)', emoji: '🥷' },
+    { id: 'av-wizard',    bg: 'linear-gradient(135deg,#6a11cb,#2575fc)', emoji: '🧙' },
+    { id: 'av-astronaut', bg: 'linear-gradient(135deg,#0f0c29,#302b63)', emoji: '👨‍🚀' },
+    { id: 'av-angel',     bg: 'linear-gradient(135deg,#f0c27f,#fc67fa)', emoji: '😇' },
+    { id: 'av-demon',     bg: 'linear-gradient(135deg,#870000,#190a05)', emoji: '😈' },
+    { id: 'av-cool',      bg: 'linear-gradient(135deg,#00b09b,#96c93d)', emoji: '😎' },
+    { id: 'av-fire',      bg: 'linear-gradient(135deg,#f12711,#f5af19)', emoji: '🔥' },
+    { id: 'av-snow',      bg: 'linear-gradient(135deg,#a1c4fd,#c2e9fb)', emoji: '❄️' },
+    { id: 'av-star',      bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '⭐' },
+    { id: 'av-diamond',   bg: 'linear-gradient(135deg,#00c6ff,#0072ff)', emoji: '💎' },
+    { id: 'av-crown',     bg: 'linear-gradient(135deg,#f7971e,#ffd200)', emoji: '👑' },
+    { id: 'av-skull',     bg: 'linear-gradient(135deg,#232526,#414345)', emoji: '💀' },
+    { id: 'av-clown',     bg: 'linear-gradient(135deg,#fc4a1a,#f7b733)', emoji: '🤡' },
+    { id: 'av-sunflower', bg: 'linear-gradient(135deg,#f9d423,#ff4e50)', emoji: '🌻' },
+    { id: 'av-planet',    bg: 'linear-gradient(135deg,#141e30,#243b55)', emoji: '🪐' },
   ];
 
   var modal       = document.getElementById('profileModal');
@@ -542,7 +427,7 @@
   if (avatarGrid) {
     AVATARS.forEach(function(av) {
       var btn = document.createElement('button');
-      btn.className = 'av-grid-btn av-btn';
+      btn.className = 'av-grid-btn';
       btn.type = 'button';
       btn.title = av.emoji;
       btn.dataset.avId = av.id;
@@ -554,8 +439,8 @@
           avatarBig.style.background = av.bg;
           avatarBig.textContent = av.emoji;
         }
-        document.querySelectorAll('.av-grid-btn').forEach(function(b){ b.classList.remove('selected', 'sel'); });
-        btn.classList.add('selected', 'sel');
+        document.querySelectorAll('.av-grid-btn').forEach(function(b){ b.classList.remove('selected'); });
+        btn.classList.add('selected');
       });
       avatarGrid.appendChild(btn);
     });
@@ -575,9 +460,7 @@
       applyAvatarToEl(avatarBig, currentAvatarId, (me || '?').slice(0,2).toUpperCase());
     }
     document.querySelectorAll('.av-grid-btn').forEach(function(b) {
-      var isSelected = b.dataset.avId === currentAvatarId;
-      b.classList.toggle('selected', isSelected);
-      b.classList.toggle('sel', isSelected);
+      b.classList.toggle('selected', b.dataset.avId === currentAvatarId);
     });
   }
 
@@ -610,4 +493,3 @@
   // Expose avatar utils for app.js
   window._novynAvatarUtils = { getAvatarById: getAvatarById, applyAvatarToEl: applyAvatarToEl, AVATARS: AVATARS };
 })();
-

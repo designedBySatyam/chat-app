@@ -1,6 +1,5 @@
 ﻿const socketAvailable = typeof io === "function";
 const socket = socketAvailable ? io() : { on() {}, emit() {} };
-window.__novynSocket = socketAvailable ? socket : null;
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -31,13 +30,12 @@ const networkPill       = document.getElementById("networkPill");
 const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
-const sendButton        = messageForm ? messageForm.querySelector(".send-btn") : null;
+const sendButton        = messageForm.querySelector("button");
 const messageSearchToggle = document.getElementById("messageSearchToggle");
 const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
-const composerRow = document.querySelector(".composer-row");
 
 let me           = "";
 let activeFriend = "";
@@ -59,147 +57,6 @@ const scrollState = {
 };
 const EMPTY_CONVERSATION_HINT = "Choose a friend to load your conversation.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
-const AUTH_SESSION_KEY = "novyn-session";
-const TEMP_LOGIN_KEY = "novyn-login-cache";
-let authInFlightMode = "";
-let authRetryTimer = null;
-
-function ensureComposerInteractive() {
-  if (!messageInput) return;
-  if (messageInput.disabled) messageInput.disabled = false;
-  messageInput.readOnly = false;
-}
-
-ensureComposerInteractive();
-if (messageForm && messageInput) {
-  messageForm.addEventListener("pointerdown", () => {
-    ensureComposerInteractive();
-  });
-}
-if (composerRow && messageInput) {
-  composerRow.addEventListener("click", (e) => {
-    if (e.target.closest("button")) return;
-    ensureComposerInteractive();
-    keepComposerFocused();
-  });
-}
-
-function clearAuthRetryTimer() {
-  if (!authRetryTimer) return;
-  clearTimeout(authRetryTimer);
-  authRetryTimer = null;
-}
-
-function readStoredSession() {
-  try {
-    const raw = localStorage.getItem(AUTH_SESSION_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const username = String(parsed?.username || "").trim();
-    const sessionToken = String(parsed?.sessionToken || "").trim();
-    if (!username || !sessionToken) return null;
-    return { username, sessionToken };
-  } catch (_) {
-    return null;
-  }
-}
-
-function saveStoredSession(username, sessionToken) {
-  const safeUsername = String(username || "").trim();
-  const safeSessionToken = String(sessionToken || "").trim();
-  if (!safeUsername || !safeSessionToken) return;
-  try {
-    localStorage.setItem(
-      AUTH_SESSION_KEY,
-      JSON.stringify({ username: safeUsername, sessionToken: safeSessionToken })
-    );
-  } catch (_) {
-    // Ignore storage quota/private mode failures.
-  }
-}
-
-function clearStoredSession() {
-  try {
-    localStorage.removeItem(AUTH_SESSION_KEY);
-  } catch (_) {
-    // Ignore storage failures.
-  }
-}
-
-function readTemporaryLogin() {
-  try {
-    const raw = sessionStorage.getItem(TEMP_LOGIN_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    const username = String(parsed?.username || "").trim();
-    const password = String(parsed?.password || "");
-    if (!username || !password) return null;
-    return { username, password };
-  } catch (_) {
-    return null;
-  }
-}
-
-function saveTemporaryLogin(username, password) {
-  const safeUsername = String(username || "").trim();
-  const safePassword = String(password || "");
-  if (!safeUsername || !safePassword) return;
-  try {
-    sessionStorage.setItem(
-      TEMP_LOGIN_KEY,
-      JSON.stringify({ username: safeUsername, password: safePassword })
-    );
-  } catch (_) {
-    // Ignore storage failures.
-  }
-}
-
-function clearTemporaryLogin() {
-  try {
-    sessionStorage.removeItem(TEMP_LOGIN_KEY);
-  } catch (_) {
-    // Ignore storage failures.
-  }
-}
-
-function attemptTemporaryLogin() {
-  if (!socketAvailable) return false;
-  if (authInFlightMode && authInFlightMode !== "session") return false;
-
-  const cached = readTemporaryLogin();
-  if (!cached) return false;
-
-  authInFlightMode = "cached_password";
-  if (usernameInput) usernameInput.value = cached.username;
-  if (passwordInput) passwordInput.value = cached.password;
-  setLoginLoading(true);
-  socket.emit("register", cached);
-  return true;
-}
-
-function attemptSessionResume() {
-  if (!socketAvailable || authInFlightMode) return false;
-  const session = readStoredSession();
-  if (!session) return attemptTemporaryLogin();
-
-  authInFlightMode = "session";
-  if (usernameInput) usernameInput.value = session.username;
-  setLoginLoading(true);
-  socket.emit("resume_session", session);
-
-  clearAuthRetryTimer();
-  // Fallback for servers that don't yet support resume_session.
-  authRetryTimer = setTimeout(() => {
-    if (authInFlightMode !== "session") return;
-    authInFlightMode = "";
-    clearStoredSession();
-    if (!attemptTemporaryLogin()) {
-      setLoginLoading(false);
-    }
-  }, 1800);
-
-  return true;
-}
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -330,18 +187,18 @@ function isNearBottom() {
 function setNetworkState(label, state) {
   if (!connectionLabel || !networkPill) return;
   connectionLabel.textContent = label;
-  networkPill.classList.remove("connected", "offline", "ok", "err");
-  if (state === "connected") networkPill.classList.add("connected", "ok");
-  if (state === "offline")   networkPill.classList.add("offline", "err");
+  networkPill.classList.remove("connected", "offline");
+  if (state === "connected") networkPill.classList.add("connected");
+  if (state === "offline")   networkPill.classList.add("offline");
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function showToast(message, type = "info") {
   toast.textContent = message;
-  toast.classList.remove("hidden", "error", "success", "ok", "err");
-  if (type === "error")   toast.classList.add("error", "err");
-  if (type === "success") toast.classList.add("success", "ok");
+  toast.classList.remove("hidden", "error", "success");
+  if (type === "error")   toast.classList.add("error");
+  if (type === "success") toast.classList.add("success");
 
   clearTimeout(showToast._timer);
   showToast._timer = setTimeout(() => {
@@ -370,7 +227,7 @@ function showUsernameSuggestions(requested, suggestions) {
   for (const suggestion of list) {
     const btn      = document.createElement("button");
     btn.type       = "button";
-    btn.className  = "suggestion-chip sug-chip";
+    btn.className  = "suggestion-chip";
     btn.textContent = suggestion;
     btn.addEventListener("click", () => {
       usernameInput.value = suggestion;
@@ -471,7 +328,7 @@ function hideTypingIndicator() {
 
 function emitTyping(isTyping, target = activeFriend) {
   if (!target) return;
-  socket.emit("typing", { to: target, isTyping, typing: isTyping });
+  socket.emit("typing", { to: target, isTyping });
 }
 
 function clearLocalTypingTimer() {
@@ -540,7 +397,7 @@ function appendDateSeparator(iso) {
   if (previousKey === dateKey) return;
 
   const separator = document.createElement("div");
-  separator.className = "message-date-separator date-sep";
+  separator.className = "message-date-separator";
   separator.dataset.dateKey = dateKey;
   separator.textContent = formatDateSeparatorLabel(iso);
   messagesEl.appendChild(separator);
@@ -601,7 +458,7 @@ function resetMessageSearch() {
 
 function applyMessageSearch() {
   const query = getSearchQuery();
-  const messageNodes = Array.from(messagesEl.querySelectorAll("article.message, article.msg"));
+  const messageNodes = Array.from(messagesEl.querySelectorAll("article.message"));
   let visibleCount = 0;
 
   for (const row of messageNodes) {
@@ -613,19 +470,12 @@ function applyMessageSearch() {
     if (match) visibleCount += 1;
   }
 
-  const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator, .date-sep"));
+  const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator"));
   for (const separator of separatorNodes) {
     let hasVisibleMessages = false;
     let cursor = separator.nextElementSibling;
-    while (
-      cursor &&
-      !cursor.classList.contains("message-date-separator") &&
-      !cursor.classList.contains("date-sep")
-    ) {
-      if (
-        (cursor.classList.contains("message") || cursor.classList.contains("msg")) &&
-        !cursor.classList.contains("search-hidden")
-      ) {
+    while (cursor && !cursor.classList.contains("message-date-separator")) {
+      if (cursor.classList.contains("message") && !cursor.classList.contains("search-hidden")) {
         hasVisibleMessages = true;
         break;
       }
@@ -683,7 +533,7 @@ function clearReply() {
 const messageContextMenu = (() => {
   const menu = document.createElement("div");
   menu.id = "messageContextMenu";
-  menu.className = "message-context-menu ctx-menu hidden";
+  menu.className = "message-context-menu hidden";
   menu.innerHTML = `
     <button type="button" data-action="copy">Copy</button>
     <button type="button" data-action="reply">Reply</button>
@@ -799,9 +649,8 @@ const messageContextMenu = (() => {
   messagesEl.addEventListener("scroll", close, { passive: true });
 
   messagesEl.addEventListener("contextmenu", (e) => {
-    const msgEl = e.target.closest("article.message, article.msg");
+    const msgEl = e.target.closest("article.message");
     if (!msgEl) return;
-    if (msgEl.classList.contains("ai-msg")) return;
     e.preventDefault();
     open(msgEl, e.clientX, e.clientY);
   });
@@ -818,9 +667,8 @@ const messageContextMenu = (() => {
   }
 
   messagesEl.addEventListener("pointerdown", (e) => {
-    const msgEl = e.target.closest("article.message, article.msg");
+    const msgEl = e.target.closest("article.message");
     if (!msgEl) return;
-    if (msgEl.classList.contains("ai-msg")) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     longPressTarget = msgEl;
     longPressStartX = e.clientX;
@@ -848,13 +696,8 @@ function renderMessagesEmptyState(text) {
   hideTypingIndicator();
 
   const empty       = document.createElement("div");
-  empty.className   = "messages-empty msgs-empty";
-  const heading = /loading/i.test(String(text || "")) ? "Loading conversation…" : "Nothing here yet";
-  empty.innerHTML = `
-    <div class="empty-ico" aria-hidden="true">💬</div>
-    <p class="empty-h">${heading}</p>
-    <p class="empty-s">${text || "Pick a friend — or open Novyn AI ✦"}</p>
-  `;
+  empty.className   = "messages-empty";
+  empty.textContent = text;
   messagesEl.appendChild(empty);
   applyMessageSearch();
 }
@@ -870,8 +713,17 @@ function renderMineMessageMeta(metaEl, timeText, statusKey) {
   time.textContent = timeText;
 
   const status = document.createElement("span");
-  status.className = `message-status message-status-${statusKey} status-icon${statusKey === "seen" ? " seen" : ""}`;
-  status.textContent = statusKey === "sent" ? "✓" : "✓✓";
+  status.className = `message-status message-status-${statusKey}`;
+
+  const tickA = document.createElement("span");
+  tickA.className = "tick";
+  tickA.textContent = "✓";
+
+  const tickB = document.createElement("span");
+  tickB.className = "tick";
+  tickB.textContent = "✓";
+
+  status.append(tickA, tickB);
   metaEl.append(time, status);
 }
 
@@ -891,7 +743,7 @@ function buildMessageElement(message, skipAnimation = false) {
   const fullTimestamp = formatFullTimestamp(message.timestamp);
 
   const row       = document.createElement("article");
-  row.className   = `message msg ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
+  row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
   row.dataset.dateKey = dateKey;
   row.dataset.timestamp = message.timestamp || "";
@@ -906,7 +758,7 @@ function buildMessageElement(message, skipAnimation = false) {
     message.replyTo?.from || "",
   ].join(" ");
   if (isDeleted) {
-    row.classList.add("message-deleted", "msg-deleted");
+    row.classList.add("message-deleted");
   }
 
   if (message.reactions && Object.keys(message.reactions).length) {
@@ -918,7 +770,7 @@ function buildMessageElement(message, skipAnimation = false) {
   }
 
   const meta        = document.createElement("span");
-  meta.className    = "message-meta msg-meta";
+  meta.className    = "message-meta";
   if (mine) {
     row.dataset.timeLabel = prettyTime(message.timestamp);
     renderMineMessageMeta(meta, row.dataset.timeLabel, getMessageStatusKey(message));
@@ -930,9 +782,9 @@ function buildMessageElement(message, skipAnimation = false) {
 
   if (message.replyTo && !isDeleted) {
     const rq      = document.createElement("div");
-    rq.className  = "reply-quote reply-q";
+    rq.className  = "reply-quote";
     const ra      = document.createElement("span");
-    ra.className  = "reply-quote-author rq-who";
+    ra.className  = "reply-quote-author";
     const replyAuthor = findFriend(message.replyTo.from);
     ra.textContent = replyAuthor
       ? getFriendDisplayName(replyAuthor)
@@ -953,16 +805,16 @@ function buildMessageElement(message, skipAnimation = false) {
   }
 
   const body        = document.createElement("div");
-  body.className    = "message-body msg-body";
+  body.className    = "message-body";
   body.textContent  = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
-  if (isDeleted) body.classList.add("message-body-deleted", "deleted");
+  if (isDeleted) body.classList.add("message-body-deleted");
 
   row.append(body);
   return row;
 }
 
 function appendMessage(message, skipAnimation = false, withSeparator = true) {
-  const emptyNode = messagesEl.querySelector(".messages-empty, .msgs-empty");
+  const emptyNode = messagesEl.querySelector(".messages-empty");
   if (emptyNode) emptyNode.remove();
   const preserveTop = messagesEl.scrollTop;
   const shouldAutoScroll = shouldAutoScrollForMessage(message, skipAnimation);
@@ -997,18 +849,15 @@ function updateStats() {
 }
 
 function setComposerEnabled(isEnabled) {
-  // Keep composer interactive so users can always draft.
-  ensureComposerInteractive();
-  if (sendButton) sendButton.disabled = false;
+  messageInput.disabled = !isEnabled;
+  if (sendButton) sendButton.disabled = !isEnabled;
 
   if (!isEnabled) {
     stopLocalTyping();
     hideTypingIndicator();
   }
 
-  messageInput.placeholder = isEnabled
-    ? "Write something… or @novyn for AI"
-    : "Select a friend or open Novyn AI ✦";
+  messageInput.placeholder = "Type a message…";
 }
 
 function renderMessages(messages) {
@@ -1046,23 +895,23 @@ function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_T
   const row = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
   if (!row) return;
 
-  row.classList.add("message-deleted", "msg-deleted");
+  row.classList.add("message-deleted");
   row.dataset.messageText = replacementText;
   row.dataset.searchText = `${row.dataset.messageFrom || ""} ${replacementText}`;
 
-  const body = row.querySelector(".message-body, .msg-body");
+  const body = row.querySelector(".message-body");
   if (body) {
     body.textContent = replacementText;
-    body.classList.add("message-body-deleted", "deleted");
+    body.classList.add("message-body-deleted");
   }
 
-  const replyQuote = row.querySelector(".reply-quote, .reply-q");
+  const replyQuote = row.querySelector(".reply-quote");
   if (replyQuote) replyQuote.remove();
 
-  const actions = row.querySelector(".msg-actions, .msg-acts");
+  const actions = row.querySelector(".msg-actions");
   if (actions) actions.remove();
 
-  const reactions = row.querySelector(".message-reactions, .msg-reacts");
+  const reactions = row.querySelector(".message-reactions");
   if (reactions) reactions.innerHTML = "";
 }
 
@@ -1074,7 +923,7 @@ function renderRequests() {
 
   if (!requests.length) {
     const empty       = document.createElement("li");
-    empty.className   = "req-row";
+    empty.className   = "item-card";
     empty.textContent = "No pending requests";
     requestList.appendChild(empty);
     return;
@@ -1082,7 +931,7 @@ function renderRequests() {
 
   for (const username of requests) {
     const li      = document.createElement("li");
-    li.className  = "request-row req-row";
+    li.className  = "item-card request-row";
 
     const name        = document.createElement("span");
     name.textContent  = username;
@@ -1125,12 +974,12 @@ function renderActiveFriendPresence() {
 
   if (!activeFriend) {
     activePresence.classList.add("hidden");
-    activeFriendAvatar.classList.remove("online", "on");
+    activeFriendAvatar.classList.remove("online");
     activeFriendAvatar.textContent = "?";
     activeFriendAvatar.style.background = "";
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Select a friend to start chatting";
-      activeFriendPresenceLine.classList.remove("online", "on");
+      activeFriendPresenceLine.classList.remove("online");
     }
     return;
   }
@@ -1140,7 +989,7 @@ function renderActiveFriendPresence() {
     activePresence.classList.add("hidden");
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Loading contact status...";
-      activeFriendPresenceLine.classList.remove("online", "on");
+      activeFriendPresenceLine.classList.remove("online");
     }
     return;
   }
@@ -1162,7 +1011,6 @@ function renderActiveFriendPresence() {
   }
 
   activeFriendAvatar.classList.toggle("online", !!friend.online);
-  activeFriendAvatar.classList.toggle("on", !!friend.online);
   activeFriendAvatar.title = friend.online
     ? `${friend.username} is online`
     : `${friend.username} is offline`;
@@ -1170,14 +1018,12 @@ function renderActiveFriendPresence() {
   if (activeFriendPresenceLine) {
     activeFriendPresenceLine.textContent = getFriendPresenceText(friend);
     activeFriendPresenceLine.classList.toggle("online", !!friend.online);
-    activeFriendPresenceLine.classList.toggle("on", !!friend.online);
   }
 }
 
 function syncRemoveFriendButton() {
   if (!removeFriendBtn) return;
   const hasActive = Boolean(activeFriend);
-  removeFriendBtn.style.display = hasActive ? "" : "none";
   removeFriendBtn.classList.toggle("hidden", !hasActive);
   removeFriendBtn.disabled = !hasActive;
   if (hasActive) {
@@ -1216,7 +1062,7 @@ function renderFriends() {
 
   if (!friends.length) {
     const empty       = document.createElement("li");
-    empty.className   = "req-row";
+    empty.className   = "item-card";
     empty.textContent = "No friends yet — add one above";
     friendList.appendChild(empty);
     renderActiveFriendPresence();
@@ -1226,16 +1072,16 @@ function renderFriends() {
 
   for (const friend of friends) {
     const li      = document.createElement("li");
-    li.className  = "";
+    li.className  = "item-card";
 
     const btn         = document.createElement("button");
     btn.type          = "button";
-    btn.className     = `friend-btn friend-row${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
+    btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
     // Avatar with initials + online dot
     const avatar        = document.createElement("div");
-    avatar.className    = `friend-avatar fr-av${friend.online ? " online on" : ""}`;
+    avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
     if (friend.avatarId && window._novynAvatarUtils) {
       window._novynAvatarUtils.applyAvatarToEl(avatar, friend.avatarId, friend.username.slice(0, 2).toUpperCase());
     } else {
@@ -1244,10 +1090,10 @@ function renderFriends() {
     btn.appendChild(avatar);
 
     const main      = document.createElement("div");
-    main.className  = "friend-main fr-main";
+    main.className  = "friend-main";
 
     const name        = document.createElement("span");
-    name.className    = "friend-name fr-name";
+    name.className    = "friend-name";
     name.textContent  = getFriendDisplayName(friend);
     if (displayDiffersFromUsername(friend)) {
       name.title = `${getFriendDisplayName(friend)} (@${friend.username})`;
@@ -1256,7 +1102,7 @@ function renderFriends() {
     }
 
     const preview       = document.createElement("span");
-    preview.className   = "friend-preview fr-prev";
+    preview.className   = "friend-preview";
     const previewBase = friendPreview(friend);
     preview.textContent = displayDiffersFromUsername(friend)
       ? `@${friend.username} · ${previewBase}`
@@ -1265,10 +1111,10 @@ function renderFriends() {
     main.append(name, preview);
 
     const side      = document.createElement("div");
-    side.className  = "friend-side fr-side";
+    side.className  = "friend-side";
 
     const status        = document.createElement("span");
-    status.className    = `status fr-time${friend.online ? " online on" : ""}`;
+    status.className    = `status${friend.online ? " online" : ""}`;
     status.textContent  = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
     status.title = status.textContent;
     side.appendChild(status);
@@ -1276,7 +1122,7 @@ function renderFriends() {
     const unreadCount = Number(friend.unreadCount) || 0;
     if (unreadCount > 0) {
       const unread        = document.createElement("span");
-      unread.className    = "unread-badge unread";
+      unread.className    = "unread-badge";
       unread.textContent  = unreadCount > 99 ? "99+" : String(unreadCount);
       side.appendChild(unread);
     }
@@ -1293,41 +1139,25 @@ function renderFriends() {
 // ─── Form handlers ────────────────────────────────────────────────────────────
 
 // ─── Login button spinner helpers ────────────────────────────────────────────
-const loginBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
+const loginBtn = document.getElementById("loginBtn");
 const loginBtnText = loginBtn ? loginBtn.querySelector(".login-btn-text") : null;
-const loginBtnArrow = loginBtn ? loginBtn.querySelector(".login-btn-arrow, .login-btn-icon") : null;
-let loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") : null;
-if (loginBtn && !loginBtnSpinner) {
-  loginBtnSpinner = document.createElement("span");
-  loginBtnSpinner.className = "login-btn-spinner hidden";
-  loginBtnSpinner.setAttribute("aria-hidden", "true");
-  const inner = loginBtn.querySelector(".login-btn-inner");
-  if (inner) inner.appendChild(loginBtnSpinner);
-}
-const loginBtnDefaultText = loginBtnText ? loginBtnText.textContent : "Enter Novyn";
+const loginBtnArrow = loginBtn ? loginBtn.querySelector(".login-btn-arrow") : null;
+const loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") : null;
 
 function setLoginLoading(isLoading) {
   if (!loginBtn) return;
   loginBtn.disabled = isLoading;
-  loginBtn.setAttribute("aria-busy", isLoading ? "true" : "false");
-  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering..." : loginBtnDefaultText;
+  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering…" : "Enter Novyn";
   if (loginBtnArrow)   loginBtnArrow.classList.toggle("hidden", isLoading);
   if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
 }
 
 loginForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  if (!socketAvailable) {
-    setLoginLoading(false);
-    showToast("Realtime unavailable. Reload from your server URL.", "error");
-    return;
-  }
   clearUsernameSuggestions();
   const username = usernameInput.value.trim();
   const password = passwordInput.value;
   if (!username || !password) return;
-  saveTemporaryLogin(username, password);
-  authInFlightMode = "password";
   setLoginLoading(true);
   socket.emit("register", { username, password });
 });
@@ -1373,7 +1203,7 @@ if (unfriendConfirm) unfriendConfirm.addEventListener("click", () => {
   hideUnfriendModal();
 });
 if (unfriendModal) {
-  unfriendModal.querySelector(".confirm-modal-backdrop, .modal-backdrop")
+  unfriendModal.querySelector(".confirm-modal-backdrop")
     ?.addEventListener("click", hideUnfriendModal);
 }
 document.addEventListener("keydown", (e) => {
@@ -1460,12 +1290,8 @@ if (messageSearchClear) {
     if (messageSearchInput) messageSearchInput.focus();
   });
 }
-document.addEventListener("click", (e) => {
-  if (!searchPanelOpen) return;
-  const target = e.target;
-  if (messageSearchPanel && messageSearchPanel.contains(target)) return;
-  if (messageSearchToggle && messageSearchToggle.contains(target)) return;
-  closeMessageSearchPanel();
+document.addEventListener("click", () => {
+  if (searchPanelOpen) closeMessageSearchPanel();
 });
 document.addEventListener("keydown", (e) => {
   const isFindShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f";
@@ -1499,15 +1325,6 @@ messageInput.addEventListener("keydown", (e) => {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 socket.on("register_success", (data) => {
-  clearAuthRetryTimer();
-  const loginMode = authInFlightMode;
-  const wasSessionResume = loginMode === "session";
-  authInFlightMode = "";
-  if (data?.sessionToken && data?.username) {
-    saveStoredSession(data.username, data.sessionToken);
-    clearTemporaryLogin();
-  }
-
   me           = data.username;
   friends      = data.friends  || [];
   requests     = data.requests || [];
@@ -1545,16 +1362,10 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
-  const welcomeText =
-    loginMode === "cached_password" || wasSessionResume
-      ? `Welcome back, @${me}!`
-      : `Welcome to Novyn, @${me}! ✨`;
-  showToast(welcomeText, "success");
+  showToast(`Welcome to Novyn, @${me}! ✨`, "success");
 });
 
 socket.on("username_unavailable", (data) => {
-  clearAuthRetryTimer();
-  authInFlightMode = "";
   const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
   showUsernameSuggestions(requested, suggestions);
@@ -1563,22 +1374,7 @@ socket.on("username_unavailable", (data) => {
 });
 
 socket.on("auth_failed", (data) => {
-  clearAuthRetryTimer();
-  const loginMode = authInFlightMode;
-  const wasSessionResume = loginMode === "session";
-  const wasCachedPasswordLogin = loginMode === "cached_password";
-  authInFlightMode = "";
   const message     = data?.message     || "Authentication failed.";
-  if (wasSessionResume || data?.code === "session_invalid") {
-    clearStoredSession();
-    if (attemptTemporaryLogin()) return;
-    setLoginLoading(false);
-    showToast(message, "error");
-    return;
-  }
-  if (wasCachedPasswordLogin) {
-    clearTemporaryLogin();
-  }
   const suggestions = data?.suggestions || [];
   if (Array.isArray(suggestions) && suggestions.length) {
     showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
@@ -1710,10 +1506,7 @@ socket.on("message_status", (payload) => {
   renderMineMessageMeta(metaEl, timeText, statusKey);
 });
 
-socket.on("typing", (payload = {}) => {
-  const from = String(payload.from || payload.username || payload.user || "").trim();
-  const isTyping = payload.isTyping === undefined ? Boolean(payload.typing) : Boolean(payload.isTyping);
-  if (!from) return;
+socket.on("typing", ({ from, isTyping }) => {
   if (!activeFriend || normalizeName(from) !== normalizeName(activeFriend)) return;
   isTyping ? showTypingIndicator(from) : hideTypingIndicator();
 });
@@ -1733,9 +1526,6 @@ socket.on("error_message", (data) => {
 
 socket.on("connect", () => {
   setNetworkState("Connected", "connected");
-  if (loginCard && !loginCard.classList.contains("hidden")) {
-    attemptSessionResume();
-  }
 });
 
 socket.on("disconnect", () => {
@@ -1818,19 +1608,10 @@ window._novynReply = { setReply };
 window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
-window._novynAuth = {
-  clearSession: clearStoredSession,
-  clearLoginCache: clearTemporaryLogin,
-};
 renderMyName();
 setTimeout(applyMyAvatar, 200);
-
-if (socketAvailable && socket.connected && loginCard && !loginCard.classList.contains("hidden")) {
-  attemptSessionResume();
-}
 
 if (!socketAvailable) {
   setNetworkState("Realtime unavailable", "offline");
   showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
 }
-

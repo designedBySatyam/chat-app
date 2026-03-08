@@ -16,10 +16,6 @@ const io = new Server(server, {
   },
 });
 
-app.use(express.json({ limit: "1mb" }));
-
-app.use("/src", express.static(path.join(__dirname, "src")));
-
 app.use(
   express.static(path.join(__dirname, "public"), {
     etag: false,
@@ -32,108 +28,6 @@ app.use(
     },
   })
 );
-
-const DEFAULT_AI_MODEL = "claude-sonnet-4-20250514";
-const AI_MAX_TOKENS_LIMIT = 4096;
-const AI_REQUEST_TIMEOUT_MS = 30000;
-
-function sanitizeAiMessages(rawMessages) {
-  if (!Array.isArray(rawMessages)) return [];
-  return rawMessages
-    .map((message) => {
-      const role = toDisplayName(message?.role);
-      if (role !== "user" && role !== "assistant") return null;
-
-      if (typeof message?.content === "string") {
-        const trimmed = message.content.trim();
-        if (!trimmed) return null;
-        return { role, content: trimmed };
-      }
-
-      if (Array.isArray(message?.content)) {
-        return { role, content: message.content };
-      }
-
-      return null;
-    })
-    .filter(Boolean)
-    .slice(-30);
-}
-
-app.post("/api/ai", async (req, res) => {
-  const apiKey = toDisplayName(process.env.ANTHROPIC_API_KEY);
-  if (!apiKey) {
-    return res.status(503).json({
-      error: "AI is not configured. Set ANTHROPIC_API_KEY on the server.",
-    });
-  }
-
-  const model = toDisplayName(req.body?.model) || DEFAULT_AI_MODEL;
-  const parsedTokens = Number(req.body?.max_tokens);
-  const maxTokens = Number.isFinite(parsedTokens)
-    ? Math.max(64, Math.min(AI_MAX_TOKENS_LIMIT, Math.floor(parsedTokens)))
-    : 600;
-  const messages = sanitizeAiMessages(req.body?.messages);
-  const systemPrompt = typeof req.body?.system === "string"
-    ? req.body.system.trim()
-    : "";
-
-  if (!messages.length) {
-    return res.status(400).json({ error: "messages array is required." });
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), AI_REQUEST_TIMEOUT_MS);
-
-  try {
-    const upstream = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        messages,
-        ...(systemPrompt ? { system: systemPrompt } : {}),
-      }),
-      signal: controller.signal,
-    });
-
-    const rawText = await upstream.text();
-    let payload = {};
-    if (rawText) {
-      try {
-        payload = JSON.parse(rawText);
-      } catch (err) {
-        payload = {
-          error: "Invalid JSON response from AI provider.",
-          raw: rawText.slice(0, 500),
-        };
-      }
-    }
-
-    if (!upstream.ok) {
-      const detailMessage = toDisplayName(payload?.error?.message || payload?.error);
-      return res.status(upstream.status).json({
-        error: detailMessage || `AI provider request failed (${upstream.status}).`,
-        details: payload,
-      });
-    }
-
-    return res.json(payload);
-  } catch (err) {
-    if (err?.name === "AbortError") {
-      return res.status(504).json({ error: "AI request timed out." });
-    }
-    console.error("AI proxy request failed:", err);
-    return res.status(502).json({ error: "Could not reach AI provider." });
-  } finally {
-    clearTimeout(timeout);
-  }
-});
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "chat-state.json");
@@ -209,10 +103,6 @@ function createMessageId() {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-function createSessionToken() {
-  return crypto.randomBytes(32).toString("hex");
-}
-
 function createUserRecord(username) {
   return {
     username: toDisplayName(username),
@@ -222,7 +112,6 @@ function createUserRecord(username) {
     isRegistered: false,
     passwordSalt: "",
     passwordHash: "",
-    sessionToken: "",
     avatarId: "",
     age: "",
     gender: "",
@@ -243,7 +132,6 @@ function serializeState() {
       isRegistered: Boolean(user.isRegistered),
       passwordSalt: toDisplayName(user.passwordSalt),
       passwordHash: toDisplayName(user.passwordHash),
-      sessionToken: toDisplayName(user.sessionToken),
       avatarId: toDisplayName(user.avatarId),
       age: toDisplayName(user.age),
       gender: toDisplayName(user.gender),
@@ -354,7 +242,6 @@ function applyLoadedState(parsed) {
     user.isRegistered = Boolean(entry.isRegistered);
     user.passwordSalt = toDisplayName(entry.passwordSalt);
     user.passwordHash = toDisplayName(entry.passwordHash);
-    user.sessionToken = toDisplayName(entry.sessionToken);
     user.avatarId = toDisplayName(entry.avatarId);
     user.age = toDisplayName(entry.age);
     user.gender = toDisplayName(entry.gender);
@@ -814,55 +701,6 @@ function removeFriendship(userAKey, userBKey) {
   return true;
 }
 
-function completeLogin(socket, userKey, user, options = {}) {
-  const rotateSessionToken = Boolean(options.rotateSessionToken);
-  if (!socket || !userKey || !user) return;
-
-  user.lastSeenAt = "";
-  if (rotateSessionToken || !user.sessionToken) {
-    user.sessionToken = createSessionToken();
-  }
-
-  socket.data.userKey = userKey;
-  socket.data.activeChatWith = null;
-
-  const previousSocketId = onlineUsers.get(userKey);
-  onlineUsers.set(userKey, socket.id);
-
-  if (previousSocketId && previousSocketId !== socket.id) {
-    const previousSocket = io.sockets.sockets.get(previousSocketId);
-    if (previousSocket) {
-      previousSocket.emit("error_message", {
-        message: "You were signed out because this account logged in elsewhere.",
-      });
-      previousSocket.disconnect(true);
-    }
-  }
-
-  markUndeliveredAsDelivered(userKey);
-
-  socket.emit("register_success", {
-    username: user.username,
-    sessionToken: user.sessionToken,
-    friends: buildFriendList(userKey),
-    requests: Array.from(user.requests).map((requesterKey) => {
-      const requester = users.get(requesterKey);
-      return requester?.username || requesterKey;
-    }),
-    profile: {
-      avatarId: user.avatarId || "",
-      age: user.age || "",
-      gender: user.gender || "",
-      displayName: user.displayName || "",
-      bio: user.bio || "",
-    },
-  });
-
-  emitStatusToFriends(userKey, true);
-  emitFriendList(userKey);
-  schedulePersist();
-}
-
 io.on("connection", (socket) => {
   socket.on("register", (payload) => {
     const username =
@@ -917,32 +755,45 @@ io.on("connection", (socket) => {
     }
 
     user.username = username;
-    completeLogin(socket, userKey, user, { rotateSessionToken: true });
-  });
+    user.lastSeenAt = "";
 
-  socket.on("resume_session", (payload) => {
-    const username = toDisplayName(payload?.username);
-    const userKey = normalizeName(username);
-    const sessionToken = toDisplayName(payload?.sessionToken);
+    socket.data.userKey = userKey;
+    socket.data.activeChatWith = null;
 
-    if (!userKey || !sessionToken) {
-      socket.emit("auth_failed", {
-        code: "session_invalid",
-        message: "Session expired. Please sign in again.",
-      });
-      return;
+    const previousSocketId = onlineUsers.get(userKey);
+    onlineUsers.set(userKey, socket.id);
+
+    if (previousSocketId && previousSocketId !== socket.id) {
+      const previousSocket = io.sockets.sockets.get(previousSocketId);
+      if (previousSocket) {
+        previousSocket.emit("error_message", {
+          message: "You were signed out because this account logged in elsewhere.",
+        });
+        previousSocket.disconnect(true);
+      }
     }
 
-    const user = users.get(userKey);
-    if (!user || !user.isRegistered || !user.sessionToken || user.sessionToken !== sessionToken) {
-      socket.emit("auth_failed", {
-        code: "session_invalid",
-        message: "Session expired. Please sign in again.",
-      });
-      return;
-    }
+    markUndeliveredAsDelivered(userKey);
 
-    completeLogin(socket, userKey, user);
+    socket.emit("register_success", {
+      username: user.username,
+      friends: buildFriendList(userKey),
+      requests: Array.from(user.requests).map((requesterKey) => {
+        const requester = users.get(requesterKey);
+        return requester?.username || requesterKey;
+      }),
+      profile: {
+        avatarId: user.avatarId || "",
+        age: user.age || "",
+        gender: user.gender || "",
+        displayName: user.displayName || "",
+        bio: user.bio || "",
+      },
+    });
+
+    emitStatusToFriends(userKey, true);
+    emitFriendList(userKey);
+    schedulePersist();
   });
 
   socket.on("add_friend", (rawFriendName) => {
