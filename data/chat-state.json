@@ -63,6 +63,22 @@
       "displayName": "",
       "bio": "",
       "lastSeenAt": "2026-02-26T13:50:38.921Z"
+    },
+    {
+      "key": "test1",
+      "username": "test1",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "e3cbbaf323b0f2b8e53d8349b72d7c7f",
+      "passwordHash": "9c5f4d65956db5c781a76fe5de1f05bc3388aa13499328e10f69f1c8519c3a565184612d57aae7746921747770d8ae2c9386082122a868382a80d55bc1817790",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-03-03T13:52:55.759Z"
     }
   ],
   "conversations": []
