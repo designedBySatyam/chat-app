@@ -23,8 +23,12 @@
 /* ── Logout ─────────────────────────────────────────────────────────────────── */
 (function () {
   var btn = document.getElementById('logoutBtn');
+  var SESSION_KEY = 'novyn-session';
   if (!btn) return;
-  btn.addEventListener('click', function () { window.location.reload(); });
+  btn.addEventListener('click', function () {
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+    window.location.replace('/login.html');
+  });
 })();
 
 /* ── Mobile panel switching ─────────────────────────────────────────────────── */

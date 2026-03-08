@@ -30,12 +30,15 @@ const networkPill       = document.getElementById("networkPill");
 const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
-const sendButton        = messageForm.querySelector("button");
+const sendButton        = messageForm ? messageForm.querySelector("button") : null;
 const messageSearchToggle = document.getElementById("messageSearchToggle");
 const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
+const SESSION_KEY       = "novyn-session";
+const LOGIN_PATH        = "/login.html";
+const isDashboardPage   = Boolean(chatLayout) && !loginForm;
 
 let me           = "";
 let activeFriend = "";
@@ -66,6 +69,63 @@ function normalizeName(value) {
 
 function normalizeSearchText(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function readStoredSession() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    const username = String(parsed?.username || "").trim();
+    const password = String(parsed?.password || "");
+    if (!username || !password) return null;
+    return { username, password };
+  } catch (_) {
+    return null;
+  }
+}
+
+function writeStoredSession(session) {
+  const username = String(session?.username || "").trim();
+  const password = String(session?.password || "");
+  if (!username || !password) return;
+  try {
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username, password }));
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function clearStoredSession() {
+  try {
+    sessionStorage.removeItem(SESSION_KEY);
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function redirectToLogin() {
+  if (window.location.pathname === LOGIN_PATH) return;
+  window.location.replace(LOGIN_PATH);
+}
+
+function authenticateStoredSession(force = false) {
+  if (!socketAvailable || !isDashboardPage) return;
+  const session = readStoredSession();
+  if (!session) {
+    redirectToLogin();
+    return;
+  }
+  if (!socket.connected) return;
+  if (authenticateStoredSession._pending && !force) return;
+  authenticateStoredSession._pending = true;
+  socket.emit("register", session);
+}
+
+authenticateStoredSession._pending = false;
+
+if (isDashboardPage && !readStoredSession()) {
+  redirectToLogin();
 }
 
 function getLocalDateKey(iso) {
@@ -1152,31 +1212,35 @@ function setLoginLoading(isLoading) {
   if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
 }
 
-loginForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  clearUsernameSuggestions();
-  const username = usernameInput.value.trim();
-  const password = passwordInput.value;
-  if (!username || !password) return;
-  setLoginLoading(true);
-  socket.emit("register", { username, password });
-});
+if (loginForm) {
+  loginForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    clearUsernameSuggestions();
+    const username = usernameInput ? usernameInput.value.trim() : "";
+    const password = passwordInput ? passwordInput.value : "";
+    if (!username || !password) return;
+    setLoginLoading(true);
+    socket.emit("register", { username, password });
+  });
+}
 
 // Clear suggestions as soon as the user starts editing
-usernameInput.addEventListener("input", clearUsernameSuggestions);
-passwordInput.addEventListener("input", clearUsernameSuggestions);
+if (usernameInput) usernameInput.addEventListener("input", clearUsernameSuggestions);
+if (passwordInput) passwordInput.addEventListener("input", clearUsernameSuggestions);
 
-addFriendForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const val = friendInput.value.trim();
-  if (!val) return;
-  if (me && normalizeName(val) === normalizeName(me)) {
-    showToast("You can't add yourself!", "error");
-    return;
-  }
-  socket.emit("add_friend", val);
-  friendInput.value = "";
-});
+if (addFriendForm) {
+  addFriendForm.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const val = friendInput ? friendInput.value.trim() : "";
+    if (!val) return;
+    if (me && normalizeName(val) === normalizeName(me)) {
+      showToast("You can't add yourself!", "error");
+      return;
+    }
+    socket.emit("add_friend", val);
+    if (friendInput) friendInput.value = "";
+  });
+}
 
 // ─── Custom unfriend confirm modal ────────────────────────────────────────────
 const unfriendModal  = document.getElementById("unfriendModal");
@@ -1325,6 +1389,8 @@ messageInput.addEventListener("keydown", (e) => {
 // ─── Socket events ────────────────────────────────────────────────────────────
 
 socket.on("register_success", (data) => {
+  const previousActiveFriend = activeFriend;
+  const storedSession = readStoredSession();
   me           = data.username;
   friends      = data.friends  || [];
   requests     = data.requests || [];
@@ -1346,22 +1412,32 @@ socket.on("register_success", (data) => {
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
-  passwordInput.value           = "";
-  activeFriendLabel.textContent = "Select a friend";
+  if (storedSession?.password) {
+    writeStoredSession({ username: data.username, password: storedSession.password });
+  }
+  if (passwordInput) passwordInput.value = "";
+  if (activeFriendLabel) activeFriendLabel.textContent = "Select a friend";
   renderActiveFriendPresence();
   syncRemoveFriendButton();
 
-  loginCard.classList.add("hidden");
-  chatLayout.classList.remove("hidden");
+  if (loginCard) loginCard.classList.add("hidden");
+  if (chatLayout) chatLayout.classList.remove("hidden");
 
   clearUsernameSuggestions();
   setLoginLoading(false);
+  authenticateStoredSession._pending = false;
   setComposerEnabled(false);
   renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
   setNetworkState("Connected", "connected");
 
   renderRequests();
   renderFriends();
+  if (
+    previousActiveFriend &&
+    friends.some((friend) => normalizeName(friend.username) === normalizeName(previousActiveFriend))
+  ) {
+    setActiveFriend(previousActiveFriend);
+  }
   showToast(`Welcome to Novyn, @${me}! ✨`, "success");
 });
 
@@ -1369,6 +1445,7 @@ socket.on("username_unavailable", (data) => {
   const requested   = data?.requested   || "This username";
   const suggestions = data?.suggestions || [];
   showUsernameSuggestions(requested, suggestions);
+  authenticateStoredSession._pending = false;
   setLoginLoading(false);
   showToast("Username already taken.", "error");
 });
@@ -1376,6 +1453,13 @@ socket.on("username_unavailable", (data) => {
 socket.on("auth_failed", (data) => {
   const message     = data?.message     || "Authentication failed.";
   const suggestions = data?.suggestions || [];
+  authenticateStoredSession._pending = false;
+  if (isDashboardPage) {
+    clearStoredSession();
+    showToast(message, "error");
+    setTimeout(redirectToLogin, 450);
+    return;
+  }
   if (Array.isArray(suggestions) && suggestions.length) {
     showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
   }
@@ -1526,16 +1610,19 @@ socket.on("error_message", (data) => {
 
 socket.on("connect", () => {
   setNetworkState("Connected", "connected");
+  authenticateStoredSession(true);
 });
 
 socket.on("disconnect", () => {
   stopLocalTyping();
   hideTypingIndicator();
+  authenticateStoredSession._pending = false;
   setNetworkState("Disconnected", "offline");
   showToast("Disconnected from server", "error");
 });
 
 socket.on("connect_error", () => {
+  authenticateStoredSession._pending = false;
   setNetworkState("Connection issue", "offline");
 });
 

@@ -1,0 +1,529 @@
+body.room-theme {
+  --room-bg: #08050e;
+  --room-panel: rgba(8, 5, 14, 0.9);
+  --room-surface: rgba(255, 255, 255, 0.04);
+  --room-surface-strong: rgba(255, 255, 255, 0.06);
+  --room-border: rgba(255, 255, 255, 0.08);
+  --room-border-strong: rgba(255, 255, 255, 0.16);
+  --room-text: rgba(255, 255, 255, 0.94);
+  --room-text-muted: rgba(255, 255, 255, 0.6);
+  --room-text-soft: rgba(255, 255, 255, 0.28);
+  --room-accent: #7c3aed;
+  --room-accent-2: #a855f7;
+  --room-accent-3: #c084fc;
+  --room-online: #87dc9e;
+  --room-danger: #f48b8b;
+  --room-warn: #f3bd65;
+  --room-shadow: 0 40px 120px rgba(0, 0, 0, 0.48);
+  --room-shadow-soft: 0 24px 70px rgba(0, 0, 0, 0.32);
+  --room-brand: linear-gradient(135deg, #7c3aed, #a855f7);
+  --room-brand-soft: linear-gradient(145deg, rgba(124, 58, 237, 0.18), rgba(168, 85, 247, 0.08));
+  --room-me: linear-gradient(145deg, rgba(124, 58, 237, 0.3), rgba(168, 85, 247, 0.12));
+  background:
+    radial-gradient(circle at 15% 15%, rgba(124, 58, 237, 0.2), transparent 32%),
+    radial-gradient(circle at 82% 12%, rgba(168, 85, 247, 0.16), transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(83, 28, 148, 0.2), transparent 36%),
+    var(--room-bg);
+  color: var(--room-text);
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+:root.light body.room-theme {
+  --room-bg: #f2ecfb;
+  --room-panel: rgba(255, 255, 255, 0.82);
+  --room-surface: rgba(255, 255, 255, 0.72);
+  --room-surface-strong: rgba(255, 255, 255, 0.92);
+  --room-border: rgba(41, 20, 72, 0.12);
+  --room-border-strong: rgba(41, 20, 72, 0.2);
+  --room-text: #1f1533;
+  --room-text-muted: rgba(31, 21, 51, 0.66);
+  --room-text-soft: rgba(31, 21, 51, 0.34);
+  --room-online: #2f985e;
+  --room-danger: #c24f68;
+  --room-warn: #b78333;
+  --room-shadow: 0 28px 90px rgba(43, 20, 74, 0.16);
+  --room-shadow-soft: 0 18px 54px rgba(43, 20, 74, 0.12);
+  --room-brand-soft: linear-gradient(145deg, rgba(124, 58, 237, 0.14), rgba(168, 85, 247, 0.05));
+  --room-me: linear-gradient(145deg, rgba(124, 58, 237, 0.14), rgba(168, 85, 247, 0.06));
+  background:
+    radial-gradient(circle at 15% 15%, rgba(124, 58, 237, 0.08), transparent 32%),
+    radial-gradient(circle at 82% 12%, rgba(168, 85, 247, 0.06), transparent 28%),
+    radial-gradient(circle at 50% 100%, rgba(83, 28, 148, 0.08), transparent 36%),
+    var(--room-bg);
+}
+
+body.room-theme .bg-shape,
+body.room-theme .grain-layer {
+  display: none;
+}
+
+body.room-theme .panel-shell {
+  position: relative;
+  z-index: 1;
+  max-width: 1360px;
+  width: calc(100% - 32px);
+  min-height: calc(100dvh - 32px);
+  margin: 16px auto;
+  padding: 24px 28px 28px;
+  border-radius: 28px;
+  border: 1px solid var(--room-border);
+  background: var(--room-panel);
+  backdrop-filter: blur(22px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    var(--room-shadow);
+}
+
+body.room-theme .app-topbar {
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--room-border);
+}
+
+body.room-theme .brand {
+  gap: 14px;
+}
+
+body.room-theme .brand h1 {
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(192, 132, 252, 0.9));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+body.room-theme .brand .eyebrow {
+  color: var(--room-text-soft);
+}
+
+body.room-theme .brand-logo {
+  filter: drop-shadow(0 0 18px rgba(124, 58, 237, 0.28));
+}
+
+body.room-theme .network-pill,
+body.room-theme .theme-toggle,
+body.room-theme .login-hero,
+body.room-theme .login-panel,
+body.room-theme .sidebar,
+body.room-theme .chat,
+body.room-theme .me-row,
+body.room-theme .list-panel,
+body.room-theme .chat-header,
+body.room-theme .message-form,
+body.room-theme .chat-search-popover,
+body.room-theme .reply-banner,
+body.room-theme .message-context-menu,
+body.room-theme .profile-modal-card,
+body.room-theme .confirm-modal-card,
+body.room-theme .toast {
+  backdrop-filter: blur(18px);
+}
+
+body.room-theme .network-pill {
+  border-color: var(--room-border);
+  background: var(--room-surface);
+  color: var(--room-text-muted);
+}
+
+body.room-theme .network-pill.connected {
+  border-color: rgba(135, 220, 158, 0.34);
+  color: var(--room-online);
+}
+
+body.room-theme .network-pill.offline {
+  border-color: rgba(244, 139, 139, 0.32);
+  color: var(--room-danger);
+}
+
+body.room-theme .network-pill .signal-dot {
+  background: currentColor;
+  box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 22%, transparent);
+}
+
+body.room-theme .theme-toggle {
+  border-color: var(--room-border);
+  background: var(--room-surface);
+}
+
+body.room-theme .theme-toggle:hover,
+body.room-theme .logout-btn:hover,
+body.room-theme .profile-avatar-btn:hover,
+body.room-theme .icon-btn:hover,
+body.room-theme .remove-friend-btn:hover,
+body.room-theme .scroll-btn:hover,
+body.room-theme .friend-btn:hover,
+body.room-theme .msg-action-btn:hover,
+body.room-theme .reaction-btn:hover,
+body.room-theme .suggestion-chip:hover,
+body.room-theme .confirm-modal-cancel:hover,
+body.room-theme .profile-modal-close:hover,
+body.room-theme .chat-search-popover button:hover {
+  border-color: var(--room-border-strong);
+}
+
+body.room-theme .login-card {
+  display: grid;
+  grid-template-columns: minmax(320px, 1.1fr) minmax(340px, 420px);
+  gap: 22px;
+  margin-top: 4px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+body.room-theme .login-hero,
+body.room-theme .login-panel {
+  border-radius: 24px;
+  border: 1px solid var(--room-border);
+  box-shadow: var(--room-shadow-soft);
+}
+
+body.room-theme .login-hero {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(124, 58, 237, 0.24), transparent 28%),
+    radial-gradient(circle at 76% 18%, rgba(168, 85, 247, 0.16), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01)),
+    rgba(10, 7, 18, 0.74);
+}
+
+:root.light body.room-theme .login-hero {
+  background:
+    radial-gradient(circle at 18% 20%, rgba(124, 58, 237, 0.12), transparent 28%),
+    radial-gradient(circle at 76% 18%, rgba(168, 85, 247, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.24), rgba(255, 255, 255, 0.12)),
+    rgba(248, 244, 255, 0.74);
+}
+
+body.room-theme .hero-headline {
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+  font-size: clamp(2.6rem, 4vw, 4.4rem);
+  line-height: 0.94;
+}
+
+body.room-theme .hero-headline em {
+  color: var(--room-accent-3);
+  text-shadow: 0 0 24px rgba(192, 132, 252, 0.24);
+}
+
+body.room-theme .hero-sub,
+body.room-theme .login-panel-sub,
+body.room-theme .login-footnote,
+body.room-theme .username-hint,
+body.room-theme .messages-empty-sub,
+body.room-theme .confirm-modal-desc,
+body.room-theme .profile-modal-subtitle,
+body.room-theme .profile-field-help,
+body.room-theme .active-friend-presence,
+body.room-theme .friend-preview,
+body.room-theme .status,
+body.room-theme .message-meta,
+body.room-theme .reply-quote-author,
+body.room-theme .message-date-separator,
+body.room-theme .chat-search-count,
+body.room-theme .char-counter,
+body.room-theme .profile-avatar-hint,
+body.room-theme .profile-identity-desc {
+  color: var(--room-text-muted);
+}
+
+body.room-theme .hero-chat-preview,
+body.room-theme .input-wrap,
+body.room-theme .add-friend-form,
+body.room-theme .message-form,
+body.room-theme .message-context-menu,
+body.room-theme .reply-banner,
+body.room-theme .chat-search-popover,
+body.room-theme .profile-avatar-grid-wrap,
+body.room-theme .profile-identity,
+body.room-theme .profile-field input,
+body.room-theme .profile-field select {
+  border: 1px solid var(--room-border);
+  background: var(--room-surface);
+}
+
+body.room-theme .hero-pill,
+body.room-theme .count-pill,
+body.room-theme .online-count-pill,
+body.room-theme .unread-badge,
+body.room-theme .scroll-btn-badge,
+body.room-theme .reaction-btn,
+body.room-theme .suggestion-chip {
+  border-color: rgba(168, 85, 247, 0.24);
+  background: rgba(168, 85, 247, 0.12);
+  color: var(--room-text);
+}
+
+body.room-theme .login-panel {
+  padding: 28px;
+  background: var(--room-panel);
+}
+
+body.room-theme .login-panel-header h3 {
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+  font-size: 2rem;
+}
+
+body.room-theme .input-label,
+body.room-theme .profile-field label,
+body.room-theme .list-head h3,
+body.room-theme .profile-modal-eyebrow,
+body.room-theme .profile-identity-title {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--room-text-soft);
+}
+
+body.room-theme input,
+body.room-theme select,
+body.room-theme textarea {
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+}
+
+body.room-theme .input-wrap,
+body.room-theme .add-friend-form,
+body.room-theme .profile-field input,
+body.room-theme .profile-field select {
+  border-radius: 14px;
+}
+
+body.room-theme .input-wrap {
+  min-height: 52px;
+  padding-inline: 14px;
+}
+
+body.room-theme .input-wrap input,
+body.room-theme .add-friend-form input,
+body.room-theme .message-form input,
+body.room-theme .chat-search-popover input,
+body.room-theme .profile-field input,
+body.room-theme .profile-field select {
+  color: var(--room-text);
+}
+
+body.room-theme .input-wrap input::placeholder,
+body.room-theme .add-friend-form input::placeholder,
+body.room-theme .message-form input::placeholder,
+body.room-theme .chat-search-popover input::placeholder,
+body.room-theme .profile-field input::placeholder {
+  color: var(--room-text-soft);
+}
+
+body.room-theme .input-wrap:focus-within,
+body.room-theme .add-friend-form:focus-within,
+body.room-theme .message-form:focus-within,
+body.room-theme .chat-search-popover:focus-within {
+  border-color: rgba(124, 58, 237, 0.35);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+body.room-theme .login-btn,
+body.room-theme .profile-save-btn,
+body.room-theme .confirm-modal-confirm,
+body.room-theme .add-friend-form button,
+body.room-theme .message-form button,
+body.room-theme .item-card.request-row button,
+body.room-theme .profile-avatar-btn,
+body.room-theme .logout-btn,
+body.room-theme .icon-btn,
+body.room-theme .remove-friend-btn,
+body.room-theme .scroll-btn {
+  border-radius: 14px;
+  border: 1px solid transparent;
+}
+
+body.room-theme .login-btn,
+body.room-theme .profile-save-btn,
+body.room-theme .message-form button,
+body.room-theme .add-friend-form button,
+body.room-theme .item-card.request-row button,
+body.room-theme .confirm-modal-confirm {
+  background: var(--room-brand);
+  color: #fff;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.28);
+}
+
+body.room-theme .sidebar,
+body.room-theme .chat {
+  border: 1px solid var(--room-border);
+  background: color-mix(in srgb, var(--room-panel) 86%, transparent);
+  box-shadow: var(--room-shadow-soft);
+}
+
+body.room-theme .me-row,
+body.room-theme .list-panel {
+  border: 1px solid var(--room-border);
+  border-radius: 20px;
+  background: var(--room-surface);
+}
+
+body.room-theme .me-avatar,
+body.room-theme .active-avatar,
+body.room-theme .friend-avatar {
+  background: var(--room-brand);
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(124, 58, 237, 0.18);
+}
+
+body.room-theme .friend-avatar.online,
+body.room-theme .active-avatar.online {
+  box-shadow: 0 0 0 1px rgba(135, 220, 158, 0.24), 0 12px 26px rgba(135, 220, 158, 0.14);
+}
+
+body.room-theme .friend-btn {
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.025);
+  border-color: transparent;
+}
+
+body.room-theme .friend-btn.active {
+  background: var(--room-brand-soft);
+  border-color: rgba(124, 58, 237, 0.26);
+}
+
+body.room-theme .chat-header {
+  border: 1px solid var(--room-border);
+  border-radius: 20px;
+  background: var(--room-surface);
+}
+
+body.room-theme .chat-header h2,
+body.room-theme .me-row h2,
+body.room-theme .messages-empty-title,
+body.room-theme .profile-modal-card h3,
+body.room-theme .confirm-modal-card h3 {
+  color: var(--room-text);
+  font-family: "Sora", "DM Sans", system-ui, sans-serif;
+}
+
+body.room-theme .online-count-pill {
+  background: rgba(135, 220, 158, 0.12);
+  color: var(--room-online);
+}
+
+body.room-theme .messages {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.014), rgba(255, 255, 255, 0.01)),
+    rgba(255, 255, 255, 0.01);
+  border-radius: 22px;
+}
+
+body.room-theme .messages-empty,
+body.room-theme .item-card {
+  background: rgba(255, 255, 255, 0.025);
+}
+
+body.room-theme .message {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 18px;
+}
+
+body.room-theme .message.me {
+  background: var(--room-me);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+body.room-theme .message-body {
+  color: var(--room-text);
+}
+
+body.room-theme .message-body-deleted {
+  color: var(--room-text-muted);
+}
+
+body.room-theme .reply-quote {
+  border-left-color: rgba(192, 132, 252, 0.5);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.room-theme .msg-action-btn,
+body.room-theme .reaction-btn,
+body.room-theme .suggestion-chip,
+body.room-theme .profile-modal-close,
+body.room-theme .confirm-modal-cancel,
+body.room-theme .chat-search-popover button {
+  border: 1px solid var(--room-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--room-text);
+}
+
+body.room-theme .typing-indicator {
+  border: 1px solid var(--room-border);
+  border-radius: 16px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+body.room-theme .snap-typing-bubble {
+  background: rgba(124, 58, 237, 0.16);
+}
+
+body.room-theme .snap-dot {
+  background: var(--room-accent-3);
+}
+
+body.room-theme .scroll-btn {
+  border: 1px solid var(--room-border);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+body.room-theme .message-context-menu {
+  background: var(--room-panel);
+}
+
+body.room-theme .profile-modal-backdrop,
+body.room-theme .confirm-modal-backdrop {
+  background: rgba(8, 5, 14, 0.62);
+  backdrop-filter: blur(14px);
+}
+
+body.room-theme .profile-modal-card,
+body.room-theme .confirm-modal-card,
+body.room-theme .toast {
+  background: var(--room-panel);
+  box-shadow: var(--room-shadow-soft);
+}
+
+body.room-theme .toast.error {
+  border-color: rgba(244, 139, 139, 0.32);
+}
+
+body.room-theme .toast.success {
+  border-color: rgba(135, 220, 158, 0.32);
+}
+
+@media (max-width: 980px) {
+  body.room-theme .panel-shell {
+    width: calc(100% - 24px);
+    min-height: calc(100dvh - 24px);
+    margin: 12px auto;
+    padding: 20px;
+  }
+
+  body.room-theme .login-card,
+  body.room-theme .chat-layout {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 768px) {
+  body.room-theme .panel-shell {
+    width: 100%;
+    min-height: 100dvh;
+    margin: 0;
+    padding: 14px 14px 0;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+  }
+
+  body.room-theme .login-hero {
+    display: none;
+  }
+}
