@@ -103,6 +103,19 @@ body.room-theme .panel-shell > * {
   z-index: 1;
 }
 
+
+body.room-theme.auth-page {
+  overflow-y: auto;
+}
+
+body.room-theme.auth-page .panel-shell {
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+body.room-theme.auth-page .login-card {
+  align-items: start;
+}
 body.room-theme .app-topbar {
   height: auto;
   padding-bottom: 18px;
@@ -1182,7 +1195,6 @@ body.room-theme .toast.success {
   body.room-theme .login-hero {
     display: none;
   }
-
   body.room-theme .login-panel,
   body.room-theme .sidebar,
   body.room-theme .chat {

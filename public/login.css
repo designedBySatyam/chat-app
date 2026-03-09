@@ -13,7 +13,7 @@
   flex-direction: column;
   justify-content: space-between;
   gap: 24px;
-  min-height: 620px;
+  min-height: clamp(460px, 60vh, 620px);
   padding: clamp(28px, 3vw, 40px);
   overflow: hidden;
 }
@@ -143,7 +143,7 @@
 .login-panel {
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 20px;
   padding: clamp(26px, 3vw, 36px);
 }
