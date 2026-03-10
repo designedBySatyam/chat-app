@@ -4,11 +4,34 @@ const crypto = require("crypto");
 const path = require("path");
 const http = require("http");
 const express = require("express");
+const multer = require("multer");
 const { MongoClient } = require("mongodb");
 const { Server } = require("socket.io");
+const cloudinary = require("./cloudinary");
 
 const app = express();
 const server = http.createServer(app);
+
+const uploadsDir = path.join(__dirname, "uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
+
+const upload = multer({ dest: uploadsDir });
+
+app.post("/upload-voice", upload.single("voice"), async (req, res) => {
+  try {
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      resource_type: "auto",
+      folder: "novyn_voice",
+    });
+
+    fs.unlinkSync(req.file.path);
+
+    res.json({ url: result.secure_url });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: "Upload failed" });
+  }
+});
 
 const io = new Server(server, {
   cors: {

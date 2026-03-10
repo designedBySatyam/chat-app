@@ -3,74 +3,67 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#05060d" />
+    <meta name="theme-color" content="#070b14" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Novyn — Secure Login</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Manrope:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="icon" type="image/svg+xml" href="/icons/novyn-badge.svg" />
-    <link rel="stylesheet" href="styles.css" />
     <link rel="stylesheet" href="login.css" />
-    <link rel="stylesheet" href="revamp.css" />
   </head>
   <body class="auth-page">
 
     <canvas id="bgScene" class="bg-scene" aria-hidden="true"></canvas>
 
     <main class="app-shell panel-shell">
+
+      <!-- ── Top bar ── -->
       <header class="app-topbar">
         <div class="brand">
+          <!-- Logo -->
           <svg class="brand-logo" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Novyn logo" role="img">
             <defs>
               <linearGradient id="lg1" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-                <stop offset="0%" stop-color="#00ffe0" />
-                <stop offset="100%" stop-color="#b06aff" />
+                <stop offset="0%" stop-color="#f5a623" />
+                <stop offset="100%" stop-color="#c0623a" />
               </linearGradient>
             </defs>
-            <rect width="42" height="42" rx="10" fill="url(#lg1)" opacity="0.15" />
-            <rect x="1" y="1" width="40" height="40" rx="9" fill="none" stroke="url(#lg1)" stroke-width="1" opacity="0.6" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="6" fill="none" stroke="#00ffe0" stroke-width="2" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#00ffe0" stroke-width="1.5" opacity="0.6" />
-            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#00ffe0" stroke-width="1" opacity="0.3" />
-            <circle cx="21" cy="21" r="3" fill="#00ffe0" />
-            <circle cx="15" cy="13" r="1.5" fill="rgba(176,106,255,0.6)" />
-            <line x1="15" y1="13" x2="21" y2="21" stroke="rgba(0,255,224,0.2)" stroke-width="0.5" />
+            <rect width="42" height="42" rx="12" fill="url(#lg1)" opacity="0.14" />
+            <rect x="1" y="1" width="40" height="40" rx="11" fill="none" stroke="url(#lg1)" stroke-width="1" opacity="0.55" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="6"  fill="none" stroke="#f5a623" stroke-width="2" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="10" fill="none" stroke="#f5a623" stroke-width="1.5" opacity="0.55" />
+            <circle class="brand-logo-ring" cx="21" cy="21" r="14" fill="none" stroke="#f5a623" stroke-width="1"   opacity="0.25" />
+            <circle cx="21" cy="21" r="3" fill="#f5a623" />
+            <circle cx="14" cy="13" r="1.5" fill="rgba(192,98,58,0.65)" />
+            <line x1="14" y1="13" x2="21" y2="21" stroke="rgba(245,166,35,0.20)" stroke-width="0.5" />
           </svg>
           <div>
-            <p class="eyebrow">SECURE CHANNEL · v2.0</p>
-            <h1 class="brand-name">NOVYN</h1>
+            <p class="eyebrow">SECURE CHANNEL · v4.0</p>
+            <h1 class="brand-name">No<span>vyn</span></h1>
           </div>
         </div>
 
         <div class="topbar-right">
-          <!-- System status readout -->
-          <div class="sys-status" aria-hidden="true">
-            <span class="sys-status-line">SYS <span class="sys-ok">NOMINAL</span></span>
-            <span class="sys-status-line">ENC <span class="sys-ok">ACTIVE</span></span>
-          </div>
           <div id="networkPill" class="network-pill" role="status" aria-live="polite">
             <span class="signal-dot" aria-hidden="true"></span>
-            <span id="connectionLabel">INIT...</span>
+            <span id="connectionLabel">INIT…</span>
           </div>
           <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark/light mode" title="Toggle theme">
             <span class="theme-toggle-thumb">
               <svg class="icon-moon" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#cbd5e1" stroke="#cbd5e1" stroke-width="0.5" stroke-linejoin="round" />
+                <path d="M10.5 7.5A5 5 0 0 1 4.5 1.5a5 5 0 1 0 6 6z" fill="#f5a623" stroke="#f5a623" stroke-width="0.5" stroke-linejoin="round" />
               </svg>
               <svg class="icon-sun" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                <circle cx="6" cy="6" r="2.5" fill="#f59e0b" />
-                <g stroke="#f59e0b" stroke-width="1" stroke-linecap="round">
-                  <line x1="6" y1="0.5" x2="6" y2="2" /><line x1="6" y1="10" x2="6" y2="11.5" />
-                  <line x1="0.5" y1="6" x2="2" y2="6" /><line x1="10" y1="6" x2="11.5" y2="6" />
-                  <line x1="2.05" y1="2.05" x2="3.1" y2="3.1" /><line x1="8.9" y1="8.9" x2="9.95" y2="9.95" />
-                  <line x1="9.95" y1="2.05" x2="8.9" y2="3.1" /><line x1="3.1" y1="8.9" x2="2.05" y2="9.95" />
+                <circle cx="6" cy="6" r="2.5" fill="#c0623a" />
+                <g stroke="#c0623a" stroke-width="1" stroke-linecap="round">
+                  <line x1="6" y1="0.5" x2="6" y2="2"   /><line x1="6"    y1="10"   x2="6"    y2="11.5" />
+                  <line x1="0.5" y1="6" x2="2" y2="6"   /><line x1="10"   y1="6"    x2="11.5" y2="6"    />
+                  <line x1="2.05" y1="2.05" x2="3.1" y2="3.1"   /><line x1="8.9" y1="8.9" x2="9.95" y2="9.95" />
+                  <line x1="9.95" y1="2.05" x2="8.9" y2="3.1"   /><line x1="3.1" y1="8.9" x2="2.05" y2="9.95" />
                 </g>
               </svg>
             </span>
@@ -78,18 +71,13 @@
         </div>
       </header>
 
+      <!-- ── Login Card ── -->
       <section id="loginCard" class="card login-card" aria-label="Login">
 
-        <!-- ── Hero panel ── -->
+        <!-- ═══ Hero Panel (left) ═══ -->
         <div class="login-hero">
           <div class="hero-orb hero-orb-1" aria-hidden="true"></div>
           <div class="hero-orb hero-orb-2" aria-hidden="true"></div>
-
-          <!-- HUD corner brackets -->
-          <span class="hero-bracket hero-bracket-tl" aria-hidden="true"></span>
-          <span class="hero-bracket hero-bracket-tr" aria-hidden="true"></span>
-          <span class="hero-bracket hero-bracket-bl" aria-hidden="true"></span>
-          <span class="hero-bracket hero-bracket-br" aria-hidden="true"></span>
 
           <div class="hero-top">
             <p class="eyebrow hero-eyebrow">
@@ -97,10 +85,10 @@
               ENCRYPTED · REALTIME · PRIVATE
             </p>
             <h2 class="hero-headline">Keep your<br/><em>people</em> close.</h2>
-            <p class="hero-sub">Direct messages, live presence, seen states and reactions — in one focused place. End-to-end encrypted.</p>
+            <p class="hero-sub">Direct messages, live presence, seen states and reactions — all in one focused place. End-to-end encrypted.</p>
           </div>
 
-          <!-- Chat preview terminal -->
+          <!-- Chat preview -->
           <div class="hcp-terminal" aria-hidden="true">
             <div class="hcp-terminal-bar">
               <span class="terminal-dot td-red"></span>
@@ -147,14 +135,14 @@
                 <div class="hcp-typing-dots">
                   <span></span><span></span><span></span>
                 </div>
-                <span class="hcp-typing-label">Maya is typing</span>
+                <span class="hcp-typing-label">Maya is typing…</span>
               </div>
             </div>
           </div>
 
           <div class="hero-pills">
             <span class="hero-pill">
-              <svg width="9" height="9" viewBox="0 0 9 9" fill="none"><circle cx="4.5" cy="4.5" r="3" fill="#00e67d"/></svg>
+              <svg width="8" height="8" viewBox="0 0 8 8" fill="none" aria-hidden="true"><circle cx="4" cy="4" r="3" fill="#6aab80"/></svg>
               Realtime
             </span>
             <span class="hero-pill">⚡ Seen states</span>
@@ -164,43 +152,40 @@
           </div>
         </div>
 
-        <!-- ── Login panel ── -->
+        <!-- ═══ Login Panel (right) ═══ -->
         <div class="login-panel">
           <div class="login-panel-inner">
 
+            <!-- Header -->
             <div class="login-panel-header">
               <div class="login-logo-wrap">
-                <svg class="login-logo-mark" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" width="44" height="44" aria-hidden="true">
+                <svg class="login-logo-mark" viewBox="0 0 42 42" fill="none" xmlns="http://www.w3.org/2000/svg" width="46" height="46" aria-hidden="true">
                   <defs>
                     <linearGradient id="lg2" x1="0" y1="0" x2="42" y2="42" gradientUnits="userSpaceOnUse">
-                      <stop offset="0%" stop-color="#00ffe0" />
-                      <stop offset="100%" stop-color="#b06aff" />
+                      <stop offset="0%" stop-color="#f5a623" />
+                      <stop offset="100%" stop-color="#c0623a" />
                     </linearGradient>
                   </defs>
-                  <rect width="42" height="42" rx="10" fill="url(#lg2)" opacity="0.12" />
-                  <rect x="1" y="1" width="40" height="40" rx="9" fill="none" stroke="url(#lg2)" stroke-width="1" opacity="0.7" />
-                  <circle cx="21" cy="21" r="6" fill="none" stroke="#00ffe0" stroke-width="2" />
-                  <circle cx="21" cy="21" r="10" fill="none" stroke="#00ffe0" stroke-width="1.5" opacity="0.7" />
-                  <circle cx="21" cy="21" r="3" fill="#00ffe0" />
+                  <rect width="42" height="42" rx="12" fill="url(#lg2)" opacity="0.14" />
+                  <rect x="1" y="1" width="40" height="40" rx="11" fill="none" stroke="url(#lg2)" stroke-width="1" opacity="0.65" />
+                  <circle cx="21" cy="21" r="6"  fill="none" stroke="#f5a623" stroke-width="2" />
+                  <circle cx="21" cy="21" r="10" fill="none" stroke="#f5a623" stroke-width="1.5" opacity="0.65" />
+                  <circle cx="21" cy="21" r="3"  fill="#f5a623" />
                 </svg>
                 <div class="login-logo-glow" aria-hidden="true"></div>
               </div>
               <div class="login-header-text">
-                <p class="login-eyebrow">NOVYN SECURE ACCESS</p>
                 <h3>Welcome back.</h3>
-                <p class="login-panel-sub">Sign in or register with a single form. New usernames are created automatically.</p>
+                <p class="login-eyebrow">NOVYN · SECURE ACCESS</p>
+                <p class="login-panel-sub">Sign in with a single form — new usernames are created automatically.</p>
               </div>
             </div>
 
-            <div class="auth-switcher" aria-hidden="true">
-              <div class="auth-switcher-row">
-                <span class="auth-pill auth-pill-active">Sign in</span>
-                <span class="auth-pill">Register</span>
-              </div>
-              <p class="auth-helper">Username doesn't exist yet? Novyn creates it automatically.</p>
-            </div>
+            <!-- Auth mode switcher removed -->
 
+            <!-- Login form -->
             <form id="loginForm" novalidate>
+
               <div class="input-group">
                 <label for="usernameInput" class="input-label">
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
@@ -208,10 +193,17 @@
                 </label>
                 <div class="input-wrap">
                   <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
                   </svg>
-                  <input id="usernameInput" type="text" maxlength="24" placeholder="your_handle" autocomplete="username" required spellcheck="false" />
-                  <div class="input-scan" aria-hidden="true"></div>
+                  <input
+                    id="usernameInput"
+                    type="text"
+                    maxlength="24"
+                    placeholder="your_handle"
+                    autocomplete="username"
+                    required
+                    spellcheck="false"
+                  />
                 </div>
               </div>
 
@@ -222,44 +214,42 @@
                 </label>
                 <div class="input-wrap">
                   <svg class="input-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
-                  <input id="passwordInput" type="password" minlength="4" maxlength="72" placeholder="min. 4 characters" autocomplete="current-password" required />
-                  <div class="input-scan" aria-hidden="true"></div>
+                  <input
+                    id="passwordInput"
+                    type="password"
+                    minlength="4"
+                    maxlength="72"
+                    placeholder="min. 4 characters"
+                    autocomplete="current-password"
+                    required
+                  />
                 </div>
               </div>
 
               <button type="submit" id="loginBtn" class="login-btn">
-                <span class="login-btn-text">ACCESS NOVYN</span>
+                <span class="login-btn-text">Sign In</span>
                 <svg class="login-btn-arrow" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <line x1="5" y1="12" x2="19" y2="12" /><polyline points="12 5 19 12 12 19" />
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
                 </svg>
                 <span class="login-btn-spinner hidden" aria-hidden="true"></span>
-                <div class="btn-scan-line" aria-hidden="true"></div>
               </button>
+
             </form>
 
+            <!-- Security footnote -->
             <p class="login-footnote">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
               </svg>
               AES-256 encrypted · Zero logs · No third parties
             </p>
 
+            <!-- Username feedback -->
             <p id="usernameHint" class="username-hint hidden"></p>
             <div id="usernameSuggestions" class="username-suggestions hidden"></div>
 
-          </div>
-
-          <!-- Decorative circuit lines -->
-          <div class="panel-circuit" aria-hidden="true">
-            <svg viewBox="0 0 200 120" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
-              <path d="M0 60 L40 60 L50 40 L80 40 L90 60 L200 60" stroke="rgba(0,255,224,0.07)" stroke-width="1" fill="none"/>
-              <path d="M0 80 L30 80 L45 95 L200 95" stroke="rgba(176,106,255,0.06)" stroke-width="1" fill="none"/>
-              <circle cx="90" cy="60" r="3" fill="rgba(0,255,224,0.2)"/>
-              <circle cx="50" cy="40" r="2" fill="rgba(176,106,255,0.2)"/>
-              <circle cx="45" cy="95" r="2" fill="rgba(176,106,255,0.15)"/>
-            </svg>
           </div>
         </div>
       </section>
@@ -276,3 +266,5 @@
     <script src="login.js"></script>
   </body>
 </html>
+
+
