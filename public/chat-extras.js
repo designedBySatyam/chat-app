@@ -44,10 +44,12 @@
     if (panel === 'chat') {
       sidebar.setAttribute('data-mob-hidden', 'true');
       chat.removeAttribute('data-mob-hidden');
+      document.body.classList.add('mob-chat-open');
       if (backBtn) backBtn.setAttribute('data-visible', 'true');
     } else {
       chat.setAttribute('data-mob-hidden', 'true');
       sidebar.removeAttribute('data-mob-hidden');
+      document.body.classList.remove('mob-chat-open');
       if (backBtn) backBtn.removeAttribute('data-visible');
     }
   }

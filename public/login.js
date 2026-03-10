@@ -1,5 +1,6 @@
 const socketAvailable = typeof io === "function";
-const socket = socketAvailable ? io() : { on() {}, emit() {}, connected: false };
+const SOCKET_URL = window.location.origin.replace(/\/$/, "");
+const socket = socketAvailable ? io(SOCKET_URL) : { on() {}, emit() {}, connected: false };
 
 const SESSION_KEY = "novyn-session";
 const DASHBOARD_PATH = "/index.html";

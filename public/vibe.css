@@ -1862,6 +1862,8 @@ body:not(.friend-selected) .info-panel {
   .chat-window { z-index: 1; transform: translateX(0); opacity: 1; }
   .sidebar:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; }
   .chat-window[data-mob-hidden] { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  body.mob-chat-open .sidebar { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+  body.mob-chat-open .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
   body.info-open .sidebar,

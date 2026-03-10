@@ -1,5 +1,6 @@
 const socketAvailable = typeof io === "function";
-const socket = socketAvailable ? io() : { on() {}, emit() {} };
+const SOCKET_URL = window.location.origin.replace(/\/$/, "");
+const socket = socketAvailable ? io(SOCKET_URL) : { on() {}, emit() {} };
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -18,6 +19,15 @@ const activeFriendLabel = document.getElementById("activeFriendLabel");
 const activeFriendPresenceLine = document.getElementById("activeFriendPresenceLine");
 const activePresence    = document.getElementById("activePresence");
 const activeFriendAvatar = document.getElementById("activeFriendAvatar");
+const profilePanel      = document.getElementById("profilePanel");
+const profilePanelAvatar = document.getElementById("profilePanelAvatar");
+const profilePanelName  = document.getElementById("profilePanelName");
+const profilePanelHandle = document.getElementById("profilePanelHandle");
+const profilePanelStatus = document.getElementById("profilePanelStatus");
+const profileStatMessages = document.getElementById("profileStatMessages");
+const profileStatMedia  = document.getElementById("profileStatMedia");
+const profileStatLinks  = document.getElementById("profileStatLinks");
+const profileStatFiles  = document.getElementById("profileStatFiles");
 const removeFriendBtn   = document.getElementById("removeFriendBtn");
 const messagesEl        = document.getElementById("messages");
 const meAvatar          = document.getElementById("meAvatar");
@@ -35,7 +45,8 @@ const networkPill       = document.getElementById("networkPill");
 const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
-const sendButton        = messageForm ? messageForm.querySelector("button") : null;
+const sendButton        = messageForm ? messageForm.querySelector('button[type="submit"]') : null;
+const voiceBtn          = document.getElementById("voiceBtn");
 const messageSearchToggle = document.getElementById("messageSearchToggle");
 const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
@@ -85,6 +96,7 @@ function showChatOnMobile() {
   if (window.innerWidth > MOBILE_BP) return;
   mobileSidebar.setAttribute("data-mob-hidden", "true");
   mobileChat.removeAttribute("data-mob-hidden");
+  document.body.classList.add("mob-chat-open");
 }
 
 function getFriendSearchBlob(friend) {
@@ -397,6 +409,78 @@ function getFriendPresenceText(friend) {
     return `${statusText} · @${friend.username}`;
   }
   return statusText;
+}
+
+function syncProfilePanelStats() {
+  if (!profileStatMessages || !profileStatMedia || !profileStatLinks || !profileStatFiles) return;
+  const messages = Array.isArray(conversationMessages) ? conversationMessages : [];
+  const linkRegex = /https?:\/\/\S+/i;
+  const mediaRegex = /\.(png|jpe?g|gif|webp|mp4|mov|webm|mp3|wav|ogg)(\?|#|$)/i;
+  const fileRegex = /\.(pdf|zip|rar|7z|docx?|pptx?|xlsx?)(\?|#|$)/i;
+
+  let linkCount = 0;
+  let mediaCount = 0;
+  let fileCount = 0;
+
+  for (const message of messages) {
+    if (message?.deletedAt) continue;
+    const text = String(message?.text || "");
+    if (!text) continue;
+    if (linkRegex.test(text)) linkCount += 1;
+    if (mediaRegex.test(text)) mediaCount += 1;
+    if (fileRegex.test(text)) fileCount += 1;
+  }
+
+  profileStatMessages.textContent = String(messages.length);
+  profileStatLinks.textContent = String(linkCount);
+  profileStatMedia.textContent = String(mediaCount);
+  profileStatFiles.textContent = String(fileCount);
+}
+
+function syncProfilePanel(friend) {
+  if (!profilePanel || !profilePanelName || !profilePanelAvatar || !profilePanelHandle || !profilePanelStatus) return;
+
+  if (!activeFriend) {
+    profilePanelName.textContent = "Select a friend";
+    profilePanelHandle.textContent = "@handle";
+    profilePanelStatus.textContent = "Offline";
+    profilePanelStatus.classList.add("offline");
+    profilePanelAvatar.textContent = "?";
+    profilePanelAvatar.style.background = "";
+    syncProfilePanelStats();
+    return;
+  }
+
+  const resolvedFriend = friend || findFriend(activeFriend);
+  if (!resolvedFriend) {
+    profilePanelName.textContent = "Loading...";
+    profilePanelHandle.textContent = `@${activeFriend}`;
+    profilePanelStatus.textContent = "Loading status...";
+    profilePanelStatus.classList.add("offline");
+    profilePanelAvatar.textContent = activeFriend.slice(0, 2).toUpperCase();
+    profilePanelAvatar.style.background = "";
+    syncProfilePanelStats();
+    return;
+  }
+
+  profilePanelName.textContent = getFriendDisplayName(resolvedFriend);
+  profilePanelHandle.textContent = `@${resolvedFriend.username}`;
+  profilePanelStatus.textContent = resolvedFriend.online ? "Active now" : formatLastSeen(resolvedFriend.lastSeenAt);
+  profilePanelStatus.classList.toggle("offline", !resolvedFriend.online);
+
+  const fallback = resolvedFriend.username.slice(0, 2).toUpperCase();
+  if (resolvedFriend.avatarId && window._novynAvatarUtils) {
+    window._novynAvatarUtils.applyAvatarToEl(
+      profilePanelAvatar,
+      resolvedFriend.avatarId,
+      fallback
+    );
+  } else {
+    profilePanelAvatar.style.background = "";
+    profilePanelAvatar.textContent = fallback;
+  }
+
+  syncProfilePanelStats();
 }
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
@@ -949,6 +1033,8 @@ function appendMessage(message, skipAnimation = false, withSeparator = true) {
   } else {
     messagesEl.scrollTop = preserveTop;
   }
+
+  syncProfilePanelStats();
 }
 
 function updateStats() {
@@ -966,6 +1052,10 @@ function updateStats() {
 function setComposerEnabled(isEnabled) {
   messageInput.disabled = !isEnabled;
   if (sendButton) sendButton.disabled = !isEnabled;
+  if (voiceBtn) {
+    voiceBtn.disabled = !isEnabled;
+    if (!isEnabled) resetVoiceState();
+  }
 
   if (!isEnabled) {
     stopLocalTyping();
@@ -982,6 +1072,7 @@ function renderMessages(messages) {
   if (!conversationMessages.length) {
     renderMessagesEmptyState("No messages yet. Say hello!");
     applyMessageSearch();
+    syncProfilePanelStats();
     return;
   }
 
@@ -994,6 +1085,7 @@ function renderMessages(messages) {
   scrollToBottom(true);
   if (window._novynFAB) window._novynFAB.reset();
   applyMessageSearch();
+  syncProfilePanelStats();
 }
 
 function markConversationMessageDeleted(messageId, deletedAt, replacementText = DELETED_MESSAGE_TEXT) {
@@ -1162,6 +1254,7 @@ function renderActiveFriendPresence() {
       activeFriendPresenceLine.textContent = "Select a friend to start chatting";
       activeFriendPresenceLine.classList.remove("online");
     }
+    syncProfilePanel();
     return;
   }
 
@@ -1172,6 +1265,7 @@ function renderActiveFriendPresence() {
       activeFriendPresenceLine.textContent = "Loading contact status...";
       activeFriendPresenceLine.classList.remove("online");
     }
+    syncProfilePanel();
     return;
   }
 
@@ -1200,6 +1294,8 @@ function renderActiveFriendPresence() {
     activeFriendPresenceLine.textContent = getFriendPresenceText(friend);
     activeFriendPresenceLine.classList.toggle("online", !!friend.online);
   }
+
+  syncProfilePanel(friend);
 }
 
 function syncRemoveFriendButton() {
@@ -1265,7 +1361,7 @@ function renderFriends() {
     const btn         = document.createElement("button");
     btn.type          = "button";
     btn.className     = `friend-btn chat-item${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
-    btn.addEventListener("click", () => setActiveFriend(friend.username));
+    btn.dataset.username = friend.username;
 
     // Avatar with initials + online dot
     const avatar        = document.createElement("div");
@@ -1380,6 +1476,18 @@ if (sidebarSearch) {
   sidebarSearch.addEventListener("search", applyFriendSearch);
 }
 
+if (friendList) {
+  friendList.addEventListener("click", (e) => {
+    const btn = e.target.closest(".friend-btn");
+    if (!btn) return;
+    const username = btn.dataset.username;
+    if (!username) return;
+    e.preventDefault();
+    setActiveFriend(username);
+    showChatOnMobile();
+  });
+}
+
 // ─── Custom unfriend confirm modal ────────────────────────────────────────────
 const unfriendModal  = document.getElementById("unfriendModal");
 const unfriendCancel  = document.getElementById("unfriendCancel");
@@ -1441,6 +1549,118 @@ function keepComposerFocused() {
   setTimeout(refocus, 40);
 }
 
+const voiceState = {
+  recorder: null,
+  chunks: [],
+  stream: null,
+  timeout: null,
+  isRecording: false,
+  uploading: false,
+};
+
+function resetVoiceState() {
+  if (voiceState.timeout) clearTimeout(voiceState.timeout);
+  voiceState.timeout = null;
+  if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
+    voiceState.recorder.stop();
+  }
+  if (voiceState.stream) {
+    voiceState.stream.getTracks().forEach((t) => t.stop());
+  }
+  voiceState.recorder = null;
+  voiceState.stream = null;
+  voiceState.chunks = [];
+  voiceState.isRecording = false;
+  if (voiceBtn) {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.setAttribute("aria-pressed", "false");
+    voiceBtn.disabled = messageInput?.disabled;
+  }
+}
+
+async function uploadVoiceBlob(blob) {
+  if (!blob || !activeFriend) return;
+  voiceState.uploading = true;
+  try {
+    const formData = new FormData();
+    formData.append("voice", blob, `voice-${Date.now()}.webm`);
+    const resp = await fetch("/upload-voice", { method: "POST", body: formData });
+    if (!resp.ok) throw new Error("Upload failed");
+    const data = await resp.json();
+    if (!data?.url) throw new Error("No URL returned");
+    socket.emit("private_message", { to: activeFriend, text: data.url });
+    showToast("Voice message sent", "success");
+  } catch (err) {
+    console.error(err);
+    showToast("Voice upload failed", "error");
+  } finally {
+    voiceState.uploading = false;
+  }
+}
+
+function stopVoiceRecording() {
+  if (!voiceState.isRecording) return;
+  voiceState.isRecording = false;
+  if (voiceState.timeout) clearTimeout(voiceState.timeout);
+  voiceState.timeout = null;
+  if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
+    voiceState.recorder.stop();
+  }
+  if (voiceBtn) {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.setAttribute("aria-pressed", "false");
+  }
+}
+
+async function startVoiceRecording() {
+  if (!voiceBtn) return;
+  if (!activeFriend) {
+    showToast("Choose a friend before recording.", "error");
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast("Voice recording not supported in this browser.", "error");
+    return;
+  }
+  if (voiceState.uploading) {
+    showToast("Voice upload in progress. Please wait.", "info");
+    return;
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const recorder = new MediaRecorder(stream);
+
+    voiceState.stream = stream;
+    voiceState.recorder = recorder;
+    voiceState.chunks = [];
+    voiceState.isRecording = true;
+
+    recorder.ondataavailable = (evt) => {
+      if (evt?.data?.size > 0) voiceState.chunks.push(evt.data);
+    };
+    recorder.onstop = async () => {
+      const blob = new Blob(voiceState.chunks, { type: "audio/webm" });
+      resetVoiceState();
+      await uploadVoiceBlob(blob);
+    };
+
+    recorder.start();
+    voiceBtn.classList.add("recording");
+    voiceBtn.setAttribute("aria-pressed", "true");
+    voiceBtn.title = "Stop recording";
+
+    voiceState.timeout = setTimeout(() => {
+      showToast("Recording auto-stopped at 60s", "info");
+      stopVoiceRecording();
+    }, 60000);
+  } catch (err) {
+    console.error(err);
+    resetVoiceState();
+    showToast("Microphone permission blocked.", "error");
+  }
+}
+
 function sendActiveMessage() {
   const text = messageInput.value.trim();
   if (!activeFriend) { showToast("Choose a friend first.", "error"); return; }
@@ -1463,6 +1683,16 @@ messageForm.addEventListener("submit", (e) => {
   e.preventDefault();
   sendActiveMessage();
 });
+
+if (voiceBtn) {
+  voiceBtn.addEventListener("click", () => {
+    if (voiceState.isRecording) {
+      stopVoiceRecording();
+    } else {
+      startVoiceRecording();
+    }
+  });
+}
 
 messageInput.addEventListener("input", () => {
   if (!activeFriend) return;
