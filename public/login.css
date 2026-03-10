@@ -657,6 +657,12 @@
 }
 
 @media (max-width: 600px) {
+  .auth-page {
+    overflow: auto;
+  }
+  .auth-page .app-shell {
+    overflow: visible;
+  }
   .app-topbar {
     padding: 10px 16px;
   }

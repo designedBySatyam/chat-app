@@ -82,7 +82,7 @@
   }
   new MutationObserver(function () {
     var layout = document.getElementById('chatLayout');
-    if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('chat');
+    if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('friends');
   }).observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
 })();
 
@@ -90,9 +90,9 @@
 (function () {
   var infoPanel = document.getElementById('infoPanel');
   var scrim = document.getElementById('infoScrim');
-  var header = document.querySelector('.chat-header');
+  var toggleBtn = document.getElementById('infoToggleBtn');
   var closeBtn = document.getElementById('infoCloseBtn');
-  if (!infoPanel || !header) return;
+  if (!infoPanel || !toggleBtn) return;
 
   function canOpenInfo() {
     return document.body.classList.contains('friend-selected');
@@ -100,19 +100,21 @@
   function openPanel() {
     if (!canOpenInfo()) return;
     document.body.classList.add('info-open');
+    toggleBtn.setAttribute('aria-expanded', 'true');
   }
   function closePanel() {
     document.body.classList.remove('info-open');
+    toggleBtn.setAttribute('aria-expanded', 'false');
   }
   function togglePanel() {
     if (!canOpenInfo()) return;
     document.body.classList.toggle('info-open');
+    toggleBtn.setAttribute('aria-expanded', document.body.classList.contains('info-open') ? 'true' : 'false');
   }
 
-  header.addEventListener('click', function (e) {
-    if (e.target.closest('.chat-header-info') || e.target.closest('#activePresence')) {
-      togglePanel();
-    }
+  toggleBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    togglePanel();
   });
   scrim && scrim.addEventListener('click', closePanel);
   closeBtn && closeBtn.addEventListener('click', closePanel);

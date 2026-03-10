@@ -175,16 +175,13 @@ body::after {
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr var(--info-w);
+  grid-template-columns: var(--sidebar-w) 1fr;
   height: 100vh;
   height: 100dvh;
   padding: 20px;
   gap: 14px;
   transition: grid-template-columns 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), gap 0.55s ease;
 }
-
-/* Right info panel is closed by default */
-body.info-open { --info-w: var(--info-w-open); }
 
 /* ── Shared card base ───────────────────────────────────────── */
 .card,
@@ -215,15 +212,37 @@ body:not(.friend-selected) .chat-window {
 }
 
 .info-panel {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(360px, 92vw);
+  height: min(86vh, 720px);
   opacity: 0;
-  transform: translateX(18px) scale(0.98);
+  transform: translate(-50%, -48%) scale(0.96);
   filter: blur(2px);
   pointer-events: none;
+  z-index: 9;
+  transition: opacity 0.28s ease, transform 0.36s cubic-bezier(0.2, 0.9, 0.2, 1), filter 0.28s ease;
+  will-change: transform, opacity;
 }
 body.info-open .info-panel {
   opacity: 1;
-  transform: translateX(0) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   filter: none;
+  pointer-events: auto;
+}
+
+.info-scrim {
+  position: fixed;
+  inset: 0;
+  background: rgba(5,8,14,0.55);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+  z-index: 8;
+}
+body.info-open .info-scrim {
+  opacity: 1;
   pointer-events: auto;
 }
 
@@ -1441,7 +1460,6 @@ body.info-open .info-panel {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both;
 }
 
 .info-top {
@@ -1472,6 +1490,8 @@ body.info-open .info-panel {
   gap: 20px;
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.07) transparent;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 .info-inner::-webkit-scrollbar { width: 3px; }
 .info-inner::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.07); border-radius: 3px; }
@@ -1931,43 +1951,11 @@ body.info-open .info-panel {
    MOBILE
 ══════════════════════════════════════════════════════════════ */
 @media (max-width: 1000px) {
-  .info-panel {
-    animation: none;
-    display: block;
-    position: fixed;
-    top: 0; right: 0; bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    transform: translateX(110%);
-    opacity: 0;
-    pointer-events: none;
-    transition: transform 0.3s ease, opacity 0.3s ease;
-    z-index: 7;
-    border-radius: 0;
-    -webkit-overflow-scrolling: touch;
-  }
-  body.info-open .info-panel {
-    transform: translateX(0);
-    opacity: 1;
-    pointer-events: auto;
-  }
-  .info-scrim {
-    position: fixed;
-    inset: 0;
-    background: rgba(5,8,14,0.55);
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.25s ease;
-    z-index: 6;
-  }
-  body.info-open .info-scrim {
-    opacity: 1;
-    pointer-events: auto;
-  }
   .app { grid-template-columns: var(--sidebar-w) 1fr; }
-  .chat-header-info { cursor: pointer; }
-  .chat-header-info:active { opacity: 0.8; }
+  .info-panel {
+    width: min(420px, 92vw);
+    height: min(88vh, 720px);
+  }
 }
 
 @media (max-width: 720px) {
@@ -1986,16 +1974,16 @@ body.info-open .info-panel {
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
     -webkit-overflow-scrolling: touch;
   }
-  /* Panels: off-screen + non-interactive by default */
-  .sidebar { z-index: 2; transform: translateX(-100%); opacity: 0; pointer-events: none; }
+  /* Panels: sidebar visible by default, chat hidden by default */
+  .sidebar { z-index: 2; transform: translateX(0); opacity: 1; pointer-events: auto; }
   .chat-window { z-index: 1; transform: translateX(100%); opacity: 0; pointer-events: none; }
-  /* Panel is ACTIVE when it does NOT carry data-mob-hidden */
-  .sidebar:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; z-index: 2; }
+  /* Explicit hides */
+  .sidebar[data-mob-hidden] { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+  .chat-window[data-mob-hidden] { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  /* Active chat panel */
   .chat-window:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; z-index: 2; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
-  body.info-open .sidebar,
-  body.info-open .chat-window { opacity: 0; pointer-events: none; }
   .chat-input-area {
     padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   }
