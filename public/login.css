@@ -55,11 +55,17 @@
   --border-2: rgba(0,0,0,0.11);
 }
 
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 /* ── Page base ──────────────────────────────────────────────── */
 .auth-page {
   height: 100dvh;
   max-height: 100dvh;
   overflow: hidden;
+  overflow-x: hidden;
+  width: 100%;
   display: flex;
   flex-direction: column;
   font-family: var(--font-body);
@@ -122,10 +128,11 @@
   flex-shrink: 0;
   height: auto;
   margin: 0;
+  min-width: 0;
 }
 
 /* Brand in topbar */
-.brand { display: flex; align-items: center; gap: 12px; }
+.brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .brand-logo { display: none; }           /* hide old amber SVG logo */
 
 /* Novyn wordmark */
@@ -146,7 +153,7 @@
 /* Style "NOVYN" text — replace colour only, keep font weight */
 .brand > div > .eyebrow { display: none; }   /* hide "SECURE CHANNEL · v4.0" */
 
-.topbar-right { display: flex; align-items: center; gap: 10px; }
+.topbar-right { display: flex; align-items: center; gap: 10px; min-width: 0; }
 
 /* Network pill — Vibe style */
 .network-pill {
@@ -156,6 +163,7 @@
   font-family: var(--font-mono); font-size: 10px; font-weight: 500;
   letter-spacing: 0.08em; color: var(--text3);
   transition: color .3s, border-color .3s, box-shadow .3s;
+  min-width: 0;
 }
 .network-pill.connected {
   color: var(--online); border-color: rgba(34,217,138,.3);
@@ -663,6 +671,14 @@
   .auth-page .app-shell {
     overflow: visible;
   }
+  .login-card {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+  .login-panel {
+    overflow: visible;
+  }
   .app-topbar {
     padding: 10px 16px;
   }
@@ -680,7 +696,7 @@
   .hero-headline  { font-size: 1.55rem; margin-bottom: 10px; }
   .hero-sub       { display: none; }
   .login-panel-inner {
-    padding: 24px 20px 56px;
+    padding: 24px 20px calc(56px + env(safe-area-inset-bottom, 0px));
     gap: 18px;
   }
   .login-panel-header { gap: 12px; }
@@ -694,6 +710,20 @@
   .input-wrap input { padding: 12px 14px 12px 40px; font-size: 13px; }
   .login-btn { padding: 13px 18px; font-size: 13px; }
   .toast { left: 16px; right: 16px; transform: none; white-space: normal; text-align: center; }
+}
+
+@media (max-width: 520px) {
+  .app-topbar { flex-wrap: wrap; gap: 8px; }
+  .brand { flex: 1 1 auto; }
+  .topbar-right { flex: 1 1 auto; justify-content: flex-end; }
+  .network-pill { max-width: 62vw; }
+  .network-pill #connectionLabel {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 @media (max-width: 360px) {

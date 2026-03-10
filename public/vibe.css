@@ -1582,6 +1582,24 @@ body.info-open .info-scrim {
   border-color: rgba(47,142,244,0.4);
   color: var(--blue);
 }
+.profile-action-btn.action-call {
+  color: var(--online);
+  border-color: rgba(34,217,138,0.35);
+}
+.profile-action-btn.action-call:hover {
+  background: rgba(34,217,138,0.14);
+  border-color: rgba(34,217,138,0.6);
+  color: var(--online);
+}
+.profile-action-btn.action-danger {
+  color: var(--danger);
+  border-color: rgba(255,92,106,0.38);
+}
+.profile-action-btn.action-danger:hover {
+  background: rgba(255,92,106,0.14);
+  border-color: rgba(255,92,106,0.6);
+  color: var(--danger);
+}
 .profile-action-btn svg {
   width: 16px; height: 16px;
   stroke: currentColor; fill: none;
