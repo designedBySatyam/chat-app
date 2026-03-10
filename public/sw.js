@@ -1,15 +1,17 @@
-const CACHE_NAME = "novyn-shell-v4";
+const CACHE_NAME = "novyn-shell-v10";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/login.html",
   "/styles.css",
+  "/vibe.css",
   "/login.css",
   "/dashboard.css",
   "/room-theme.css",
   "/app.js",
   "/chat-extras.js",
   "/login.js",
+  "/visuals.js",
   "/pwa-register.js",
   "/manifest.json",
   "/icons/novyn-badge.svg",
@@ -56,7 +58,8 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request).catch(async () => {
-        const fallbackPath = url.pathname === "/login.html" ? "/login.html" : "/index.html";
+        const fallbackPath =
+          url.pathname === "/" || url.pathname === "/login.html" ? "/login.html" : "/index.html";
         const cached = await caches.match(fallbackPath);
         return cached || Response.error();
       })

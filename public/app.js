@@ -13,6 +13,7 @@ const addFriendForm     = document.getElementById("addFriendForm");
 const friendInput       = document.getElementById("friendInput");
 const requestList       = document.getElementById("requestList");
 const friendList        = document.getElementById("friendList");
+const sidebarSearch     = document.getElementById("sidebarSearch");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
 const activeFriendPresenceLine = document.getElementById("activeFriendPresenceLine");
 const activePresence    = document.getElementById("activePresence");
@@ -20,6 +21,10 @@ const activeFriendAvatar = document.getElementById("activeFriendAvatar");
 const removeFriendBtn   = document.getElementById("removeFriendBtn");
 const messagesEl        = document.getElementById("messages");
 const meAvatar          = document.getElementById("meAvatar");
+const infoPanelName     = document.getElementById("infoPanelName");
+const infoPanelAvatar   = document.getElementById("infoPanelAvatar");
+const infoPanelHandle   = document.getElementById("infoPanelHandle");
+const infoPanelStatus   = document.getElementById("infoPanelStatus");
 const messageForm       = document.getElementById("messageForm");
 const messageInput      = document.getElementById("messageInput");
 const toast             = document.getElementById("toast");
@@ -36,9 +41,12 @@ const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
+const mobileSidebar     = document.getElementById("mobileSidebar");
+const mobileChat        = document.getElementById("mobileChat");
 const SESSION_KEY       = "novyn-session";
-const LOGIN_PATH        = "/login.html";
-const isDashboardPage   = Boolean(chatLayout) && !loginForm;
+const LOGIN_PATH        = "/";
+const isDashboardPage   = Boolean(chatLayout) && !document.body.classList.contains("auth-page");
+const MOBILE_BP         = 768;
 
 let me           = "";
 let activeFriend = "";
@@ -46,6 +54,7 @@ let friends      = [];
 let requests     = [];
 let replyTo      = null;
 let searchPanelOpen = false;
+let friendSearchQuery = "";
 let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
 let conversationMessages = [];
 window._novynProfile = myProfile;
@@ -69,6 +78,25 @@ function normalizeName(value) {
 
 function normalizeSearchText(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function showChatOnMobile() {
+  if (!mobileSidebar || !mobileChat) return;
+  if (window.innerWidth > MOBILE_BP) return;
+  mobileSidebar.setAttribute("data-mob-hidden", "true");
+  mobileChat.removeAttribute("data-mob-hidden");
+}
+
+function getFriendSearchBlob(friend) {
+  const displayName = getFriendDisplayName(friend);
+  const bio = friend?.bio || "";
+  const username = friend?.username || "";
+  const lastMessage = friend?.lastMessage || "";
+  const lastFrom = friend?.lastFrom || "";
+  const preview = friendPreview(friend);
+  return normalizeSearchText(
+    `${displayName} ${username} ${bio} ${lastMessage} ${lastFrom} ${preview}`
+  );
 }
 
 function readStoredSession() {
@@ -1008,23 +1036,32 @@ function renderRequests() {
   requestList.innerHTML = "";
   updateStats();
 
-  if (!requests.length) {
+  const query = friendSearchQuery;
+  const filteredRequests = query
+    ? requests.filter((name) => normalizeSearchText(name).includes(query))
+    : requests;
+
+  if (!filteredRequests.length) {
     const empty       = document.createElement("li");
-    empty.className   = "item-card";
-    empty.textContent = "No pending requests";
+    empty.className   = "item-card list-empty";
+    empty.textContent = requests.length
+      ? `No requests match "${friendSearchQuery}"`
+      : "No pending requests";
     requestList.appendChild(empty);
     return;
   }
 
-  for (const username of requests) {
+  for (const username of filteredRequests) {
     const li      = document.createElement("li");
-    li.className  = "item-card request-row";
+    li.className  = "request-card";
 
     const name        = document.createElement("span");
+    name.className    = "request-name";
     name.textContent  = username;
 
     const btn       = document.createElement("button");
     btn.type        = "button";
+    btn.className   = "req-btn accept";
     btn.textContent = "Accept";
     btn.addEventListener("click", () => socket.emit("accept_friend", username));
 
@@ -1056,7 +1093,64 @@ function findFriend(username) {
   );
 }
 
+function setInfoPanelStatus(text, state) {
+  if (!infoPanelStatus) return;
+  infoPanelStatus.textContent = text;
+  infoPanelStatus.classList.remove("online", "offline", "me");
+  if (state) infoPanelStatus.classList.add(state);
+}
+
+function applyInfoAvatar(avatarEl, avatarId, fallbackText) {
+  if (!avatarEl) return;
+  const utils = window._novynAvatarUtils;
+  if (utils && avatarId) {
+    utils.applyAvatarToEl(avatarEl, avatarId, fallbackText);
+    return;
+  }
+  avatarEl.style.background = "";
+  avatarEl.textContent = fallbackText || "?";
+}
+
+function syncInfoPanel() {
+  if (!infoPanelName || !infoPanelAvatar || !infoPanelHandle || !infoPanelStatus) return;
+
+  if (activeFriend) {
+    const friend = findFriend(activeFriend);
+    if (!friend) {
+      infoPanelName.textContent = "Loading...";
+      infoPanelHandle.textContent = "";
+      setInfoPanelStatus("● Offline", "offline");
+      return;
+    }
+
+    infoPanelName.textContent = getFriendDisplayName(friend);
+    infoPanelHandle.textContent = `@${friend.username}`;
+    infoPanelHandle.title = `@${friend.username}`;
+    applyInfoAvatar(
+      infoPanelAvatar,
+      friend.avatarId,
+      friend.username.slice(0, 2).toUpperCase()
+    );
+    setInfoPanelStatus(friend.online ? "● Online" : "● Offline", friend.online ? "online" : "offline");
+    infoPanelStatus.title = friend.online ? "Online now" : formatLastSeen(friend.lastSeenAt);
+    return;
+  }
+
+  const myName = getMyDisplayName();
+  infoPanelName.textContent = myName;
+  infoPanelHandle.textContent = me ? `@${me}` : "@you";
+  infoPanelHandle.title = me ? `@${me}` : "@you";
+  applyInfoAvatar(infoPanelAvatar, myProfile.avatarId, (me || "You").slice(0, 2).toUpperCase());
+  setInfoPanelStatus("● You", "me");
+  infoPanelStatus.title = "Your profile";
+}
+
 function renderActiveFriendPresence() {
+  if (document.body) {
+    document.body.classList.toggle("friend-selected", Boolean(activeFriend));
+  }
+  syncInfoPanel();
+
   if (!activePresence || !activeFriendAvatar) return;
 
   if (!activeFriend) {
@@ -1147,28 +1241,35 @@ function renderFriends() {
   friendList.innerHTML = "";
   updateStats();
 
-  if (!friends.length) {
+  const query = friendSearchQuery;
+  const filteredFriends = query
+    ? friends.filter((friend) => getFriendSearchBlob(friend).includes(query))
+    : friends;
+
+  if (!filteredFriends.length) {
     const empty       = document.createElement("li");
-    empty.className   = "item-card";
-    empty.textContent = "No friends yet — add one above";
+    empty.className   = "item-card list-empty";
+    empty.textContent = friends.length
+      ? `No friends match "${friendSearchQuery}"`
+      : "No friends yet — add one above";
     friendList.appendChild(empty);
     renderActiveFriendPresence();
     syncRemoveFriendButton();
     return;
   }
 
-  for (const friend of friends) {
+  for (const friend of filteredFriends) {
     const li      = document.createElement("li");
     li.className  = "item-card";
 
     const btn         = document.createElement("button");
     btn.type          = "button";
-    btn.className     = `friend-btn${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
+    btn.className     = `friend-btn chat-item${normalizeName(activeFriend) === normalizeName(friend.username) ? " active" : ""}`;
     btn.addEventListener("click", () => setActiveFriend(friend.username));
 
     // Avatar with initials + online dot
     const avatar        = document.createElement("div");
-    avatar.className    = `friend-avatar${friend.online ? " online" : ""}`;
+    avatar.className    = `friend-avatar chat-av av-default${friend.online ? " online" : ""}`;
     if (friend.avatarId && window._novynAvatarUtils) {
       window._novynAvatarUtils.applyAvatarToEl(avatar, friend.avatarId, friend.username.slice(0, 2).toUpperCase());
     } else {
@@ -1177,10 +1278,10 @@ function renderFriends() {
     btn.appendChild(avatar);
 
     const main      = document.createElement("div");
-    main.className  = "friend-main";
+    main.className  = "friend-main chat-info";
 
     const name        = document.createElement("span");
-    name.className    = "friend-name";
+    name.className    = "friend-name chat-name";
     name.textContent  = getFriendDisplayName(friend);
     if (displayDiffersFromUsername(friend)) {
       name.title = `${getFriendDisplayName(friend)} (@${friend.username})`;
@@ -1189,7 +1290,7 @@ function renderFriends() {
     }
 
     const preview       = document.createElement("span");
-    preview.className   = "friend-preview";
+    preview.className   = "friend-preview chat-preview";
     const previewBase = friendPreview(friend);
     preview.textContent = displayDiffersFromUsername(friend)
       ? `@${friend.username} · ${previewBase}`
@@ -1198,10 +1299,10 @@ function renderFriends() {
     main.append(name, preview);
 
     const side      = document.createElement("div");
-    side.className  = "friend-side";
+    side.className  = "friend-side chat-right";
 
     const status        = document.createElement("span");
-    status.className    = `status${friend.online ? " online" : ""}`;
+    status.className    = `status chat-time${friend.online ? " online" : ""}`;
     status.textContent  = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
     status.title = status.textContent;
     side.appendChild(status);
@@ -1267,6 +1368,16 @@ if (addFriendForm) {
     socket.emit("add_friend", val);
     if (friendInput) friendInput.value = "";
   });
+}
+
+if (sidebarSearch) {
+  const applyFriendSearch = () => {
+    friendSearchQuery = normalizeSearchText(sidebarSearch.value);
+    renderRequests();
+    renderFriends();
+  };
+  sidebarSearch.addEventListener("input", applyFriendSearch);
+  sidebarSearch.addEventListener("search", applyFriendSearch);
 }
 
 // ─── Custom unfriend confirm modal ────────────────────────────────────────────
@@ -1629,6 +1740,14 @@ socket.on("user_status", ({ username, online, lastSeenAt }) => {
       : f
   );
   renderFriends();
+  showChatOnMobile();
+  if (window._novynPanels && window._novynPanels.isMobile && window._novynPanels.isMobile()) {
+    window._novynPanels.show("chat");
+  }
+  if (window._novynPanels && window._novynPanels.isMobile && window._novynPanels.isMobile()) {
+    window._novynPanels.show("chat");
+  }
+  syncInfoPanel();
 });
 
 socket.on("error_message", (data) => {
@@ -1675,6 +1794,7 @@ socket.on("profile_updated", (data) => {
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
+  syncInfoPanel();
   showToast("Profile updated ✨", "success");
 });
 
@@ -1685,6 +1805,7 @@ socket.on("friend_profile_updated", (data) => {
       : f
   );
   renderFriends();
+  syncInfoPanel();
 });
 
 socket.on("reaction_updated", (payload) => {

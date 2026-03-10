@@ -27,7 +27,7 @@
   if (!btn) return;
   btn.addEventListener('click', function () {
     try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
-    window.location.replace('/login.html');
+    window.location.replace('/');
   });
 })();
 
@@ -37,6 +37,7 @@
   var sidebar = document.getElementById('mobileSidebar');
   var chat    = document.getElementById('mobileChat');
   var backBtn = document.getElementById('mobBackBtn');
+  var closeBtn = document.getElementById('mobSidebarClose');
   function isMobile() { return window.innerWidth <= BP; }
   function showPanel(panel) {
     if (!sidebar || !chat) return;
@@ -50,12 +51,19 @@
       if (backBtn) backBtn.removeAttribute('data-visible');
     }
   }
+  window._novynPanels = {
+    show: showPanel,
+    isMobile: isMobile
+  };
   document.addEventListener('click', function (e) {
     if (!isMobile()) return;
     if (e.target.closest('.friend-btn')) showPanel('chat');
   });
   backBtn && backBtn.addEventListener('click', function () {
     if (isMobile()) showPanel('friends');
+  });
+  closeBtn && closeBtn.addEventListener('click', function () {
+    if (isMobile()) showPanel('chat');
   });
   window.addEventListener('resize', function () {
     if (!isMobile()) {
@@ -65,8 +73,52 @@
   });
   new MutationObserver(function () {
     var layout = document.getElementById('chatLayout');
-    if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('friends');
+    if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('chat');
   }).observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
+})();
+
+/* ── Mobile info panel toggle (WhatsApp-style) ─────────────────── */
+(function () {
+  var infoPanel = document.getElementById('infoPanel');
+  var scrim = document.getElementById('infoScrim');
+  var header = document.querySelector('.chat-header');
+  if (!infoPanel || !header) return;
+
+  function isMobileInfo() {
+    return window.matchMedia('(max-width: 1000px)').matches;
+  }
+  function canOpenInfo() {
+    return document.body.classList.contains('friend-selected');
+  }
+  function openPanel() {
+    if (!isMobileInfo() || !canOpenInfo()) return;
+    document.body.classList.add('info-open');
+  }
+  function closePanel() {
+    document.body.classList.remove('info-open');
+  }
+  function togglePanel() {
+    if (!isMobileInfo() || !canOpenInfo()) return;
+    document.body.classList.toggle('info-open');
+  }
+
+  header.addEventListener('click', function (e) {
+    if (!isMobileInfo()) return;
+    if (e.target.closest('.chat-header-info') || e.target.closest('#activePresence')) {
+      togglePanel();
+    }
+  });
+  var infoMq = window.matchMedia('(max-width: 1000px)');
+  scrim && scrim.addEventListener('click', closePanel);
+  if (infoMq && infoMq.addEventListener) {
+    infoMq.addEventListener('change', function () {
+      closePanel();
+    });
+  }
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') closePanel();
+  });
+  closePanel();
 })();
 
 /* ── Scroll-to-bottom FAB ───────────────────────────────────────────────────── */

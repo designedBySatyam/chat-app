@@ -2,7 +2,7 @@ const socketAvailable = typeof io === "function";
 const socket = socketAvailable ? io() : { on() {}, emit() {}, connected: false };
 
 const SESSION_KEY = "novyn-session";
-const DASHBOARD_PATH = "/";
+const DASHBOARD_PATH = "/index.html";
 
 const loginForm = document.getElementById("loginForm");
 const usernameInput = document.getElementById("usernameInput");

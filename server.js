@@ -18,6 +18,7 @@ const io = new Server(server, {
 
 app.use(
   express.static(path.join(__dirname, "public"), {
+    index: false,
     etag: false,
     lastModified: false,
     maxAge: 0,
@@ -28,6 +29,11 @@ app.use(
     },
   })
 );
+
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "public", "login.html"));
+});
+
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "chat-state.json");

@@ -83,19 +83,97 @@
     {
       "key": "test11",
       "username": "test11",
-      "friends": [],
+      "friends": [
+        "test2"
+      ],
       "requests": [],
-      "unread": [],
+      "unread": [
+        [
+          "test2",
+          0
+        ]
+      ],
       "isRegistered": true,
       "passwordSalt": "dbbcddaefb26b74ca09023ab64222e58",
       "passwordHash": "e6191fa8e67124f47406d69335cd446408055337e018e6c2eb48627b7c4ecae557952c7e103d05540d8127a2c960bd1f2571937c2be7443b56509a12a203f3bc",
       "avatarId": "",
       "age": "",
-      "gender": "",
+      "gender": "Male",
       "displayName": "",
       "bio": "",
       "lastSeenAt": ""
+    },
+    {
+      "key": "teat",
+      "username": "teat",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "isRegistered": true,
+      "passwordSalt": "b7c4640e8ede8b0aa280b7f6694dc3ef",
+      "passwordHash": "9f80bd8edaa0c3941d5a0bace7279cb1534beb4644cfcf1ef824d1d5f14fb9272b1c52c6c62660a0506000202bf73f7698cff6757388dffa91e76feea7abd519",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-03-10T10:40:16.037Z"
+    },
+    {
+      "key": "test2",
+      "username": "test2",
+      "friends": [
+        "test11"
+      ],
+      "requests": [],
+      "unread": [
+        [
+          "test11",
+          0
+        ]
+      ],
+      "isRegistered": true,
+      "passwordSalt": "b56ee04f1bf18593a62014cb1f0a8049",
+      "passwordHash": "5f336ae5d1ce426c794873d7cdab34a672f1c5f92c06c45645a994514c727f652014960891269888193029eba3ab38577bf16e1cbaf1127bf6a8a29602bf442b",
+      "avatarId": "av-ghost",
+      "age": "800",
+      "gender": "Non-binary",
+      "displayName": "lolll",
+      "bio": "huhlhlhlhl",
+      "lastSeenAt": ""
     }
   ],
-  "conversations": []
+  "conversations": [
+    {
+      "key": "test11::test2",
+      "messages": [
+        {
+          "id": "1773150160708-97iv4k",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "hey",
+          "timestamp": "2026-03-10T13:42:40.708Z",
+          "deliveredAt": "2026-03-10T13:42:40.708Z",
+          "seenAt": "2026-03-10T13:42:42.637Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773150166405-b1z0r2",
+          "from": "test2",
+          "to": "test11",
+          "fromKey": "test2",
+          "toKey": "test11",
+          "text": "hoo",
+          "timestamp": "2026-03-10T13:42:46.405Z",
+          "deliveredAt": "2026-03-10T13:42:46.405Z",
+          "seenAt": "2026-03-10T13:42:46.405Z",
+          "deletedAt": null,
+          "reactions": {}
+        }
+      ]
+    }
+  ]
 }
