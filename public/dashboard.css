@@ -1073,3 +1073,105 @@
   .message[data-ts-full]:hover::after { display: none; }
   .reply-banner { margin: 0 10px; }
 }
+/* ═══════════════════════════════════════════════
+   Novyn — Ghost Protocol v2 · Dashboard extras
+   ═══════════════════════════════════════════════ */
+
+/* ── Sidebar overview block (removed, but keep compat) ── */
+.sidebar-overview        { display: none; }
+
+/* ── Composer meta enhanced ─────────────────── */
+.composer-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 10px 2px;
+  flex-shrink: 0;
+}
+.composer-hint {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.60rem;
+  letter-spacing: 0.16em;
+  color: var(--t3);
+  text-transform: uppercase;
+}
+:root.light .composer-hint { color: var(--t2); }
+
+/* ── Message empty state icon (non-clip-path) ── */
+.messages-empty-icon svg {
+  display: block;
+}
+
+/* ── Ghost-mode canvas visibility ──────────────
+   room-theme hides canvas/scanlines/hud via room-theme.css
+   but raw ghost mode (no room-theme class) shows them ── */
+body:not(.room-theme) #bgCanvas,
+body:not(.room-theme) .scanlines,
+body:not(.room-theme) .hud-corner,
+body:not(.room-theme) .bg-shape,
+body:not(.room-theme) .grain-layer {
+  display: block;
+}
+
+/* ── Chat header eyebrow in ghost mode ─────── */
+body:not(.room-theme) .chat-header .eyebrow {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.58rem;
+  letter-spacing: 0.20em;
+  color: rgba(0,255,224,0.40);
+}
+
+/* ── Message input ghost mode placeholder ─── */
+body:not(.room-theme) #messageInput::placeholder {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.80rem;
+  letter-spacing: 0.10em;
+  color: rgba(0,255,224,0.20);
+}
+
+/* ── Typing label ghost mode ───────────────── */
+body:not(.room-theme) .snap-typing-label {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.62rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+/* ── Scroll button ghost mode ──────────────── */
+body:not(.room-theme) .scroll-btn-badge {
+  border-radius: var(--r1);
+}
+
+/* ── Me row eyebrow ghost mode ─────────────── */
+body:not(.room-theme) .me-row-text .eyebrow {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.56rem;
+  letter-spacing: 0.22em;
+  color: rgba(0,255,224,0.30);
+}
+
+/* ── Online count pill ghost mode ──────────── */
+body:not(.room-theme) .online-count-pill {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.60rem;
+  letter-spacing: 0.14em;
+}
+
+/* ── List head ghost mode ───────────────────── */
+body:not(.room-theme) .list-head h3 {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+}
+
+/* ── Messages empty ghost mode ─────────────── */
+body:not(.room-theme) .messages-empty-title {
+  font-family: var(--font-hud, 'Share Tech Mono', monospace);
+  font-size: 0.9rem;
+  letter-spacing: 0.14em;
+}
+
+/* ── Chat header conversation eyebrow ─────── */
+body:not(.room-theme) .chat-header-info .eyebrow {
+  display: block;
+  margin-bottom: 2px;
+}

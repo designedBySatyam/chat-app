@@ -1,5 +1,6 @@
 const socketAvailable = typeof io === "function";
-const socket = socketAvailable ? io() : { on() {}, emit() {} };
+const SOCKET_URL = window.location.origin.replace(/\/$/, "");
+const socket = socketAvailable ? io(SOCKET_URL) : { on() {}, emit() {} };
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
