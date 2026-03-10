@@ -86,44 +86,36 @@
   }).observe(document.getElementById('chatLayout') || document.body, { attributes: true, attributeFilter: ['class'] });
 })();
 
-/* ── Mobile info panel toggle (WhatsApp-style) ─────────────────── */
+/* ── Info panel toggle (chat header) ───────────────────────────── */
 (function () {
   var infoPanel = document.getElementById('infoPanel');
   var scrim = document.getElementById('infoScrim');
   var header = document.querySelector('.chat-header');
+  var closeBtn = document.getElementById('infoCloseBtn');
   if (!infoPanel || !header) return;
 
-  function isMobileInfo() {
-    return window.matchMedia('(max-width: 1000px)').matches;
-  }
   function canOpenInfo() {
     return document.body.classList.contains('friend-selected');
   }
   function openPanel() {
-    if (!isMobileInfo() || !canOpenInfo()) return;
+    if (!canOpenInfo()) return;
     document.body.classList.add('info-open');
   }
   function closePanel() {
     document.body.classList.remove('info-open');
   }
   function togglePanel() {
-    if (!isMobileInfo() || !canOpenInfo()) return;
+    if (!canOpenInfo()) return;
     document.body.classList.toggle('info-open');
   }
 
   header.addEventListener('click', function (e) {
-    if (!isMobileInfo()) return;
     if (e.target.closest('.chat-header-info') || e.target.closest('#activePresence')) {
       togglePanel();
     }
   });
-  var infoMq = window.matchMedia('(max-width: 1000px)');
   scrim && scrim.addEventListener('click', closePanel);
-  if (infoMq && infoMq.addEventListener) {
-    infoMq.addEventListener('change', function () {
-      closePanel();
-    });
-  }
+  closeBtn && closeBtn.addEventListener('click', closePanel);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape') closePanel();
   });

@@ -88,6 +88,7 @@ body::after {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr var(--info-w);
   height: 100vh;
+  height: 100dvh;
   padding: 20px;
   gap: 14px;
 }
@@ -1662,11 +1663,16 @@ body::after {
     grid-template-columns: 1fr;
     padding: 0;
     gap: 0;
+    height: 100vh;
+    height: 100dvh;
   }
   .sidebar, .chat-window {
-    position: absolute; inset: 0;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: 100%;
     border-radius: 0; border: none;
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
+    -webkit-overflow-scrolling: touch;
   }
   .sidebar { z-index: 2; transform: translateX(0); opacity: 1; }
   .chat-window { z-index: 1; transform: translateX(100%); opacity: 0; }
@@ -1674,6 +1680,15 @@ body::after {
   .chat-window:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; z-index: 2; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
+  .chat-input-area {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .toast {
+    left: 16px; right: 16px;
+    transform: none;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    white-space: normal;
+  }
 }
 
 .mob-back-btn { display: none; }

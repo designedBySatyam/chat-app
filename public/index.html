@@ -117,7 +117,7 @@
       <!-- ══════════════════════════
            MAIN CHAT WINDOW
       ══════════════════════════ -->
-      <main class="chat-window card" id="mobileChat" aria-label="Conversation">
+      <main class="chat-window card" id="mobileChat" data-mob-hidden="true" aria-label="Conversation">
 
         <!-- Chat header -->
         <div class="chat-header">
@@ -238,6 +238,12 @@
       ══════════════════════════ -->
       <aside class="info-panel" id="infoPanel">
         <div class="info-inner">
+          <div class="info-top">
+            <span class="info-title">Details</span>
+            <button class="icon-btn info-close-btn" id="infoCloseBtn" aria-label="Close details" title="Close">
+              <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+          </div>
 
           <!-- Profile center -->
           <div class="profile-center">

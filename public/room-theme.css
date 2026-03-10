@@ -665,7 +665,7 @@ body.room-theme select, body.room-theme textarea {
   body.room-theme .chat.mob-hidden { display: none; }
   body.room-theme .messages { padding: 16px 16px 12px; }
   body.room-theme .chat-header { padding: 0 16px; }
-  body.room-theme .message-form-wrap { padding: 10px 14px 14px; }
+  body.room-theme .message-form-wrap { padding: 10px 14px calc(14px + env(safe-area-inset-bottom, 0px)); }
 }
 
 /* ═══ SCROLLBARS ════════════════════════════════════════════ */

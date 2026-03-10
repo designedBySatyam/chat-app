@@ -26,8 +26,9 @@
   --danger:     #ff5c6a;
   --radius:     18px;
 
-  --sidebar-w:  310px;
-  --info-w:     260px;
+  --sidebar-w:   310px;
+  --info-w-open: 260px;
+  --info-w:      0px;
 
   --font-brand: 'Sora', sans-serif;
   --font-body:  'DM Sans', sans-serif;
@@ -176,15 +177,14 @@ body::after {
   display: grid;
   grid-template-columns: var(--sidebar-w) 1fr var(--info-w);
   height: 100vh;
+  height: 100dvh;
   padding: 20px;
   gap: 14px;
   transition: grid-template-columns 0.55s cubic-bezier(0.2, 0.9, 0.2, 1), gap 0.55s ease;
 }
 
-/* Hide right panel until a friend is selected */
-body:not(.friend-selected) {
-  --info-w: 0px;
-}
+/* Right info panel is closed by default */
+body.info-open { --info-w: var(--info-w-open); }
 
 /* ── Shared card base ───────────────────────────────────────── */
 .card,
@@ -214,13 +214,17 @@ body:not(.friend-selected) .chat-window {
   border-color: var(--border2);
 }
 
-body:not(.friend-selected) .info-panel {
+.info-panel {
   opacity: 0;
   transform: translateX(18px) scale(0.98);
   filter: blur(2px);
   pointer-events: none;
-  border-color: transparent;
-  box-shadow: none;
+}
+body.info-open .info-panel {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+  filter: none;
+  pointer-events: auto;
 }
 
 /* ══════════════════════════════════════════════════════════════
@@ -1440,6 +1444,25 @@ body:not(.friend-selected) .info-panel {
   animation: fadeUp 0.5s cubic-bezier(0.16,1,0.3,1) 0.15s both;
 }
 
+.info-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.info-title {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text3);
+  font-weight: 600;
+}
+.info-close-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
+}
+
 .info-inner {
   flex: 1;
   overflow-y: auto;
@@ -1914,12 +1937,15 @@ body:not(.friend-selected) .info-panel {
     position: fixed;
     top: 0; right: 0; bottom: 0;
     width: 100vw;
+    height: 100vh;
+    height: 100dvh;
     transform: translateX(110%);
     opacity: 0;
     pointer-events: none;
     transition: transform 0.3s ease, opacity 0.3s ease;
     z-index: 7;
     border-radius: 0;
+    -webkit-overflow-scrolling: touch;
   }
   body.info-open .info-panel {
     transform: translateX(0);
@@ -1949,28 +1975,35 @@ body:not(.friend-selected) .info-panel {
     grid-template-columns: 1fr;
     padding: 0;
     gap: 0;
+    height: 100vh;
+    height: 100dvh;
   }
   .sidebar, .chat-window {
-    position: absolute; inset: 0;
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    height: 100%;
     border-radius: 0; border: none;
     transition: transform 0.28s cubic-bezier(0.4,0,0.2,1), opacity 0.28s;
+    -webkit-overflow-scrolling: touch;
   }
+  /* Panels: off-screen + non-interactive by default */
   .sidebar { z-index: 2; transform: translateX(-100%); opacity: 0; pointer-events: none; }
-  .chat-window { z-index: 1; transform: translateX(0); opacity: 1; }
-  .sidebar:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; }
-  .chat-window[data-mob-hidden] { transform: translateX(100%); opacity: 0; pointer-events: none; }
-  body.mob-chat-open .sidebar { transform: translateX(-100%); opacity: 0; pointer-events: none; }
-  body.mob-chat-open .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
-  body.mob-list-open .sidebar { transform: translateX(0); opacity: 1; pointer-events: auto; }
-  body.mob-list-open .chat-window { transform: translateX(100%); opacity: 0; pointer-events: none; }
-  body.friend-selected .sidebar { transform: translateX(-100%); opacity: 0; pointer-events: none; }
-  body.friend-selected .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  .chat-window { z-index: 1; transform: translateX(100%); opacity: 0; pointer-events: none; }
+  /* Panel is ACTIVE when it does NOT carry data-mob-hidden */
+  .sidebar:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; z-index: 2; }
+  .chat-window:not([data-mob-hidden]) { transform: translateX(0); opacity: 1; pointer-events: auto; z-index: 2; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
   body.info-open .sidebar,
-  body.info-open .chat-window {
-    opacity: 0;
-    pointer-events: none;
+  body.info-open .chat-window { opacity: 0; pointer-events: none; }
+  .chat-input-area {
+    padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  }
+  .toast {
+    left: 16px; right: 16px;
+    transform: none;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    white-space: normal;
   }
 }
 

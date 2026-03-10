@@ -101,6 +101,15 @@ function showChatOnMobile() {
   document.body.classList.remove("mob-list-open");
 }
 
+function showSidebarOnMobile() {
+  if (!mobileSidebar || !mobileChat) return;
+  if (window.innerWidth > MOBILE_BP) return;
+  mobileSidebar.removeAttribute("data-mob-hidden");
+  mobileChat.setAttribute("data-mob-hidden", "true");
+  document.body.classList.remove("mob-chat-open");
+  document.body.classList.add("mob-list-open");
+}
+
 function setActiveChatTarget(friendName) {
   if (!socketAvailable || !isDashboardPage) return;
   socket.emit("set_active_chat", friendName || "");
@@ -1334,6 +1343,9 @@ function renderActiveFriendPresence() {
   if (document.body) {
     document.body.classList.toggle("friend-selected", Boolean(activeFriend));
   }
+  if (!activeFriend) {
+    document.body.classList.remove("info-open");
+  }
   syncInfoPanel();
 
   if (!activePresence || !activeFriendAvatar) return;
@@ -1563,7 +1575,10 @@ if (sidebarSearch) {
 }
 
 if (mobBackBtn) {
-  mobBackBtn.addEventListener("click", () => setActiveChatTarget(""));
+  mobBackBtn.addEventListener("click", () => {
+    setActiveChatTarget("");
+    showSidebarOnMobile();
+  });
 }
 
 document.addEventListener("visibilitychange", () => {
@@ -1586,7 +1601,6 @@ if (friendList) {
     showChatOnMobile();
   };
   friendList.addEventListener("click", handleFriendActivate);
-  friendList.addEventListener("pointerup", handleFriendActivate);
 }
 
 // ─── Custom unfriend confirm modal ────────────────────────────────────────────
@@ -2073,13 +2087,6 @@ socket.on("user_status", ({ username, online, lastSeenAt }) => {
       : f
   );
   renderFriends();
-  showChatOnMobile();
-  if (window._novynPanels && window._novynPanels.isMobile && window._novynPanels.isMobile()) {
-    window._novynPanels.show("chat");
-  }
-  if (window._novynPanels && window._novynPanels.isMobile && window._novynPanels.isMobile()) {
-    window._novynPanels.show("chat");
-  }
   syncInfoPanel();
 });
 
