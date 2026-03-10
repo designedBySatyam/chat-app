@@ -526,7 +526,13 @@ body:not(.friend-selected) .info-panel {
   border: 2px solid var(--bg2);
 }
 
-.chat-info { flex: 1; min-width: 0; }
+.chat-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
 
 .chat-name {
   font-weight: 600;
@@ -545,6 +551,17 @@ body:not(.friend-selected) .info-panel {
   text-overflow: ellipsis;
   margin-top: 1px;
 }
+
+.friend-status {
+  font-size: 12px;
+  color: var(--text3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 2px;
+}
+.friend-status.online { color: var(--online); }
+.friend-status.offline { color: var(--danger); }
 
 .chat-right {
   display: flex;
@@ -1864,6 +1881,8 @@ body:not(.friend-selected) .info-panel {
   .chat-window[data-mob-hidden] { transform: translateX(100%); opacity: 0; pointer-events: none; }
   body.mob-chat-open .sidebar { transform: translateX(-100%); opacity: 0; pointer-events: none; }
   body.mob-chat-open .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  body.mob-list-open .sidebar { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  body.mob-list-open .chat-window { transform: translateX(100%); opacity: 0; pointer-events: none; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
   body.info-open .sidebar,

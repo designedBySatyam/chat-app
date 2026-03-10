@@ -45,11 +45,13 @@
       sidebar.setAttribute('data-mob-hidden', 'true');
       chat.removeAttribute('data-mob-hidden');
       document.body.classList.add('mob-chat-open');
+      document.body.classList.remove('mob-list-open');
       if (backBtn) backBtn.setAttribute('data-visible', 'true');
     } else {
       chat.setAttribute('data-mob-hidden', 'true');
       sidebar.removeAttribute('data-mob-hidden');
       document.body.classList.remove('mob-chat-open');
+      document.body.classList.add('mob-list-open');
       if (backBtn) backBtn.removeAttribute('data-visible');
     }
   }
@@ -71,8 +73,13 @@
     if (!isMobile()) {
       if (sidebar) sidebar.removeAttribute('data-mob-hidden');
       if (chat)    chat.removeAttribute('data-mob-hidden');
+      document.body.classList.remove('mob-chat-open');
+      document.body.classList.remove('mob-list-open');
     }
   });
+  if (isMobile()) {
+    document.body.classList.add('mob-list-open');
+  }
   new MutationObserver(function () {
     var layout = document.getElementById('chatLayout');
     if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('chat');

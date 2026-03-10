@@ -171,6 +171,119 @@
           "deliveredAt": "2026-03-10T13:42:46.405Z",
           "seenAt": "2026-03-10T13:42:46.405Z",
           "deletedAt": null,
+          "reactions": {
+            "😂": {
+              "count": 1,
+              "userKeys": [
+                "test11"
+              ]
+            },
+            "❤️": {
+              "count": 0,
+              "userKeys": []
+            },
+            "👍": {
+              "count": 1,
+              "userKeys": [
+                "test11"
+              ]
+            }
+          }
+        },
+        {
+          "id": "1773155767266-bt39fs",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "hehehehehe",
+          "timestamp": "2026-03-10T15:16:07.265Z",
+          "deliveredAt": "2026-03-10T15:16:07.265Z",
+          "seenAt": "2026-03-10T15:30:39.149Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773155800181-ugdtrq",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "hii",
+          "timestamp": "2026-03-10T15:16:40.181Z",
+          "deliveredAt": "2026-03-10T15:16:40.181Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773155809075-ow6xfo",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "hey",
+          "timestamp": "2026-03-10T15:16:49.075Z",
+          "deliveredAt": "2026-03-10T15:20:02.157Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773155835532-fdfirp",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "hehe",
+          "timestamp": "2026-03-10T15:17:15.532Z",
+          "deliveredAt": "2026-03-10T15:20:02.157Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
+          "reactions": {},
+          "replyTo": {
+            "id": "1773150166405-b1z0r2",
+            "from": "test2",
+            "text": "hoo"
+          }
+        },
+        {
+          "id": "1773156598297-0e9j0w",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "..",
+          "timestamp": "2026-03-10T15:29:58.296Z",
+          "deliveredAt": "2026-03-10T15:29:58.296Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773156618397-y9x0dg",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "..",
+          "timestamp": "2026-03-10T15:30:18.397Z",
+          "deliveredAt": "2026-03-10T15:30:32.385Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
+          "reactions": {}
+        },
+        {
+          "id": "1773156636465-7abven",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "..",
+          "timestamp": "2026-03-10T15:30:36.465Z",
+          "deliveredAt": "2026-03-10T15:30:36.465Z",
+          "seenAt": "2026-03-10T15:30:39.150Z",
+          "deletedAt": null,
           "reactions": {}
         }
       ]

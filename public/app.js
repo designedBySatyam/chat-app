@@ -97,6 +97,7 @@ function showChatOnMobile() {
   mobileSidebar.setAttribute("data-mob-hidden", "true");
   mobileChat.removeAttribute("data-mob-hidden");
   document.body.classList.add("mob-chat-open");
+  document.body.classList.remove("mob-list-open");
 }
 
 function getFriendSearchBlob(friend) {
@@ -917,12 +918,13 @@ function renderMineMessageMeta(metaEl, timeText, statusKey) {
   const tickA = document.createElement("span");
   tickA.className = "tick";
   tickA.textContent = "✓";
-
-  const tickB = document.createElement("span");
-  tickB.className = "tick";
-  tickB.textContent = "✓";
-
-  status.append(tickA, tickB);
+  status.appendChild(tickA);
+  if (statusKey === "seen") {
+    const tickB = document.createElement("span");
+    tickB.className = "tick";
+    tickB.textContent = "✓";
+    status.appendChild(tickB);
+  }
   metaEl.append(time, status);
 }
 
@@ -1385,23 +1387,15 @@ function renderFriends() {
       name.title = friend.username;
     }
 
-    const preview       = document.createElement("span");
-    preview.className   = "friend-preview chat-preview";
-    const previewBase = friendPreview(friend);
-    preview.textContent = displayDiffersFromUsername(friend)
-      ? `@${friend.username} · ${previewBase}`
-      : previewBase;
+    const statusLine = document.createElement("span");
+    statusLine.className = `friend-status${friend.online ? " online" : " offline"}`;
+    statusLine.textContent = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
+    statusLine.title = statusLine.textContent;
 
-    main.append(name, preview);
+    main.append(name, statusLine);
 
     const side      = document.createElement("div");
     side.className  = "friend-side chat-right";
-
-    const status        = document.createElement("span");
-    status.className    = `status chat-time${friend.online ? " online" : ""}`;
-    status.textContent  = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
-    status.title = status.textContent;
-    side.appendChild(status);
 
     const unreadCount = Number(friend.unreadCount) || 0;
     if (unreadCount > 0) {
