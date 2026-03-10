@@ -1444,7 +1444,6 @@ body.room-theme select, body.room-theme textarea {
   body.room-theme .online-count-pill { display: none; }
 }
 
-<<<<<<< HEAD
 body.room-theme input,
 body.room-theme button,
 body.room-theme select,
@@ -1850,17 +1849,3 @@ body.room-theme .scroll-btn {
     background: rgba(10, 16, 30, 0.85);
   }
 }
-=======
-/* ═══ SCROLLBARS ════════════════════════════════════════════ */
-body.room-theme .sidebar ::-webkit-scrollbar { width: 3px; }
-body.room-theme .sidebar ::-webkit-scrollbar-track { background: transparent; }
-body.room-theme .sidebar ::-webkit-scrollbar-thumb { background: var(--s-raised); border-radius: 2px; }
-body.room-theme .messages::-webkit-scrollbar { width: 3px; }
-body.room-theme .messages::-webkit-scrollbar-track { background: transparent; }
-body.room-theme .messages::-webkit-scrollbar-thumb { background: rgba(140,100,50,0.15); border-radius: 2px; }
-
-/* ═══ ENTRANCE ANIMATIONS ═══════════════════════════════════ */
-@keyframes rtSlideLeft  { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
-@keyframes rtSlideRight { from { opacity: 0; transform: translateX(10px);  } to { opacity: 1; transform: none; } }
-@keyframes bubblePop { from { opacity: 0; transform: scale(0.93) translateY(5px); } to { opacity: 1; transform: scale(1) translateY(0); } }
->>>>>>> 67b55259dc12de923e34ee334e5f4e1fd0f4bf72

@@ -13,11 +13,7 @@
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="/icons/icon-192.png" />
     <link rel="icon" type="image/svg+xml" href="/icons/novyn-badge.svg" />
-<<<<<<< HEAD
     <link rel="stylesheet" href="vibe.css" />
-=======
-    <link rel="stylesheet" href="dashboard.css" />
->>>>>>> 67b55259dc12de923e34ee334e5f4e1fd0f4bf72
   </head>
   <body>
 
@@ -31,19 +27,11 @@
         <!-- Sidebar head -->
         <div class="sidebar-head">
           <div class="sidebar-top">
-<<<<<<< HEAD
             <span class="app-brand">No<span>vyn</span></span>
             <div class="sidebar-top-actions">
               <button class="icon-btn mob-close-btn" id="mobSidebarClose" aria-label="Close menu" title="Close menu">
                 <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
               </button>
-=======
-            <div class="brand-wrap">
-              <span class="novyn-mark" aria-hidden="true">N</span>
-              <span class="app-brand">No<span>vyn</span></span>
-            </div>
-            <div class="sidebar-top-actions">
->>>>>>> 67b55259dc12de923e34ee334e5f4e1fd0f4bf72
               <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
                 <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               </button>
@@ -313,10 +301,7 @@
       </aside>
 
     </div><!-- /.app -->
-<<<<<<< HEAD
     <div class="info-scrim" id="infoScrim" aria-hidden="true"></div>
-=======
->>>>>>> 67b55259dc12de923e34ee334e5f4e1fd0f4bf72
 
     <!-- ══════════════════════════
          PROFILE MODAL
@@ -445,25 +430,6 @@
           });
         }
 
-<<<<<<< HEAD
-=======
-        // Info panel sync with active friend
-        function syncInfoPanel() {
-          var nameEl = document.getElementById('activeFriendLabel');
-          var avEl   = document.getElementById('activeFriendAvatar');
-          var pName  = document.getElementById('infoPanelName');
-          var pAv    = document.getElementById('infoPanelAvatar');
-          var pHandle= document.getElementById('infoPanelHandle');
-          if (nameEl && pName) pName.textContent = nameEl.textContent;
-          if (avEl && pAv) pAv.textContent = avEl.textContent || avEl.querySelector('span')?.textContent || '?';
-          if (nameEl && pHandle) pHandle.textContent = '@' + nameEl.textContent.toLowerCase().replace(/\s+/g, '');
-        }
-
-        var labelEl = document.getElementById('activeFriendLabel');
-        if (labelEl) {
-          new MutationObserver(syncInfoPanel).observe(labelEl, { childList: true, characterData: true, subtree: true });
-        }
->>>>>>> 67b55259dc12de923e34ee334e5f4e1fd0f4bf72
       })();
     </script>
   </body>
