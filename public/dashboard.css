@@ -1106,7 +1106,7 @@
 /* ── Ghost-mode canvas visibility ──────────────
    room-theme hides canvas/scanlines/hud via room-theme.css
    but raw ghost mode (no room-theme class) shows them ── */
-body:not(.room-theme) #bgCanvas,
+body:not(.room-theme) :is(#bgScene, #bgCanvas, .bg-scene),
 body:not(.room-theme) .scanlines,
 body:not(.room-theme) .hud-corner,
 body:not(.room-theme) .bg-shape,

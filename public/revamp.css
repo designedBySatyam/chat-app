@@ -1,0 +1,230 @@
+:root {
+  --ink: #0c0f1a;
+  --ink-soft: #101426;
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-strong: rgba(255, 255, 255, 0.12);
+  --stroke: rgba(255, 255, 255, 0.12);
+  --stroke-strong: rgba(120, 156, 255, 0.32);
+  --text-strong: #f8fbff;
+  --text: #d6e2ff;
+  --text-soft: #9eb2d4;
+  --accent: #7cf3ff;
+  --accent-2: #c48bff;
+  --accent-3: #7cfaa2;
+  --shadow-lg: 0 24px 70px rgba(7, 10, 20, 0.45);
+  --shadow-md: 0 14px 40px rgba(7, 10, 20, 0.35);
+  --radius-lg: 28px;
+  --radius-md: 16px;
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body: "Manrope", "Inter", system-ui, sans-serif;
+}
+
+body {
+  background: radial-gradient(circle at 18% 20%, rgba(124, 243, 255, 0.07), transparent 26%),
+    radial-gradient(circle at 82% 12%, rgba(196, 139, 255, 0.08), transparent 32%),
+    radial-gradient(circle at 50% 100%, rgba(124, 250, 162, 0.08), transparent 38%),
+    #05060d;
+  color: var(--text);
+  font-family: var(--font-body);
+}
+
+.bg-scene,
+#bgScene,
+#bgCanvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  filter: saturate(1.05);
+}
+
+.panel-shell {
+  position: relative;
+  z-index: 1;
+  border-radius: 36px;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(32px);
+}
+
+.card,
+.sidebar,
+.chat,
+.login-panel,
+.login-hero,
+.list-panel,
+.message-form,
+.chat-header,
+.messages-empty,
+.message,
+.toast,
+.profile-modal-card,
+.confirm-modal-card {
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--stroke);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  box-shadow: var(--shadow-md);
+  backdrop-filter: blur(22px);
+}
+
+.app-topbar,
+.rt-sidebar-brand,
+.chat-header {
+  border-bottom: 1px solid var(--stroke);
+}
+
+.brand-name,
+.hero-headline,
+.login-panel-header h3,
+.chat-header h2,
+.me-row h2 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+.theme-toggle {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.network-pill {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-soft);
+}
+
+.login-card {
+  gap: 26px;
+}
+
+.login-hero {
+  background: linear-gradient(135deg, rgba(124, 243, 255, 0.08), rgba(196, 139, 255, 0.12)),
+    rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--stroke-strong);
+}
+
+.login-panel {
+  background: linear-gradient(180deg, rgba(10, 12, 22, 0.78), rgba(10, 12, 22, 0.94));
+  border: 1px solid var(--stroke);
+}
+
+.login-btn,
+button,
+.add-friend-form button,
+.message-form button {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  color: #020409;
+  border: none;
+  box-shadow: 0 14px 34px rgba(124, 243, 255, 0.35);
+}
+
+.login-btn:hover,
+button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 40px rgba(124, 243, 255, 0.42);
+}
+
+.input-wrap {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+}
+
+.input-wrap input {
+  color: var(--text-strong);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, rgba(10, 12, 22, 0.9), rgba(8, 10, 18, 0.96));
+}
+
+.chat {
+  background: linear-gradient(180deg, rgba(6, 9, 16, 0.92), rgba(6, 9, 16, 0.98));
+}
+
+.messages {
+  background: transparent;
+}
+
+.message.me .message-body {
+  background: linear-gradient(135deg, rgba(124, 243, 255, 0.18), rgba(196, 139, 255, 0.18));
+  border: 1px solid rgba(124, 243, 255, 0.25);
+  color: var(--text-strong);
+}
+
+.message.them .message-body {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--stroke);
+  color: var(--text);
+}
+
+.message-form {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--stroke);
+}
+
+.scroll-btn,
+.icon-btn,
+.remove-friend-btn,
+.profile-avatar-btn {
+  border-radius: 12px;
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.list-panel {
+  background: linear-gradient(180deg, rgba(12, 15, 26, 0.88), rgba(12, 15, 26, 0.94));
+}
+
+.friend-btn.active,
+.friend-btn:hover {
+  background: linear-gradient(90deg, rgba(124, 243, 255, 0.12), rgba(196, 139, 255, 0.12));
+  border-color: var(--stroke-strong);
+}
+
+.hero-pill,
+.count-pill,
+.online-count-pill {
+  border: 1px solid var(--stroke);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-soft);
+}
+
+.toast {
+  border: 1px solid var(--stroke-strong);
+}
+
+/* Clean out legacy HUD chrome */
+.scanlines,
+.hud-corner,
+.panel-circuit,
+.sys-status,
+.hero-bracket {
+  display: none !important;
+}
+
+.hcp-terminal {
+  border-color: var(--stroke);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hcp-bar {
+  border-bottom-color: var(--stroke);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 960px) {
+  .panel-shell {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .login-card {
+    grid-template-columns: 1fr;
+  }
+  .login-hero {
+    min-height: 360px;
+  }
+}
