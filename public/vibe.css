@@ -1013,6 +1013,86 @@ body:not(.friend-selected) .info-panel {
 }
 .message-body-deleted { font-style: italic; opacity: 0.55; }
 
+.audio-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 16px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.2);
+  min-width: 230px;
+}
+.message.me .audio-card {
+  background: rgba(255,255,255,0.16);
+  border-color: rgba(255,255,255,0.22);
+}
+
+.audio-play {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.audio-play:hover { background: rgba(255,255,255,0.32); }
+.audio-card.is-playing .audio-play { background: rgba(255,255,255,0.38); }
+.audio-play svg { width: 14px; height: 14px; fill: currentColor; }
+.audio-play .icon-pause { display: none; }
+.audio-card.is-playing .icon-play { display: none; }
+.audio-card.is-playing .icon-pause { display: block; }
+
+.audio-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.2);
+  position: relative;
+  overflow: hidden;
+}
+.audio-progress {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0%;
+  background: rgba(255,255,255,0.95);
+  border-radius: 999px;
+}
+
+.audio-time {
+  font-size: 10.5px;
+  font-family: var(--font-mono);
+  color: rgba(255,255,255,0.75);
+  min-width: 66px;
+  text-align: right;
+}
+
+.audio-el { display: none; }
+
+:root.light .audio-card {
+  background: rgba(15,23,42,0.06);
+  border-color: rgba(15,23,42,0.16);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.8);
+}
+:root.light .message.me .audio-card {
+  background: rgba(47,142,244,0.12);
+  border-color: rgba(47,142,244,0.22);
+}
+:root.light .audio-play {
+  background: rgba(15,23,42,0.08);
+  color: var(--text);
+}
+:root.light .audio-track { background: rgba(15,23,42,0.12); }
+:root.light .audio-progress { background: rgba(15,23,42,0.55); }
+:root.light .audio-time { color: rgba(15,23,42,0.65); }
+
 /* Date divider */
 .message-date-separator {
   align-self: center;
@@ -1883,6 +1963,8 @@ body:not(.friend-selected) .info-panel {
   body.mob-chat-open .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
   body.mob-list-open .sidebar { transform: translateX(0); opacity: 1; pointer-events: auto; }
   body.mob-list-open .chat-window { transform: translateX(100%); opacity: 0; pointer-events: none; }
+  body.friend-selected .sidebar { transform: translateX(-100%); opacity: 0; pointer-events: none; }
+  body.friend-selected .chat-window { transform: translateX(0); opacity: 1; pointer-events: auto; }
   .mob-back-btn { display: flex !important; }
   .message { max-width: 88%; }
   body.info-open .sidebar,

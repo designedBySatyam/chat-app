@@ -16,25 +16,71 @@ const uploadsDir = path.join(__dirname, "uploads");
 fs.mkdirSync(uploadsDir, { recursive: true });
 
 const upload = multer({ dest: uploadsDir });
+const uploadTokenSecret =
+  process.env.UPLOAD_TOKEN_SECRET ||
+  process.env.CLOUDINARY_API_SECRET ||
+  "dev-secret";
+
+if (!process.env.UPLOAD_TOKEN_SECRET && !process.env.CLOUDINARY_API_SECRET) {
+  console.warn(
+    "UPLOAD_TOKEN_SECRET is not set. Using an insecure dev secret for upload links."
+  );
+}
+
+function signUploadToken(filename) {
+  return crypto.createHmac("sha256", uploadTokenSecret).update(filename).digest("hex");
+}
+
+app.get("/uploads/:file", (req, res) => {
+  const filename = path.basename(req.params.file || "");
+  const token = String(req.query.token || "");
+  if (!filename || token !== signUploadToken(filename)) {
+    res.status(403).json({ error: "Unauthorized" });
+    return;
+  }
+  const filePath = path.join(uploadsDir, filename);
+  if (!fs.existsSync(filePath)) {
+    res.status(404).json({ error: "Not found" });
+    return;
+  }
+  res.set("Cache-Control", "no-store, no-cache, must-revalidate, proxy-revalidate");
+  res.set("Pragma", "no-cache");
+  res.set("Expires", "0");
+  res.sendFile(filePath);
+});
 
 app.post("/upload-voice", upload.single("voice"), async (req, res) => {
-  if (!hasCloudinaryConfig) {
-    if (req.file?.path) {
-      fs.unlink(req.file.path, () => {});
-    }
-    res.status(503).json({ error: "Cloudinary is not configured on the server." });
+  if (!req.file?.path) {
+    res.status(400).json({ error: "No voice file uploaded." });
     return;
   }
 
   try {
-    const result = await cloudinary.uploader.upload(req.file.path, {
-      resource_type: "auto",
-      folder: "novyn_voice",
-    });
+    if (hasCloudinaryConfig) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        resource_type: "auto",
+        folder: "novyn_voice",
+      });
 
-    fs.unlinkSync(req.file.path);
+      fs.unlink(req.file.path, () => {});
+      res.json({ url: result.secure_url });
+      return;
+    }
 
-    res.json({ url: result.secure_url });
+    const mime = String(req.file.mimetype || "").toLowerCase();
+    const extMap = {
+      "audio/webm": ".webm",
+      "audio/wav": ".wav",
+      "audio/mpeg": ".mp3",
+      "audio/ogg": ".ogg",
+    };
+    const ext = extMap[mime] || path.extname(req.file.originalname || "") || ".webm";
+    const safeExt = ext.startsWith(".") ? ext : `.${ext}`;
+    const filename = `voice-${Date.now()}-${crypto.randomBytes(3).toString("hex")}${safeExt}`;
+    const destPath = path.join(uploadsDir, filename);
+    fs.renameSync(req.file.path, destPath);
+    const token = signUploadToken(filename);
+    res.json({ url: `/uploads/${filename}?token=${token}` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Upload failed" });
@@ -1027,6 +1073,26 @@ io.on("connection", (socket) => {
       with: users.get(friendKey)?.username || friendName,
       messages,
     });
+  });
+
+  socket.on("set_active_chat", (rawFriendName) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const friendName = toDisplayName(rawFriendName);
+    if (!friendName) {
+      socket.data.activeChatWith = null;
+      return;
+    }
+
+    const friendKey = normalizeName(friendName);
+    const me = users.get(userKey);
+    if (!me || !me.friends.has(friendKey)) {
+      socket.data.activeChatWith = null;
+      return;
+    }
+
+    socket.data.activeChatWith = friendKey;
   });
 
   socket.on("private_message", (payload) => {

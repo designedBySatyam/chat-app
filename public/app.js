@@ -54,6 +54,7 @@ const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
 const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
+const mobBackBtn        = document.getElementById("mobBackBtn");
 const SESSION_KEY       = "novyn-session";
 const LOGIN_PATH        = "/";
 const isDashboardPage   = Boolean(chatLayout) && !document.body.classList.contains("auth-page");
@@ -98,6 +99,11 @@ function showChatOnMobile() {
   mobileChat.removeAttribute("data-mob-hidden");
   document.body.classList.add("mob-chat-open");
   document.body.classList.remove("mob-list-open");
+}
+
+function setActiveChatTarget(friendName) {
+  if (!socketAvailable || !isDashboardPage) return;
+  socket.emit("set_active_chat", friendName || "");
 }
 
 function getFriendSearchBlob(friend) {
@@ -348,6 +354,13 @@ function prettyTime(iso) {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatAudioTime(seconds) {
+  const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+  const mins = Math.floor(safe / 60);
+  const secs = Math.floor(safe % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
 function formatLastSeen(iso) {
@@ -1007,8 +1020,86 @@ function buildMessageElement(message, skipAnimation = false) {
 
   const body        = document.createElement("div");
   body.className    = "message-body";
-  body.textContent  = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
-  if (isDeleted) body.classList.add("message-body-deleted");
+  if (isDeleted) {
+    body.textContent = DELETED_MESSAGE_TEXT;
+    body.classList.add("message-body-deleted");
+  } else {
+    const rawText = String(message.text || "").trim();
+    const isAudio = /^\/uploads\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(rawText) ||
+      /^https?:\/\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(rawText);
+    if (isAudio) {
+      const audioCard = document.createElement("div");
+      audioCard.className = "audio-card";
+
+      const playBtn = document.createElement("button");
+      playBtn.type = "button";
+      playBtn.className = "audio-play";
+      playBtn.setAttribute("aria-label", "Play voice message");
+      playBtn.innerHTML = `
+        <svg class="icon-play" viewBox="0 0 24 24" aria-hidden="true"><polygon points="8 5 19 12 8 19 8 5"/></svg>
+        <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
+      `;
+
+      const track = document.createElement("div");
+      track.className = "audio-track";
+      const progress = document.createElement("span");
+      progress.className = "audio-progress";
+      track.appendChild(progress);
+
+      const time = document.createElement("span");
+      time.className = "audio-time";
+      time.textContent = "0:00 / 0:00";
+
+      const audio = document.createElement("audio");
+      audio.className = "audio-el";
+      audio.preload = "metadata";
+      audio.src = rawText;
+      audio.setAttribute("playsinline", "");
+
+      const syncUI = () => {
+        const cur = audio.currentTime || 0;
+        const dur = audio.duration || 0;
+        time.textContent = `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`;
+        const pct = dur > 0 ? (cur / dur) * 100 : 0;
+        progress.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+      };
+
+      audio.addEventListener("loadedmetadata", syncUI);
+      audio.addEventListener("timeupdate", syncUI);
+      audio.addEventListener("ended", () => {
+        audioCard.classList.remove("is-playing");
+        syncUI();
+      });
+      audio.addEventListener("play", () => audioCard.classList.add("is-playing"));
+      audio.addEventListener("pause", () => audioCard.classList.remove("is-playing"));
+
+      playBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (audio.paused) {
+          if (window._novynAudio && window._novynAudio !== audio) {
+            window._novynAudio.pause();
+          }
+          window._novynAudio = audio;
+          audio.play();
+        } else {
+          audio.pause();
+        }
+      });
+
+      track.addEventListener("pointerdown", (e) => {
+        if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        const rect = track.getBoundingClientRect();
+        const pct = (e.clientX - rect.left) / rect.width;
+        audio.currentTime = Math.max(0, Math.min(audio.duration, pct * audio.duration));
+        syncUI();
+      });
+
+      audioCard.append(playBtn, track, time, audio);
+      body.appendChild(audioCard);
+    } else {
+      body.textContent = message.text;
+    }
+  }
 
   row.append(body);
   return row;
@@ -1320,6 +1411,7 @@ function setActiveFriend(username) {
   }
 
   activeFriend = username;
+  setActiveChatTarget(username);
   conversationMessages = [];
   clearReply();
   resetMessageSearch();
@@ -1470,8 +1562,21 @@ if (sidebarSearch) {
   sidebarSearch.addEventListener("search", applyFriendSearch);
 }
 
+if (mobBackBtn) {
+  mobBackBtn.addEventListener("click", () => setActiveChatTarget(""));
+}
+
+document.addEventListener("visibilitychange", () => {
+  if (!isDashboardPage) return;
+  if (document.hidden) {
+    setActiveChatTarget("");
+  } else if (activeFriend) {
+    setActiveChatTarget(activeFriend);
+  }
+});
+
 if (friendList) {
-  friendList.addEventListener("click", (e) => {
+  const handleFriendActivate = (e) => {
     const btn = e.target.closest(".friend-btn");
     if (!btn) return;
     const username = btn.dataset.username;
@@ -1479,7 +1584,9 @@ if (friendList) {
     e.preventDefault();
     setActiveFriend(username);
     showChatOnMobile();
-  });
+  };
+  friendList.addEventListener("click", handleFriendActivate);
+  friendList.addEventListener("pointerup", handleFriendActivate);
 }
 
 // ─── Custom unfriend confirm modal ────────────────────────────────────────────
@@ -1579,8 +1686,8 @@ async function uploadVoiceBlob(blob) {
     const formData = new FormData();
     formData.append("voice", blob, `voice-${Date.now()}.webm`);
     const resp = await fetch("/upload-voice", { method: "POST", body: formData });
-    if (!resp.ok) throw new Error("Upload failed");
-    const data = await resp.json();
+    const data = await resp.json().catch(() => ({}));
+    if (!resp.ok) throw new Error(data?.error || "Upload failed");
     if (!data?.url) throw new Error("No URL returned");
     socket.emit("private_message", { to: activeFriend, text: data.url });
     showToast("Voice message sent", "success");
@@ -1757,6 +1864,7 @@ socket.on("register_success", (data) => {
   friends      = data.friends  || [];
   requests     = data.requests || [];
   activeFriend = "";
+  setActiveChatTarget("");
 
   if (data.profile) {
     myProfile.avatarId    = data.profile.avatarId || "";
@@ -1882,6 +1990,7 @@ socket.on("friend_removed", (data) => {
   if (activeFriend && removedKey && activeKey === removedKey) {
     stopLocalTyping(activeFriend);
     activeFriend = "";
+    setActiveChatTarget("");
     conversationMessages = [];
     clearReply();
     activeFriendLabel.textContent = "Select a friend";
