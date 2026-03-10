@@ -7,7 +7,7 @@ const express = require("express");
 const multer = require("multer");
 const { MongoClient } = require("mongodb");
 const { Server } = require("socket.io");
-const cloudinary = require("./cloudinary");
+const { cloudinary, hasCloudinaryConfig } = require("./cloudinary");
 
 const app = express();
 const server = http.createServer(app);
@@ -18,6 +18,14 @@ fs.mkdirSync(uploadsDir, { recursive: true });
 const upload = multer({ dest: uploadsDir });
 
 app.post("/upload-voice", upload.single("voice"), async (req, res) => {
+  if (!hasCloudinaryConfig) {
+    if (req.file?.path) {
+      fs.unlink(req.file.path, () => {});
+    }
+    res.status(503).json({ error: "Cloudinary is not configured on the server." });
+    return;
+  }
+
   try {
     const result = await cloudinary.uploader.upload(req.file.path, {
       resource_type: "auto",
