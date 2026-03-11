@@ -52,6 +52,17 @@ const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
+const callButton       = document.querySelector(".chat-header-actions .call-btn");
+const callModal        = document.getElementById("callModal");
+const callAvatar       = document.getElementById("callAvatar");
+const callPeerName     = document.getElementById("callPeerName");
+const callStatusText   = document.getElementById("callStatusText");
+const callMuteBtn      = document.getElementById("callMuteBtn");
+const callSpeakerBtn   = document.getElementById("callSpeakerBtn");
+const callAcceptBtn    = document.getElementById("callAcceptBtn");
+const callRejectBtn    = document.getElementById("callRejectBtn");
+const callHangupBtn    = document.getElementById("callHangupBtn");
+const callRemoteAudio  = document.getElementById("callRemoteAudio");
 const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
 const mobBackBtn        = document.getElementById("mobBackBtn");
@@ -1673,6 +1684,23 @@ const voiceState = {
   uploading: false,
 };
 
+const ICE_SERVERS = window.NOVYN_ICE_SERVERS || [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
+const callState = {
+  status: "idle",
+  peer: "",
+  pc: null,
+  localStream: null,
+  remoteStream: null,
+  pendingOffer: null,
+  pendingCandidates: [],
+  isCaller: false,
+  muted: false,
+  speakerOn: true,
+};
+
 function resetVoiceState() {
   if (voiceState.timeout) clearTimeout(voiceState.timeout);
   voiceState.timeout = null;
@@ -1776,6 +1804,317 @@ async function startVoiceRecording() {
   }
 }
 
+function getCallPeerDisplayName(peer) {
+  if (!peer) return "Friend";
+  const friend = findFriend(peer);
+  return friend ? getFriendDisplayName(friend) : peer;
+}
+
+function updateCallUi() {
+  if (!callModal) return;
+  const show = callState.status !== "idle";
+  callModal.classList.toggle("hidden", !show);
+  callModal.setAttribute("aria-hidden", show ? "false" : "true");
+  if (callPeerName) callPeerName.textContent = getCallPeerDisplayName(callState.peer);
+  if (callAvatar) {
+    const displayName = getCallPeerDisplayName(callState.peer);
+    const trimmed = String(displayName || "").trim();
+    callAvatar.textContent = trimmed ? trimmed.slice(0, 2).toUpperCase() : "?";
+  }
+
+  let statusLabel = "";
+  if (callState.status === "outgoing") statusLabel = "Calling...";
+  if (callState.status === "incoming") statusLabel = "Incoming call";
+  if (callState.status === "connecting") statusLabel = "Connecting...";
+  if (callState.status === "active") statusLabel = "In call";
+  if (callStatusText) callStatusText.textContent = statusLabel || "Call";
+
+  if (callAcceptBtn) callAcceptBtn.style.display = callState.status === "incoming" ? "inline-flex" : "none";
+  if (callRejectBtn) callRejectBtn.style.display = callState.status === "incoming" ? "inline-flex" : "none";
+  if (callHangupBtn) {
+    const showHangup = ["outgoing", "connecting", "active"].includes(callState.status);
+    callHangupBtn.style.display = showHangup ? "inline-flex" : "none";
+    callHangupBtn.textContent = callState.status === "outgoing" ? "Cancel" : "End call";
+  }
+
+  const controlsEnabled = callState.status !== "idle";
+  if (callMuteBtn) {
+    callMuteBtn.disabled = !controlsEnabled;
+    callMuteBtn.classList.toggle("muted", callState.muted);
+    callMuteBtn.classList.toggle("active", callState.muted);
+    callMuteBtn.setAttribute("aria-pressed", callState.muted ? "true" : "false");
+    const label = callMuteBtn.querySelector("span");
+    if (label) label.textContent = callState.muted ? "Unmute" : "Mute";
+  }
+  if (callSpeakerBtn) {
+    callSpeakerBtn.disabled = !controlsEnabled;
+    callSpeakerBtn.classList.toggle("active", callState.speakerOn);
+    callSpeakerBtn.setAttribute("aria-pressed", callState.speakerOn ? "true" : "false");
+    const label = callSpeakerBtn.querySelector("span");
+    if (label) label.textContent = callState.speakerOn ? "Speaker" : "Speaker off";
+  }
+}
+
+function resetCallState() {
+  if (callState.pc) {
+    callState.pc.onicecandidate = null;
+    callState.pc.ontrack = null;
+    callState.pc.onconnectionstatechange = null;
+    callState.pc.close();
+  }
+  if (callState.localStream) {
+    callState.localStream.getTracks().forEach((t) => t.stop());
+  }
+  callState.status = "idle";
+  callState.peer = "";
+  callState.isCaller = false;
+  callState.pc = null;
+  callState.localStream = null;
+  callState.remoteStream = null;
+  callState.pendingOffer = null;
+  callState.pendingCandidates = [];
+  callState.muted = false;
+  callState.speakerOn = true;
+  if (callRemoteAudio) {
+    callRemoteAudio.srcObject = null;
+    callRemoteAudio.muted = false;
+    callRemoteAudio.volume = 1;
+  }
+  updateCallUi();
+}
+
+function applyMuteState() {
+  if (callState.localStream) {
+    callState.localStream.getAudioTracks().forEach((track) => {
+      track.enabled = !callState.muted;
+    });
+  }
+}
+
+function applySpeakerState() {
+  if (callRemoteAudio) {
+    callRemoteAudio.muted = !callState.speakerOn;
+    callRemoteAudio.volume = callState.speakerOn ? 1 : 0;
+  }
+}
+
+function toggleMute() {
+  callState.muted = !callState.muted;
+  applyMuteState();
+  updateCallUi();
+}
+
+function toggleSpeaker() {
+  callState.speakerOn = !callState.speakerOn;
+  applySpeakerState();
+  updateCallUi();
+}
+
+function createCallPeerConnection() {
+  const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+
+  pc.onicecandidate = (event) => {
+    if (!event.candidate || !callState.peer) return;
+    socket.emit("call_signal", {
+      to: callState.peer,
+      type: "ice",
+      candidate: event.candidate,
+    });
+  };
+
+  pc.ontrack = (event) => {
+    if (!callState.remoteStream) {
+      callState.remoteStream = new MediaStream();
+    }
+    callState.remoteStream.addTrack(event.track);
+    if (callRemoteAudio) {
+      callRemoteAudio.srcObject = callState.remoteStream;
+      callRemoteAudio.play().catch(() => {});
+      applySpeakerState();
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    if (pc.connectionState === "connected") {
+      callState.status = "active";
+      updateCallUi();
+      return;
+    }
+    if (["failed", "disconnected", "closed"].includes(pc.connectionState)) {
+      showToast("Call disconnected.", "info");
+      resetCallState();
+    }
+  };
+
+  return pc;
+}
+
+function flushPendingCandidates() {
+  if (!callState.pc || !callState.pc.remoteDescription) return;
+  const pending = callState.pendingCandidates.splice(0, callState.pendingCandidates.length);
+  pending.forEach((candidate) => {
+    callState.pc.addIceCandidate(candidate).catch(() => {});
+  });
+}
+
+async function applyRemoteOffer(offer) {
+  if (!callState.pc || !offer) return;
+  await callState.pc.setRemoteDescription(new RTCSessionDescription(offer));
+  const answer = await callState.pc.createAnswer();
+  await callState.pc.setLocalDescription(answer);
+  socket.emit("call_signal", {
+    to: callState.peer,
+    type: "answer",
+    sdp: callState.pc.localDescription,
+  });
+  flushPendingCandidates();
+}
+
+async function startVoiceCall() {
+  if (!socketAvailable) {
+    showToast("Realtime connection not available.", "error");
+    return;
+  }
+  if (!activeFriend) {
+    showToast("Choose a friend first.", "error");
+    return;
+  }
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast("Voice calling not supported in this browser.", "error");
+    return;
+  }
+  if (!window.RTCPeerConnection) {
+    showToast("Voice calling not supported in this browser.", "error");
+    return;
+  }
+  if (callState.status !== "idle") {
+    showToast("You're already in a call.", "error");
+    return;
+  }
+
+  callState.peer = activeFriend;
+  callState.isCaller = true;
+  callState.status = "outgoing";
+  updateCallUi();
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    callState.localStream = stream;
+    callState.pc = createCallPeerConnection();
+    stream.getTracks().forEach((track) => callState.pc.addTrack(track, stream));
+    applyMuteState();
+
+    const offer = await callState.pc.createOffer({ offerToReceiveAudio: true });
+    await callState.pc.setLocalDescription(offer);
+
+    socket.emit("call_invite", { to: callState.peer, type: "audio" });
+    socket.emit("call_signal", {
+      to: callState.peer,
+      type: "offer",
+      sdp: callState.pc.localDescription,
+    });
+  } catch (err) {
+    console.error(err);
+    showToast("Microphone permission blocked.", "error");
+    if (callState.peer) socket.emit("call_cancel", { to: callState.peer });
+    resetCallState();
+  }
+}
+
+async function acceptIncomingCall() {
+  if (callState.status !== "incoming") return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    showToast("Voice calling not supported in this browser.", "error");
+    return;
+  }
+  if (!window.RTCPeerConnection) {
+    showToast("Voice calling not supported in this browser.", "error");
+    return;
+  }
+
+  callState.status = "connecting";
+  updateCallUi();
+  socket.emit("call_answer", { to: callState.peer });
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    callState.localStream = stream;
+    callState.pc = createCallPeerConnection();
+    stream.getTracks().forEach((track) => callState.pc.addTrack(track, stream));
+    applyMuteState();
+    if (callState.pendingOffer) {
+      const offer = callState.pendingOffer;
+      callState.pendingOffer = null;
+      await applyRemoteOffer(offer);
+    }
+  } catch (err) {
+    console.error(err);
+    showToast("Microphone permission blocked.", "error");
+    socket.emit("call_reject", { to: callState.peer });
+    resetCallState();
+  }
+}
+
+function rejectIncomingCall() {
+  if (callState.status !== "incoming") return;
+  if (callState.peer) socket.emit("call_reject", { to: callState.peer });
+  resetCallState();
+}
+
+function hangupCall() {
+  if (!callState.peer) {
+    resetCallState();
+    return;
+  }
+  if (callState.status === "outgoing") {
+    socket.emit("call_cancel", { to: callState.peer });
+  } else {
+    socket.emit("call_end", { to: callState.peer });
+  }
+  resetCallState();
+}
+
+async function handleCallSignal(payload) {
+  const from = String(payload?.from || "").trim();
+  if (!from) return;
+
+  if (callState.status === "idle") {
+    callState.peer = from;
+    callState.isCaller = false;
+    callState.status = "incoming";
+    updateCallUi();
+  }
+
+  if (normalizeName(from) !== normalizeName(callState.peer)) return;
+
+  if (payload?.type === "offer") {
+    callState.pendingOffer = payload.sdp;
+    if (callState.pc && callState.status !== "outgoing") {
+      const offer = callState.pendingOffer;
+      callState.pendingOffer = null;
+      await applyRemoteOffer(offer);
+    }
+    return;
+  }
+
+  if (payload?.type === "answer") {
+    if (!callState.pc) return;
+    await callState.pc.setRemoteDescription(new RTCSessionDescription(payload.sdp));
+    callState.status = "connecting";
+    updateCallUi();
+    flushPendingCandidates();
+    return;
+  }
+
+  if (payload?.type === "ice" && payload.candidate) {
+    if (callState.pc && callState.pc.remoteDescription) {
+      callState.pc.addIceCandidate(payload.candidate).catch(() => {});
+    } else {
+      callState.pendingCandidates.push(payload.candidate);
+    }
+  }
+}
+
 function sendActiveMessage() {
   const text = messageInput.value.trim();
   if (!activeFriend) { showToast("Choose a friend first.", "error"); return; }
@@ -1808,6 +2147,17 @@ if (voiceBtn) {
     }
   });
 }
+
+if (callButton) {
+  callButton.addEventListener("click", () => {
+    startVoiceCall();
+  });
+}
+if (callMuteBtn) callMuteBtn.addEventListener("click", toggleMute);
+if (callSpeakerBtn) callSpeakerBtn.addEventListener("click", toggleSpeaker);
+if (callAcceptBtn) callAcceptBtn.addEventListener("click", acceptIncomingCall);
+if (callRejectBtn) callRejectBtn.addEventListener("click", rejectIncomingCall);
+if (callHangupBtn) callHangupBtn.addEventListener("click", hangupCall);
 
 messageInput.addEventListener("input", () => {
   if (!activeFriend) return;
@@ -2080,6 +2430,66 @@ socket.on("typing", ({ from, isTyping }) => {
   isTyping ? showTypingIndicator(from) : hideTypingIndicator();
 });
 
+socket.on("call_invite", (data) => {
+  const from = String(data?.from || "").trim();
+  if (!from) return;
+  if (callState.status !== "idle") {
+    socket.emit("call_reject", { to: from });
+    return;
+  }
+  callState.peer = from;
+  callState.isCaller = false;
+  callState.status = "incoming";
+  updateCallUi();
+  playIncomingPing();
+});
+
+socket.on("call_ringing", () => {
+  if (callState.status === "outgoing" && callStatusText) {
+    callStatusText.textContent = "Ringing...";
+  }
+});
+
+socket.on("call_answer", (data) => {
+  if (normalizeName(data?.from) !== normalizeName(callState.peer)) return;
+  if (callState.status === "outgoing") {
+    callState.status = "connecting";
+    updateCallUi();
+  }
+});
+
+socket.on("call_reject", (data) => {
+  if (normalizeName(data?.from) !== normalizeName(callState.peer)) return;
+  showToast(`${getCallPeerDisplayName(callState.peer)} declined the call.`, "info");
+  resetCallState();
+});
+
+socket.on("call_cancelled", (data) => {
+  if (normalizeName(data?.from) !== normalizeName(callState.peer)) return;
+  showToast(`${getCallPeerDisplayName(callState.peer)} cancelled the call.`, "info");
+  resetCallState();
+});
+
+socket.on("call_end", (data) => {
+  if (normalizeName(data?.from) !== normalizeName(callState.peer)) return;
+  showToast("Call ended.", "info");
+  resetCallState();
+});
+
+socket.on("call_busy", () => {
+  showToast("Friend is already on another call.", "error");
+  resetCallState();
+});
+
+socket.on("call_unavailable", () => {
+  showToast("Friend is offline or unavailable.", "error");
+  resetCallState();
+});
+
+socket.on("call_signal", (payload) => {
+  handleCallSignal(payload).catch(() => {});
+});
+
 socket.on("user_status", ({ username, online, lastSeenAt }) => {
   friends = friends.map((f) =>
     normalizeName(f.username) === normalizeName(username)
@@ -2105,6 +2515,7 @@ socket.on("disconnect", () => {
   authenticateStoredSession._pending = false;
   setNetworkState("Disconnected", "offline");
   showToast("Disconnected from server", "error");
+  if (callState.status !== "idle") resetCallState();
 });
 
 socket.on("connect_error", () => {

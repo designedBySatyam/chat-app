@@ -132,6 +132,7 @@ const DELETED_MESSAGE_TEXT = "This message was deleted.";
 const users = new Map();
 const onlineUsers = new Map();
 const conversations = new Map();
+const activeCalls = new Map();
 
 let mongoClient = null;
 let mongoCollection = null;
@@ -464,6 +465,20 @@ function getConversationKey(userA, userB) {
   const a = normalizeName(userA);
   const b = normalizeName(userB);
   return [a, b].sort().join("::");
+}
+
+function setCallPair(userKey, peerKey, status) {
+  activeCalls.set(userKey, { peerKey, status });
+  activeCalls.set(peerKey, { peerKey: userKey, status });
+}
+
+function clearCallPair(userKey) {
+  const state = activeCalls.get(userKey);
+  if (!state) return null;
+  const peerKey = state.peerKey;
+  activeCalls.delete(userKey);
+  if (peerKey) activeCalls.delete(peerKey);
+  return peerKey;
 }
 
 function getRetentionCutoffMs() {
@@ -1183,6 +1198,138 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("call_invite", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const to = toDisplayName(payload?.to);
+    const toKey = normalizeName(to);
+    if (!toKey) return;
+
+    const me = users.get(userKey);
+    const friend = users.get(toKey);
+    if (!me || !friend || !me.friends.has(toKey)) {
+      socket.emit("error_message", { message: "You can call only friends." });
+      return;
+    }
+
+    if (activeCalls.has(userKey) || activeCalls.has(toKey)) {
+      socket.emit("call_busy", { to: friend.username });
+      return;
+    }
+
+    const friendSocketId = onlineUsers.get(toKey);
+    if (!friendSocketId) {
+      socket.emit("call_unavailable", { to: friend.username });
+      return;
+    }
+
+    setCallPair(userKey, toKey, "ringing");
+    io.to(friendSocketId).emit("call_invite", {
+      from: me.username,
+      type: payload?.type || "audio",
+    });
+    socket.emit("call_ringing", { to: friend.username });
+  });
+
+  socket.on("call_answer", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const toKey = normalizeName(payload?.to);
+    const state = activeCalls.get(userKey);
+    if (!state || (toKey && state.peerKey !== toKey)) return;
+
+    const peerKey = state.peerKey;
+    setCallPair(userKey, peerKey, "active");
+
+    const peerSocketId = onlineUsers.get(peerKey);
+    if (peerSocketId) {
+      io.to(peerSocketId).emit("call_answer", {
+        from: users.get(userKey)?.username || userKey,
+      });
+    }
+  });
+
+  socket.on("call_reject", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const toKey = normalizeName(payload?.to);
+    const state = activeCalls.get(userKey);
+    if (!state || (toKey && state.peerKey !== toKey)) return;
+
+    const peerKey = clearCallPair(userKey);
+    if (!peerKey) return;
+
+    const peerSocketId = onlineUsers.get(peerKey);
+    if (peerSocketId) {
+      io.to(peerSocketId).emit("call_reject", {
+        from: users.get(userKey)?.username || userKey,
+      });
+    }
+  });
+
+  socket.on("call_cancel", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const toKey = normalizeName(payload?.to);
+    const state = activeCalls.get(userKey);
+    if (!state || (toKey && state.peerKey !== toKey)) return;
+
+    const peerKey = clearCallPair(userKey);
+    if (!peerKey) return;
+
+    const peerSocketId = onlineUsers.get(peerKey);
+    if (peerSocketId) {
+      io.to(peerSocketId).emit("call_cancelled", {
+        from: users.get(userKey)?.username || userKey,
+      });
+    }
+  });
+
+  socket.on("call_end", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const toKey = normalizeName(payload?.to);
+    const state = activeCalls.get(userKey);
+    if (!state || (toKey && state.peerKey !== toKey)) return;
+
+    const peerKey = clearCallPair(userKey);
+    if (!peerKey) return;
+
+    const peerSocketId = onlineUsers.get(peerKey);
+    if (peerSocketId) {
+      io.to(peerSocketId).emit("call_end", {
+        from: users.get(userKey)?.username || userKey,
+      });
+    }
+  });
+
+  socket.on("call_signal", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+
+    const toKey = normalizeName(payload?.to);
+    if (!toKey) return;
+
+    const state = activeCalls.get(userKey);
+    if (!state || state.peerKey !== toKey) return;
+
+    const friendSocketId = onlineUsers.get(toKey);
+    if (!friendSocketId) return;
+
+    const me = users.get(userKey);
+    io.to(friendSocketId).emit("call_signal", {
+      from: me?.username || userKey,
+      type: payload?.type,
+      sdp: payload?.sdp || null,
+      candidate: payload?.candidate || null,
+    });
+  });
+
   socket.on("update_profile", (payload) => {
     const userKey = socket.data.userKey;
     if (!userKey) return;
@@ -1325,6 +1472,16 @@ io.on("connection", (socket) => {
         }
 
         user.lastSeenAt = nowIso();
+      }
+
+      const callPeerKey = clearCallPair(userKey);
+      if (callPeerKey) {
+        const peerSocketId = onlineUsers.get(callPeerKey);
+        if (peerSocketId) {
+          io.to(peerSocketId).emit("call_end", {
+            from: user?.username || userKey,
+          });
+        }
       }
 
       onlineUsers.delete(userKey);

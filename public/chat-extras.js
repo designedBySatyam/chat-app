@@ -67,7 +67,12 @@
     if (isMobile()) showPanel('friends');
   });
   closeBtn && closeBtn.addEventListener('click', function () {
-    if (isMobile()) showPanel('chat');
+    if (!isMobile()) return;
+    if (document.body.classList.contains('friend-selected')) {
+      showPanel('chat');
+    } else {
+      showPanel('friends');
+    }
   });
   window.addEventListener('resize', function () {
     if (!isMobile()) {

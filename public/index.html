@@ -136,10 +136,10 @@
             <button class="icon-btn" id="messageSearchToggle" type="button" title="Search" aria-label="Search messages" aria-expanded="false">
               <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </button>
-            <button class="icon-btn" aria-label="Call">
+            <button class="icon-btn call-btn" aria-label="Call">
               <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81 19.79 19.79 0 01.22 1.2 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16h-.08z"/></svg>
             </button>
-            <button class="icon-btn" aria-label="Video">
+            <button class="icon-btn video-btn" aria-label="Video">
               <svg viewBox="0 0 24 24"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
             </button>
             <button class="icon-btn" id="infoToggleBtn" type="button" aria-label="More options">
@@ -194,7 +194,7 @@
             <span class="reply-preview-text" id="replyPreviewText">Replying to…</span>
             <button class="reply-cancel-btn" id="replyCancelBtn" aria-label="Cancel reply" type="button">✕</button>
           </div>
-          <form id="messageForm" class="input-toolbar" autocomplete="off">
+          <form id="messageForm" class="input-toolbar" autocomplete="on">
             <button type="button" class="tool-btn" aria-label="Emoji">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
@@ -203,10 +203,11 @@
               id="messageInput"
               name="chatMessage"
               placeholder="Type a message…"
-              autocomplete="off"
+              autocomplete="on"
               inputmode="text"
               enterkeyhint="send"
               autocapitalize="sentences"
+              autocorrect="on"
               spellcheck="true"
               maxlength="1000"
             />
@@ -386,6 +387,35 @@
     </div>
 
     <div id="toast" class="toast hidden" role="alert" aria-live="assertive"></div>
+
+        <!-- Voice call modal -->
+    <div id="callModal" class="call-modal hidden" role="dialog" aria-modal="true" aria-label="Voice call">
+      <div class="call-modal-backdrop"></div>
+      <div class="call-modal-card">
+        <div class="call-header">
+          <p class="call-badge">VOICE CALL</p>
+        </div>
+        <div class="call-avatar" id="callAvatar">?</div>
+        <div class="call-peer" id="callPeerName">Friend</div>
+        <div class="call-status" id="callStatusText">Calling...</div>
+        <div class="call-actions">
+          <button class="call-icon-btn" id="callMuteBtn" type="button" aria-pressed="false" title="Mute microphone">
+            <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            <span>Mute</span>
+          </button>
+          <button class="call-icon-btn active" id="callSpeakerBtn" type="button" aria-pressed="true" title="Speaker">
+            <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 9a3 3 0 010 6"/><path d="M19 6a6 6 0 010 12"/></svg>
+            <span>Speaker</span>
+          </button>
+        </div>
+        <div class="call-controls">
+          <button class="call-control-btn accept" id="callAcceptBtn" type="button">Answer</button>
+          <button class="call-control-btn decline" id="callRejectBtn" type="button">Decline</button>
+          <button class="call-control-btn hangup" id="callHangupBtn" type="button">End call</button>
+        </div>
+      </div>
+    </div>
+    <audio id="callRemoteAudio" class="call-remote-audio" autoplay playsinline></audio>
 
     <!-- Ghost elements for JS compat — hidden -->
     <div style="display:none;" aria-hidden="true">

@@ -129,7 +129,7 @@
       "unread": [
         [
           "test11",
-          1
+          0
         ]
       ],
       "isRegistered": true,
@@ -334,7 +334,7 @@
           "text": "/uploads/voice-1773163927869-3c8332.webm?token=f6c3a6297ffeeedf996f1cab8179a57ccf2079a6cd1ea3b28e371939462d61ce",
           "timestamp": "2026-03-10T17:32:07.892Z",
           "deliveredAt": "2026-03-10T17:32:07.892Z",
-          "seenAt": null,
+          "seenAt": "2026-03-11T03:45:36.521Z",
           "deletedAt": null,
           "reactions": {}
         }
