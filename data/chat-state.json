@@ -8,6 +8,7 @@
         "test11"
       ],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "ca4f7fbda9aab9be49336fd1b1f57651",
       "passwordHash": "f6dfa6d81d897e23f8ebe8326777574c8273617195e280c10c4a4a265adb71857526b42cb5a028925a869fb572994284d85a91a571d7a353a36e1cb67fea72d4",
@@ -24,6 +25,7 @@
       "friends": [],
       "requests": [],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "d426a406a481a70a338d334395c606fa",
       "passwordHash": "ccca4037a9ba9c0b824f65d163590dde8de3ef2a89f8c8b62ad2e4c7302be0eddbb3566328953f6ad87126e2971d5d09f83d9d34a80fb426129174954df5d471",
@@ -40,6 +42,7 @@
       "friends": [],
       "requests": [],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "1bd8b23bb8c5c4bcac122d2ff4ecef2c",
       "passwordHash": "7752563812ae1a341d3260bd7a501e40832319b4f24f1f4fd515c9e6d6dc37d8c9d2dbb9a48dfa5a871fdc5d66a8afa0d02d42b3219b315722b661d76972517a",
@@ -56,6 +59,7 @@
       "friends": [],
       "requests": [],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "4aeca583f13359910c7e3043200c4635",
       "passwordHash": "65c8bcc015e3fc9623c563e3ab295986e0f77981e7f720e61d86023fc969910f46c3f24c05b5902de8847467363c7342e03655c62be69c2d4509725b27e39ec4",
@@ -72,6 +76,7 @@
       "friends": [],
       "requests": [],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "e3cbbaf323b0f2b8e53d8349b72d7c7f",
       "passwordHash": "9c5f4d65956db5c781a76fe5de1f05bc3388aa13499328e10f69f1c8519c3a565184612d57aae7746921747770d8ae2c9386082122a868382a80d55bc1817790",
@@ -95,6 +100,16 @@
           0
         ]
       ],
+      "pushSubs": [
+        {
+          "endpoint": "https://fcm.googleapis.com/fcm/send/c_8sk1PkRAM:APA91bGBA6uibWG7OgdDS-86dXMNOW0XbUQ4hh9VCWN3MO5N0C47FJ2jHVhCO9eKGJkhF9r3PFw454SEako1g1dPuxLwyV9_DlmmWVHpaGi3BFcQ5Me4RvvaaXfudhspf96rppeUauPr",
+          "keys": {
+            "p256dh": "BChJP5O_8065k6xpOeoFapKUFUY2BPtZNyOPlDQ2ebdWu7Cf5hI4AqPE7vEPzVlGODyLlhnuQT2wbITCUSmDdI0",
+            "auth": "qmdUvU-OMdq02vmRxITPYg"
+          },
+          "expirationTime": null
+        }
+      ],
       "isRegistered": true,
       "passwordSalt": "dbbcddaefb26b74ca09023ab64222e58",
       "passwordHash": "e6191fa8e67124f47406d69335cd446408055337e018e6c2eb48627b7c4ecae557952c7e103d05540d8127a2c960bd1f2571937c2be7443b56509a12a203f3bc",
@@ -103,7 +118,7 @@
       "gender": "Male",
       "displayName": "",
       "bio": "",
-      "lastSeenAt": ""
+      "lastSeenAt": "2026-03-11T15:43:50.534Z"
     },
     {
       "key": "teat",
@@ -111,6 +126,7 @@
       "friends": [],
       "requests": [],
       "unread": [],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "b7c4640e8ede8b0aa280b7f6694dc3ef",
       "passwordHash": "9f80bd8edaa0c3941d5a0bace7279cb1534beb4644cfcf1ef824d1d5f14fb9272b1c52c6c62660a0506000202bf73f7698cff6757388dffa91e76feea7abd519",
@@ -134,6 +150,7 @@
           0
         ]
       ],
+      "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "b56ee04f1bf18593a62014cb1f0a8049",
       "passwordHash": "5f336ae5d1ce426c794873d7cdab34a672f1c5f92c06c45645a994514c727f652014960891269888193029eba3ab38577bf16e1cbaf1127bf6a8a29602bf442b",

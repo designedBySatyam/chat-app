@@ -261,11 +261,15 @@
 /* ── Mobile panel switching ─────────────────────────────────────────────────── */
 (function () {
   var BP      = 768;
+  var THEME_BP = 720;
   var sidebar = document.getElementById('mobileSidebar');
   var chat    = document.getElementById('mobileChat');
   var backBtn = document.getElementById('mobBackBtn');
-  var closeBtn = document.getElementById('mobSidebarClose');
   function isMobile() { return window.innerWidth <= BP; }
+  function isThemeMobile() { return window.innerWidth <= THEME_BP; }
+  function syncMobileTheme() {
+    document.body.classList.toggle('mobile-theme', isThemeMobile());
+  }
   function showPanel(panel) {
     if (!sidebar || !chat) return;
     if (panel === 'chat') {
@@ -293,14 +297,6 @@
   backBtn && backBtn.addEventListener('click', function () {
     if (isMobile()) showPanel('friends');
   });
-  closeBtn && closeBtn.addEventListener('click', function () {
-    if (!isMobile()) return;
-    if (document.body.classList.contains('friend-selected')) {
-      showPanel('chat');
-    } else {
-      showPanel('friends');
-    }
-  });
   window.addEventListener('resize', function () {
     if (!isMobile()) {
       if (sidebar) sidebar.removeAttribute('data-mob-hidden');
@@ -308,10 +304,12 @@
       document.body.classList.remove('mob-chat-open');
       document.body.classList.remove('mob-list-open');
     }
+    syncMobileTheme();
   });
   if (isMobile()) {
     document.body.classList.add('mob-list-open');
   }
+  syncMobileTheme();
   new MutationObserver(function () {
     var layout = document.getElementById('chatLayout');
     if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('friends');
