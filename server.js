@@ -31,6 +31,19 @@ function signUploadToken(filename) {
   return crypto.createHmac("sha256", uploadTokenSecret).update(filename).digest("hex");
 }
 
+function withUploadToken(rawUrl) {
+  const text = toDisplayName(rawUrl);
+  if (!text || !text.startsWith("/uploads/")) return text;
+  if (text.includes("token=")) return text;
+  const [base, hash] = text.split("#");
+  const pathOnly = base.split("?")[0];
+  const filename = path.basename(pathOnly || "");
+  if (!filename) return text;
+  const token = signUploadToken(filename);
+  const joiner = base.includes("?") ? "&" : "?";
+  return `${base}${joiner}token=${token}${hash ? `#${hash}` : ""}`;
+}
+
 app.get("/uploads/:file", (req, res) => {
   const filename = path.basename(req.params.file || "");
   const token = String(req.query.token || "");
@@ -292,7 +305,7 @@ function hydrateMessage(rawMessage) {
     to: to || toKey,
     fromKey,
     toKey,
-    text: toDisplayName(message.text),
+    text: withUploadToken(message.text),
     timestamp: toDisplayName(message.timestamp) || nowIso(),
     deliveredAt: toDisplayName(message.deliveredAt) || null,
     seenAt: toDisplayName(message.seenAt) || null,
@@ -1115,7 +1128,7 @@ io.on("connection", (socket) => {
     if (!userKey) return;
 
     const to = toDisplayName(payload?.to);
-    const text = toDisplayName(payload?.text);
+    const text = withUploadToken(payload?.text);
     const toKey = normalizeName(to);
 
     if (!text) return;

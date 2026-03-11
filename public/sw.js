@@ -1,4 +1,4 @@
-const CACHE_NAME = "novyn-shell-v27";
+const CACHE_NAME = "novyn-shell-v32";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -55,6 +55,11 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(request.url);
   if (url.origin !== self.location.origin) return;
+  const isRangeRequest = request.headers.has("range");
+  if (isRangeRequest || url.pathname.startsWith("/uploads/")) {
+    event.respondWith(fetch(request));
+    return;
+  }
 
   if (request.mode === "navigate") {
     event.respondWith(
@@ -72,7 +77,7 @@ self.addEventListener("fetch", (event) => {
     caches.match(request).then((cached) => {
       const network = fetch(request)
         .then((response) => {
-          if (response && response.ok) {
+          if (response && response.ok && response.status !== 206) {
             const copy = response.clone();
             caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
           }

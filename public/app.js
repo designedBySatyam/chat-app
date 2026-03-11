@@ -63,6 +63,8 @@ const callAcceptBtn    = document.getElementById("callAcceptBtn");
 const callRejectBtn    = document.getElementById("callRejectBtn");
 const callHangupBtn    = document.getElementById("callHangupBtn");
 const callRemoteAudio  = document.getElementById("callRemoteAudio");
+const profileCallBtn   = document.querySelector('.profile-action-btn[data-action="call"]');
+const profileVideoBtn  = document.querySelector('.profile-action-btn[data-action="video"]');
 const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
 const mobBackBtn        = document.getElementById("mobBackBtn");
@@ -70,6 +72,7 @@ const SESSION_KEY       = "novyn-session";
 const LOGIN_PATH        = "/";
 const isDashboardPage   = Boolean(chatLayout) && !document.body.classList.contains("auth-page");
 const MOBILE_BP         = 768;
+const INCOMING_CALLS_ENABLED = true;
 
 let me           = "";
 let activeFriend = "";
@@ -240,6 +243,9 @@ const notificationAudio = {
   context: null,
   unlocked: false,
 };
+const notificationState = {
+  permissionRequested: false,
+};
 
 function unlockNotificationAudio() {
   if (notificationAudio.unlocked) return;
@@ -280,8 +286,84 @@ function playIncomingPing() {
   }
 }
 
-document.addEventListener("pointerdown", unlockNotificationAudio, { passive: true });
-document.addEventListener("keydown", unlockNotificationAudio, { passive: true });
+function requestNotificationPermission() {
+  if (!("Notification" in window)) return;
+  if (notificationState.permissionRequested) return;
+  if (Notification.permission !== "default") return;
+  notificationState.permissionRequested = true;
+  try {
+    Notification.requestPermission().catch(() => {});
+  } catch (_) {
+    // Ignore permission errors.
+  }
+}
+
+function canSystemNotify() {
+  return "Notification" in window && Notification.permission === "granted";
+}
+
+function shouldSystemNotify() {
+  return document.hidden || !document.hasFocus();
+}
+
+function showSystemNotification(title, options = {}) {
+  if (!canSystemNotify()) return false;
+  try {
+    const notification = new Notification(title, options);
+    notification.onclick = () => {
+      try {
+        window.focus();
+      } catch (_) {
+        // Ignore focus errors.
+      }
+    };
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function formatNotificationPreview(text, maxLen = 120) {
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return "New message";
+  if (cleaned.length <= maxLen) return cleaned;
+  return `${cleaned.slice(0, maxLen - 3)}...`;
+}
+
+function notifyIncomingMessage(message, options = {}) {
+  if (!message) return;
+  if (normalizeName(message.from) === normalizeName(me)) return;
+  if (!options.force && !shouldSystemNotify()) return;
+  const senderName = options.senderName || (() => {
+    const sender = findFriend(message.from);
+    return sender ? getFriendDisplayName(sender) : message.from;
+  })();
+  showSystemNotification(`New message from ${senderName}`, {
+    body: formatNotificationPreview(message.text),
+    tag: `msg-${normalizeName(message.from) || "unknown"}`,
+  });
+}
+
+function notifyIncomingCall(from, options = {}) {
+  if (!from) return;
+  if (!options.force && !shouldSystemNotify()) return;
+  const displayName = getCallPeerDisplayName(from);
+  const body = options.blocked
+    ? `${displayName} tried to call you.`
+    : `${displayName} is calling.`;
+  showSystemNotification("Incoming call", {
+    body,
+    tag: `call-${normalizeName(from) || "unknown"}`,
+  });
+}
+
+function handleUserGesture() {
+  unlockNotificationAudio();
+  requestNotificationPermission();
+}
+
+document.addEventListener("pointerdown", handleUserGesture, { passive: true });
+document.addEventListener("keydown", handleUserGesture, { passive: true });
 
 /**
  * Smooth-scroll the messages container to the bottom.
@@ -2078,6 +2160,11 @@ async function handleCallSignal(payload) {
   const from = String(payload?.from || "").trim();
   if (!from) return;
 
+  if (!INCOMING_CALLS_ENABLED && callState.status === "idle") {
+    socket.emit("call_reject", { to: from });
+    return;
+  }
+
   if (callState.status === "idle") {
     callState.peer = from;
     callState.isCaller = false;
@@ -2151,6 +2238,16 @@ if (voiceBtn) {
 if (callButton) {
   callButton.addEventListener("click", () => {
     startVoiceCall();
+  });
+}
+if (profileCallBtn) {
+  profileCallBtn.addEventListener("click", () => {
+    startVoiceCall();
+  });
+}
+if (profileVideoBtn) {
+  profileVideoBtn.addEventListener("click", () => {
+    showToast("Coming soon...", "info");
   });
 }
 if (callMuteBtn) callMuteBtn.addEventListener("click", toggleMute);
@@ -2382,21 +2479,26 @@ socket.on("history", (data) => {
 socket.on("private_message", (message) => {
   const other =
     normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
+  const isIncoming = normalizeName(message.from) !== normalizeName(me);
+  const isActiveThread = activeFriend && normalizeName(other) === normalizeName(activeFriend);
 
-  if (!activeFriend || normalizeName(other) !== normalizeName(activeFriend)) {
+  if (!isActiveThread) {
     // Message is for a different conversation — just show a toast
-    if (normalizeName(message.from) !== normalizeName(me)) {
+    if (isIncoming) {
       const sender = findFriend(message.from);
       const senderName = sender ? getFriendDisplayName(sender) : message.from;
-      showToast(`💬 ${senderName}: ${message.text.slice(0, 40)}${message.text.length > 40 ? "…" : ""}`);
+      const preview = String(message.text || "");
+      showToast(`💬 ${senderName}: ${preview.slice(0, 40)}${preview.length > 40 ? "..." : ""}`);
       playIncomingPing();
+      notifyIncomingMessage(message, { senderName });
     }
     return;
   }
 
-  if (normalizeName(message.from) !== normalizeName(me)) {
+  if (isIncoming) {
     hideTypingIndicator();
     playIncomingPing();
+    notifyIncomingMessage(message);
   }
 
   conversationMessages.push(message);
@@ -2433,6 +2535,13 @@ socket.on("typing", ({ from, isTyping }) => {
 socket.on("call_invite", (data) => {
   const from = String(data?.from || "").trim();
   if (!from) return;
+  if (!INCOMING_CALLS_ENABLED) {
+    socket.emit("call_reject", { to: from });
+    showToast(`Missed call from ${getCallPeerDisplayName(from)}.`, "info");
+    playIncomingPing();
+    notifyIncomingCall(from, { blocked: true });
+    return;
+  }
   if (callState.status !== "idle") {
     socket.emit("call_reject", { to: from });
     return;
@@ -2442,6 +2551,7 @@ socket.on("call_invite", (data) => {
   callState.status = "incoming";
   updateCallUi();
   playIncomingPing();
+  notifyIncomingCall(from);
 });
 
 socket.on("call_ringing", () => {
