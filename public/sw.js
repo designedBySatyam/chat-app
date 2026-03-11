@@ -1,4 +1,4 @@
-const CACHE_NAME = "novyn-shell-v32";
+const CACHE_NAME = "novyn-shell-v33";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -93,5 +93,54 @@ self.addEventListener("fetch", (event) => {
 
       return cached || network;
     })
+  );
+});
+
+self.addEventListener("push", (event) => {
+  let payload = {};
+  if (event.data) {
+    try {
+      payload = event.data.json();
+    } catch (_) {
+      payload = { body: event.data.text() };
+    }
+  }
+
+  const title = payload.title || "Novyn";
+  const options = {
+    body: payload.body || "",
+    icon: payload.icon || "/icons/icon-192.png",
+    badge: payload.badge || "/icons/novyn-badge.svg",
+    tag: payload.tag || payload.type || "novyn",
+    data: {
+      url: payload.url || "/",
+      type: payload.type || "",
+    },
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification?.data?.url || "/";
+  event.waitUntil(
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((clientList) => {
+        for (const client of clientList) {
+          if (client.url && client.url.startsWith(self.location.origin)) {
+            client.focus();
+            if (targetUrl && client.url !== self.location.origin + targetUrl) {
+              return client.navigate(targetUrl);
+            }
+            return undefined;
+          }
+        }
+        if (clients.openWindow) {
+          return clients.openWindow(targetUrl);
+        }
+        return undefined;
+      })
   );
 });

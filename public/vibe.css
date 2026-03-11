@@ -1472,6 +1472,42 @@ body.info-open .info-scrim {
   overflow: hidden;
 }
 
+/* Desktop: keep details as a separate right column */
+@media (min-width: 1001px) {
+  body.info-open .app {
+    grid-template-columns: var(--sidebar-w) 1fr minmax(280px, 360px);
+  }
+
+  .info-panel {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    width: auto;
+    height: auto;
+    max-height: none;
+    transform: none;
+    opacity: 1;
+    filter: none;
+    pointer-events: auto;
+    z-index: 1;
+  }
+
+  body:not(.info-open) .info-panel {
+    display: none;
+  }
+
+  body.info-open .info-panel {
+    display: flex;
+    transform: none;
+  }
+
+  .info-scrim {
+    display: none;
+  }
+}
+
 .info-top {
   display: flex;
   align-items: center;

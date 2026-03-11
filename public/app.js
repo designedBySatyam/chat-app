@@ -54,6 +54,7 @@ const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
 const callButton       = document.querySelector(".chat-header-actions .call-btn");
+const videoButton      = document.querySelector(".chat-header-actions .video-btn");
 const profileCallBtn   = document.querySelector(".profile-action-btn[data-action='call']");
 const profileVideoBtn  = document.querySelector(".profile-action-btn[data-action='video']");
 const callModal        = document.getElementById("callModal");
@@ -87,6 +88,7 @@ let searchPanelOpen = false;
 let friendSearchQuery = "";
 let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
 let conversationMessages = [];
+let pendingUnreadJump = { friendKey: "", count: 0 };
 window._novynProfile = myProfile;
 
 const localTyping = {
@@ -251,6 +253,12 @@ const notificationAudio = {
 const notificationState = {
   permissionRequested: false,
 };
+const pushState = {
+  publicKey: "",
+  inFlight: false,
+  lastEndpoint: "",
+  lastUser: "",
+};
 
 function unlockNotificationAudio() {
   if (notificationAudio.unlocked) return;
@@ -291,15 +299,15 @@ function playIncomingPing() {
   }
 }
 
-function requestNotificationPermission() {
-  if (!("Notification" in window)) return;
-  if (notificationState.permissionRequested) return;
-  if (Notification.permission !== "default") return;
+async function requestNotificationPermission() {
+  if (!("Notification" in window)) return "denied";
+  if (Notification.permission !== "default") return Notification.permission;
+  if (notificationState.permissionRequested) return Notification.permission;
   notificationState.permissionRequested = true;
   try {
-    Notification.requestPermission().catch(() => {});
+    return await Notification.requestPermission();
   } catch (_) {
-    // Ignore permission errors.
+    return Notification.permission;
   }
 }
 
@@ -309,6 +317,74 @@ function canSystemNotify() {
 
 function shouldSystemNotify() {
   return document.hidden || !document.hasFocus();
+}
+
+function isAppVisible() {
+  return !document.hidden && document.hasFocus();
+}
+
+function urlBase64ToUint8Array(base64String) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+async function getPushPublicKey() {
+  if (pushState.publicKey) return pushState.publicKey;
+  try {
+    const res = await fetch("/api/push/public-key", { cache: "no-store" });
+    if (!res.ok) return "";
+    const data = await res.json();
+    pushState.publicKey = String(data?.publicKey || "").trim();
+    return pushState.publicKey;
+  } catch (_) {
+    return "";
+  }
+}
+
+async function ensurePushSubscription(requestPermission = false) {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+  if (!socketAvailable || !me) return;
+  if (pushState.inFlight) return;
+
+  if (Notification.permission === "default" && requestPermission) {
+    await requestNotificationPermission();
+  }
+  if (Notification.permission !== "granted") return;
+
+  pushState.inFlight = true;
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    if (!registration?.pushManager) return;
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      const publicKey = await getPushPublicKey();
+      if (!publicKey) return;
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+    }
+
+    const payload = subscription.toJSON ? subscription.toJSON() : subscription;
+    const endpoint = payload?.endpoint || "";
+    const userKey = normalizeName(me);
+    if (!endpoint) return;
+    if (pushState.lastEndpoint === endpoint && pushState.lastUser === userKey) return;
+    pushState.lastEndpoint = endpoint;
+    pushState.lastUser = userKey;
+    socket.emit("push_subscribe", { subscription: payload });
+  } catch (err) {
+    console.warn("Push subscription failed:", err);
+  } finally {
+    pushState.inFlight = false;
+  }
 }
 
 function showSystemNotification(title, options = {}) {
@@ -338,7 +414,9 @@ function formatNotificationPreview(text, maxLen = 120) {
 function notifyIncomingMessage(message, options = {}) {
   if (!message) return;
   if (normalizeName(message.from) === normalizeName(me)) return;
-  if (!options.force && !shouldSystemNotify()) return;
+  const isActiveThread =
+    activeFriend && normalizeName(message.from) === normalizeName(activeFriend);
+  if (!options.force && isActiveThread && isAppVisible()) return;
   const senderName = options.senderName || (() => {
     const sender = findFriend(message.from);
     return sender ? getFriendDisplayName(sender) : message.from;
@@ -367,6 +445,7 @@ function notifyIncomingCall(from, options = {}) {
 function handleUserGesture() {
   unlockNotificationAudio();
   requestNotificationPermission();
+  ensurePushSubscription(true);
 }
 
 document.addEventListener("pointerdown", handleUserGesture, { passive: true });
@@ -1415,6 +1494,33 @@ function setComposerEnabled(isEnabled) {
   messageInput.placeholder = "Type a message…";
 }
 
+function scrollToUnreadStart() {
+  if (!messagesEl) return false;
+  if (getSearchQuery()) return false;
+  if (!pendingUnreadJump.count) return false;
+  if (!activeFriend || normalizeName(activeFriend) !== pendingUnreadJump.friendKey) return false;
+
+  const incoming = Array.from(messagesEl.querySelectorAll("article.message.them"));
+  if (!incoming.length) {
+    pendingUnreadJump = { friendKey: "", count: 0 };
+    return false;
+  }
+
+  const index = Math.max(0, incoming.length - pendingUnreadJump.count);
+  const target = incoming[index] || incoming[0];
+  if (!target) {
+    pendingUnreadJump = { friendKey: "", count: 0 };
+    return false;
+  }
+
+  target.scrollIntoView({ behavior: "auto", block: "start" });
+  target.classList.add("highlight-flash");
+  setTimeout(() => target.classList.remove("highlight-flash"), 1200);
+  scrollState.pinnedToBottom = false;
+  pendingUnreadJump = { friendKey: "", count: 0 };
+  return true;
+}
+
 function renderMessages(messages) {
   clearMessages();
   conversationMessages = Array.isArray(messages) ? messages.slice() : [];
@@ -1432,8 +1538,12 @@ function renderMessages(messages) {
     appendMessage(message, /* skipAnimation */ true, /* withSeparator */ true);
   }
 
-  // Jump straight to bottom for history load (no animation needed)
-  scrollToBottom(true);
+  // Jump to first unread message when available, otherwise bottom
+  const jumpedToUnread = scrollToUnreadStart();
+  if (!jumpedToUnread) {
+    scrollToBottom(true);
+    scrollState.pinnedToBottom = true;
+  }
   if (window._novynFAB) window._novynFAB.reset();
   applyMessageSearch();
   syncProfilePanelStats();
@@ -1674,6 +1784,16 @@ function syncRemoveFriendButton() {
 function setActiveFriend(username) {
   if (activeFriend && normalizeName(activeFriend) !== normalizeName(username)) {
     stopLocalTyping(activeFriend);
+  }
+
+  if (username) {
+    const friend = findFriend(username);
+    pendingUnreadJump = {
+      friendKey: normalizeName(username),
+      count: Number(friend?.unreadCount) || 0,
+    };
+  } else {
+    pendingUnreadJump = { friendKey: "", count: 0 };
   }
 
   activeFriend = username;
@@ -2404,6 +2524,11 @@ if (callButton) {
     startVoiceCall();
   });
 }
+if (videoButton) {
+  videoButton.addEventListener("click", () => {
+    showToast("Coming soon...", "info");
+  });
+}
 if (profileCallBtn) {
   profileCallBtn.addEventListener("click", () => {
     startVoiceCall();
@@ -2539,6 +2664,7 @@ socket.on("register_success", (data) => {
     hasGreeted = true;
     showToast(`Welcome to Novyn, @${me}! ✨`, "success");
   }
+  ensurePushSubscription(false);
 });
 
 socket.on("username_unavailable", (data) => {
@@ -2660,7 +2786,7 @@ socket.on("private_message", (message) => {
       const preview = callPreview || String(message.text || "");
       showToast(`💬 ${senderName}: ${preview.slice(0, 40)}${preview.length > 40 ? "..." : ""}`);
       playIncomingPing();
-      notifyIncomingMessage(message, { senderName });
+      notifyIncomingMessage(message, { senderName, force: true });
     }
     return;
   }

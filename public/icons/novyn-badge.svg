@@ -1,44 +1,53 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true">
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
   <defs>
-    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0e1423"/>
-      <stop offset="100%" stop-color="#070b16"/>
-    </linearGradient>
-
-    <linearGradient id="blue" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7cb9fd"/>
-      <stop offset="40%" stop-color="#3b82f6"/>
-      <stop offset="100%" stop-color="#1d4ed8"/>
-    </linearGradient>
-
-    <radialGradient id="bgGlow" cx="38%" cy="32%" r="55%">
-      <stop offset="0%" stop-color="#1e3a6e" stop-opacity="0.45"/>
-      <stop offset="100%" stop-color="#070b16" stop-opacity="0"/>
+    <radialGradient id="bgB" cx="38%" cy="30%" r="80%">
+      <stop offset="0%"  stop-color="#f7f4ff"/>
+      <stop offset="55%" stop-color="#ede7ff"/>
+      <stop offset="100%" stop-color="#ddd4ff"/>
     </radialGradient>
-
-    <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
-      <feGaussianBlur stdDeviation="10" result="blur"/>
-      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    <radialGradient id="bgBlB" cx="50%" cy="50%" r="45%">
+      <stop offset="0%"  stop-color="#c4b0ff" stop-opacity="0.18"/>
+      <stop offset="100%" stop-color="#c4b0ff" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bgCtB" cx="20%" cy="15%" r="38%">
+      <stop offset="0%"  stop-color="#ffffff" stop-opacity="0.72"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gOB" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%"  stop-color="#b8a4f8"/>
+      <stop offset="100%" stop-color="#9b84f0"/>
+    </linearGradient>
+    <linearGradient id="gMB" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%"  stop-color="#8b6ef5"/>
+      <stop offset="100%" stop-color="#7055e8"/>
+    </linearGradient>
+    <linearGradient id="gIB" x1="20%" y1="10%" x2="80%" y2="90%">
+      <stop offset="0%"  stop-color="#6b4aee"/>
+      <stop offset="100%" stop-color="#5535d4"/>
+    </linearGradient>
+    <radialGradient id="gDB" cx="38%" cy="30%" r="70%">
+      <stop offset="0%"  stop-color="#7c5ff5"/>
+      <stop offset="100%" stop-color="#4527cc"/>
+    </radialGradient>
+    <filter id="fSymB" x="-35%" y="-35%" width="170%" height="170%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="2.2" result="b"/>
+      <feFlood flood-color="#7c5ff5" flood-opacity="0.22" result="c"/>
+      <feComposite in="c" in2="b" operator="in" result="g"/>
+      <feMerge><feMergeNode in="g"/><feMergeNode in="SourceGraphic"/></feMerge>
     </filter>
   </defs>
-
-  <!-- Full circular background for badge use -->
-  <circle cx="256" cy="256" r="256" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="256" fill="url(#bgGlow)"/>
-
-  <!-- N lettermark centered and scaled for circular badge -->
-  <g filter="url(#glow)">
-    <!-- Left bar -->
-    <rect x="108" y="130" width="68" height="252" rx="12" fill="url(#blue)"/>
-    <!-- Right bar -->
-    <rect x="336" y="130" width="68" height="252" rx="12" fill="url(#blue)"/>
-    <!-- Diagonal -->
-    <line 
-      x1="142" y1="130" 
-      x2="370" y2="382" 
-      stroke="url(#blue)" 
-      stroke-width="68" 
-      stroke-linecap="square"
-    />
+  <rect width="128" height="128" rx="26" fill="url(#bgB)"/>
+  <rect width="128" height="128" rx="26" fill="url(#bgBlB)"/>
+  <rect width="128" height="128" rx="26" fill="url(#bgCtB)"/>
+  <g filter="url(#fSymB)">
+    <circle cx="64" cy="64" r="42"  fill="none" stroke="url(#gOB)" stroke-width="2.1" opacity="0.75"/>
+    <circle cx="64" cy="64" r="28"  fill="none" stroke="url(#gMB)" stroke-width="2.6" opacity="0.88"/>
+    <circle cx="64" cy="64" r="15"  fill="none" stroke="url(#gIB)" stroke-width="3.2"/>
+    <circle cx="64" cy="64" r="8.6" fill="none" stroke="#7c5ff5"   stroke-width="1.8" opacity="0.30"/>
+    <circle cx="64" cy="64" r="5.3" fill="url(#gDB)"/>
   </g>
+  <rect width="128" height="128" rx="26" fill="none"
+        stroke="#a090e8" stroke-opacity="0.20" stroke-width="0.9"/>
+  <rect x="1" y="1" width="126" height="126" rx="25.2" fill="none"
+        stroke="white" stroke-opacity="0.55" stroke-width="0.8"/>
 </svg>

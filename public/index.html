@@ -194,7 +194,7 @@
             <span class="reply-preview-text" id="replyPreviewText">Replying to…</span>
             <button class="reply-cancel-btn" id="replyCancelBtn" aria-label="Cancel reply" type="button">✕</button>
           </div>
-          <form id="messageForm" class="input-toolbar" autocomplete="on">
+          <form id="messageForm" class="input-toolbar" autocomplete="off">
             <button type="button" class="tool-btn" aria-label="Emoji">
               <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
             </button>
@@ -203,7 +203,7 @@
               id="messageInput"
               name="chatMessage"
               placeholder="Type a message…"
-              autocomplete="on"
+              autocomplete="off"
               inputmode="text"
               enterkeyhint="send"
               autocapitalize="sentences"
@@ -311,9 +311,8 @@
 
         </div>
       </aside>
-
+      <div class="info-scrim" id="infoScrim" aria-hidden="true"></div>
     </div><!-- /.app -->
-    <div class="info-scrim" id="infoScrim" aria-hidden="true"></div>
 
     <!-- ══════════════════════════
          PROFILE MODAL

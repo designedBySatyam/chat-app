@@ -7,6 +7,7 @@ const express = require("express");
 const multer = require("multer");
 const { MongoClient } = require("mongodb");
 const { Server } = require("socket.io");
+const webpush = require("web-push");
 const { cloudinary, hasCloudinaryConfig } = require("./cloudinary");
 
 const app = express();
@@ -25,6 +26,30 @@ if (!process.env.UPLOAD_TOKEN_SECRET && !process.env.CLOUDINARY_API_SECRET) {
   console.warn(
     "UPLOAD_TOKEN_SECRET is not set. Using an insecure dev secret for upload links."
   );
+}
+
+const VAPID_SUBJECT = toDisplayName(process.env.VAPID_SUBJECT) || "mailto:admin@novyn.local";
+const VAPID_PUBLIC_KEY = toDisplayName(process.env.VAPID_PUBLIC_KEY);
+const VAPID_PRIVATE_KEY = toDisplayName(process.env.VAPID_PRIVATE_KEY);
+let vapidKeys = null;
+
+if (VAPID_PUBLIC_KEY && VAPID_PRIVATE_KEY) {
+  vapidKeys = { publicKey: VAPID_PUBLIC_KEY, privateKey: VAPID_PRIVATE_KEY };
+} else {
+  try {
+    vapidKeys = webpush.generateVAPIDKeys();
+    console.warn("VAPID keys are not set. Generated temporary keys for this session.");
+    console.warn(`VAPID_PUBLIC_KEY=${vapidKeys.publicKey}`);
+    console.warn(`VAPID_PRIVATE_KEY=${vapidKeys.privateKey}`);
+  } catch (err) {
+    console.warn("Failed to generate VAPID keys. Push notifications disabled.", err);
+    vapidKeys = null;
+  }
+}
+
+const pushEnabled = Boolean(vapidKeys?.publicKey && vapidKeys?.privateKey);
+if (pushEnabled) {
+  webpush.setVapidDetails(VAPID_SUBJECT, vapidKeys.publicKey, vapidKeys.privateKey);
 }
 
 function signUploadToken(filename) {
@@ -120,6 +145,14 @@ app.use(
   })
 );
 
+app.get("/api/push/public-key", (req, res) => {
+  if (!pushEnabled) {
+    res.status(503).json({ error: "Push notifications are not configured." });
+    return;
+  }
+  res.json({ publicKey: vapidKeys.publicKey });
+});
+
 app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
@@ -206,6 +239,7 @@ function createUserRecord(username) {
     friends: new Set(),
     requests: new Set(),
     unread: new Map(),
+    pushSubs: [],
     isRegistered: false,
     passwordSalt: "",
     passwordHash: "",
@@ -226,6 +260,7 @@ function serializeState() {
       friends: Array.from(user.friends),
       requests: Array.from(user.requests),
       unread: Array.from(user.unread.entries()),
+      pushSubs: Array.isArray(user.pushSubs) ? user.pushSubs : [],
       isRegistered: Boolean(user.isRegistered),
       passwordSalt: toDisplayName(user.passwordSalt),
       passwordHash: toDisplayName(user.passwordHash),
@@ -292,6 +327,92 @@ function schedulePersist() {
   }, 180);
 }
 
+function normalizePushSubscription(raw) {
+  const endpoint = toDisplayName(raw?.endpoint);
+  const keys = raw?.keys || {};
+  const p256dh = toDisplayName(keys.p256dh);
+  const auth = toDisplayName(keys.auth);
+  if (!endpoint || !p256dh || !auth) return null;
+  return {
+    endpoint,
+    keys: { p256dh, auth },
+    expirationTime:
+      raw?.expirationTime === null || raw?.expirationTime === undefined
+        ? null
+        : raw.expirationTime,
+  };
+}
+
+function upsertPushSubscription(user, raw) {
+  if (!user) return false;
+  const normalized = normalizePushSubscription(raw);
+  if (!normalized) return false;
+  if (!Array.isArray(user.pushSubs)) user.pushSubs = [];
+  const existingIndex = user.pushSubs.findIndex((sub) => sub.endpoint === normalized.endpoint);
+  if (existingIndex >= 0) {
+    user.pushSubs[existingIndex] = normalized;
+    return true;
+  }
+  user.pushSubs.push(normalized);
+  return true;
+}
+
+function removePushSubscription(user, endpoint) {
+  if (!user || !Array.isArray(user.pushSubs) || !endpoint) return false;
+  const before = user.pushSubs.length;
+  user.pushSubs = user.pushSubs.filter((sub) => sub.endpoint !== endpoint);
+  return user.pushSubs.length !== before;
+}
+
+function detachSubscriptionFromAll(endpoint, exceptKey) {
+  if (!endpoint) return false;
+  let changed = false;
+  for (const [key, user] of users.entries()) {
+    if (exceptKey && key === exceptKey) continue;
+    if (removePushSubscription(user, endpoint)) {
+      changed = true;
+    }
+  }
+  return changed;
+}
+
+function formatPushBody(text, fallback = "New message") {
+  const cleaned = String(text || "").replace(/\s+/g, " ").trim();
+  if (!cleaned) return fallback;
+  if (cleaned.length <= 120) return cleaned;
+  return `${cleaned.slice(0, 117)}...`;
+}
+
+async function sendPushToUser(userKey, payload) {
+  if (!pushEnabled || !userKey) return;
+  const user = users.get(userKey);
+  if (!user || !Array.isArray(user.pushSubs) || user.pushSubs.length === 0) return;
+
+  const body = JSON.stringify(payload || {});
+  const remaining = [];
+  let changed = false;
+
+  for (const sub of user.pushSubs) {
+    try {
+      await webpush.sendNotification(sub, body);
+      remaining.push(sub);
+    } catch (err) {
+      const status = err?.statusCode;
+      if (status === 404 || status === 410) {
+        changed = true;
+        continue;
+      }
+      console.warn("Push notification failed:", status || err?.message || err);
+      remaining.push(sub);
+    }
+  }
+
+  if (changed) {
+    user.pushSubs = remaining;
+    schedulePersist();
+  }
+}
+
 function hydrateMessage(rawMessage) {
   const message = rawMessage || {};
   const from = toDisplayName(message.from);
@@ -345,6 +466,9 @@ function applyLoadedState(parsed) {
     user.displayName = toDisplayName(entry.displayName);
     user.bio = toDisplayName(entry.bio);
     user.lastSeenAt = toDisplayName(entry.lastSeenAt);
+    user.pushSubs = Array.isArray(entry.pushSubs)
+      ? entry.pushSubs.filter((sub) => sub && sub.endpoint && sub.keys)
+      : [];
 
     for (const unreadEntry of entry.unread || []) {
       if (!Array.isArray(unreadEntry) || unreadEntry.length < 2) continue;
@@ -907,6 +1031,31 @@ io.on("connection", (socket) => {
     schedulePersist();
   });
 
+  socket.on("push_subscribe", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey || !pushEnabled) return;
+    const subscription = payload?.subscription || payload;
+    const endpoint = toDisplayName(subscription?.endpoint);
+    if (!endpoint) return;
+    const detached = detachSubscriptionFromAll(endpoint, userKey);
+    const user = users.get(userKey);
+    const updated = upsertPushSubscription(user, subscription);
+    if (updated || detached) {
+      schedulePersist();
+    }
+  });
+
+  socket.on("push_unsubscribe", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const endpoint = toDisplayName(payload?.endpoint);
+    if (!endpoint) return;
+    const user = users.get(userKey);
+    if (removePushSubscription(user, endpoint)) {
+      schedulePersist();
+    }
+  });
+
   socket.on("add_friend", (rawFriendName) => {
     const userKey = socket.data.userKey;
     if (!userKey) return;
@@ -1181,6 +1330,19 @@ io.on("connection", (socket) => {
 
     if (recipientSocketId) {
       io.to(recipientSocketId).emit("private_message", message);
+    }
+
+    if (!recipientSocketId) {
+      const bodyText = formatPushBody(text);
+      void sendPushToUser(toKey, {
+        type: "message",
+        title: `New message from ${me.username}`,
+        body: bodyText,
+        tag: `msg-${userKey}`,
+        url: `/?source=push&chat=${encodeURIComponent(me.username)}`,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/novyn-badge.svg",
+      });
     }
 
     emitMessageStatus(message);
