@@ -12,12 +12,16 @@
     t === 'light' ? root.classList.add('light') : root.classList.remove('light');
     try { localStorage.setItem(STORE, t); } catch(e) {}
   }
+  function toggleTheme() {
+    applyTheme(root.classList.contains('light') ? 'dark' : 'light');
+  }
   var saved = 'dark';
   try { saved = localStorage.getItem(STORE) || 'dark'; } catch(e) {}
   applyTheme(saved);
-  btn && btn.addEventListener('click', function () {
-    applyTheme(root.classList.contains('light') ? 'dark' : 'light');
-  });
+  btn && btn.addEventListener('click', toggleTheme);
+  window._novynToggleTheme = toggleTheme;
+  window._novynSetTheme = applyTheme;
+  window._novynGetTheme = function () { return root.classList.contains('light') ? 'light' : 'dark'; };
 })();
 
 /* ── Logout ─────────────────────────────────────────────────────────────────── */
@@ -29,6 +33,229 @@
     try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
     window.location.replace('/');
   });
+})();
+
+/* ─── Settings Menu + Account Actions ───────────────────────────────────────── */
+(function () {
+  var settingsBtn = document.getElementById('settingsBtn');
+  var settingsMenu = document.getElementById('settingsMenu');
+  if (!settingsBtn || !settingsMenu) return;
+
+  var usernameModal = document.getElementById('usernameModal');
+  var passwordModal = document.getElementById('passwordModal');
+  var usernameCancel = document.getElementById('usernameCancel');
+  var usernameSave = document.getElementById('usernameSave');
+  var usernameCurrentPassword = document.getElementById('usernameCurrentPassword');
+  var usernameNew = document.getElementById('usernameNew');
+  var passwordCancel = document.getElementById('passwordCancel');
+  var passwordSave = document.getElementById('passwordSave');
+  var passwordCurrent = document.getElementById('passwordCurrent');
+  var passwordNew = document.getElementById('passwordNew');
+  var passwordConfirm = document.getElementById('passwordConfirm');
+
+  var pendingUsername = false;
+  var pendingPassword = false;
+  var lastPasswordValue = '';
+
+  function toast(msg, type) {
+    if (window._novynToast) {
+      window._novynToast(msg, type);
+    } else {
+      alert(msg);
+    }
+  }
+
+  function openMenu() {
+    settingsMenu.classList.remove('hidden');
+    settingsBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeMenu() {
+    settingsMenu.classList.add('hidden');
+    settingsBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function showModal(modal) {
+    if (!modal) return;
+    modal.style.display = 'flex';
+  }
+  function hideModal(modal) {
+    if (!modal) return;
+    modal.style.display = 'none';
+  }
+
+  function resetUsernameForm() {
+    pendingUsername = false;
+    if (usernameSave) usernameSave.disabled = false;
+    if (usernameCurrentPassword) usernameCurrentPassword.value = '';
+    if (usernameNew) usernameNew.value = '';
+  }
+  function resetPasswordForm() {
+    pendingPassword = false;
+    if (passwordSave) passwordSave.disabled = false;
+    if (passwordCurrent) passwordCurrent.value = '';
+    if (passwordNew) passwordNew.value = '';
+    if (passwordConfirm) passwordConfirm.value = '';
+    lastPasswordValue = '';
+  }
+
+  settingsBtn.addEventListener('click', function (e) {
+    e.stopPropagation();
+    settingsMenu.classList.contains('hidden') ? openMenu() : closeMenu();
+  });
+
+  document.addEventListener('click', function (e) {
+    if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
+      closeMenu();
+    }
+  });
+
+  settingsMenu.addEventListener('click', function (e) {
+    var actionBtn = e.target.closest('[data-settings-action]');
+    if (!actionBtn) return;
+    var action = actionBtn.dataset.settingsAction;
+    closeMenu();
+
+    if (action === 'profile') {
+      if (window._novynOpenProfileModal) {
+        window._novynOpenProfileModal();
+      } else {
+        var openBtn = document.querySelector('[data-profile-open]') || document.getElementById('profileBtn');
+        if (openBtn) openBtn.click();
+      }
+      return;
+    }
+    if (action === 'theme') {
+      if (window._novynToggleTheme) window._novynToggleTheme();
+      return;
+    }
+    if (action === 'username') {
+      showModal(usernameModal);
+      return;
+    }
+    if (action === 'password') {
+      showModal(passwordModal);
+      return;
+    }
+    if (action === 'logout') {
+      try { sessionStorage.removeItem('novyn-session'); } catch (e) {}
+      window.location.replace('/');
+    }
+  });
+
+  usernameCancel && usernameCancel.addEventListener('click', function () {
+    hideModal(usernameModal);
+    resetUsernameForm();
+  });
+  passwordCancel && passwordCancel.addEventListener('click', function () {
+    hideModal(passwordModal);
+    resetPasswordForm();
+  });
+
+  if (usernameModal) {
+    var back = usernameModal.querySelector('.confirm-modal-backdrop');
+    back && back.addEventListener('click', function () {
+      hideModal(usernameModal);
+      resetUsernameForm();
+    });
+  }
+  if (passwordModal) {
+    var back2 = passwordModal.querySelector('.confirm-modal-backdrop');
+    back2 && back2.addEventListener('click', function () {
+      hideModal(passwordModal);
+      resetPasswordForm();
+    });
+  }
+
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Escape') return;
+    if (usernameModal && usernameModal.style.display !== 'none') {
+      hideModal(usernameModal);
+      resetUsernameForm();
+    }
+    if (passwordModal && passwordModal.style.display !== 'none') {
+      hideModal(passwordModal);
+      resetPasswordForm();
+    }
+  });
+
+  usernameSave && usernameSave.addEventListener('click', function () {
+    if (pendingUsername) return;
+    var current = usernameCurrentPassword ? usernameCurrentPassword.value : '';
+    var next = usernameNew ? usernameNew.value.trim() : '';
+    if (!current || !next) {
+      toast('Enter your current password and a new username.', 'error');
+      return;
+    }
+    if (!window._novynSocket) {
+      toast('Realtime connection not available.', 'error');
+      return;
+    }
+    pendingUsername = true;
+    usernameSave.disabled = true;
+    window._novynSocket.emit('change_username', {
+      currentPassword: current,
+      newUsername: next
+    });
+  });
+
+  passwordSave && passwordSave.addEventListener('click', function () {
+    if (pendingPassword) return;
+    var current = passwordCurrent ? passwordCurrent.value : '';
+    var next = passwordNew ? passwordNew.value : '';
+    var confirm = passwordConfirm ? passwordConfirm.value : '';
+    if (!current || !next || !confirm) {
+      toast('Fill in all password fields.', 'error');
+      return;
+    }
+    if (next.length < 4) {
+      toast('Password must be at least 4 characters.', 'error');
+      return;
+    }
+    if (next !== confirm) {
+      toast('New passwords do not match.', 'error');
+      return;
+    }
+    if (!window._novynSocket) {
+      toast('Realtime connection not available.', 'error');
+      return;
+    }
+    pendingPassword = true;
+    passwordSave.disabled = true;
+    lastPasswordValue = next;
+    window._novynSocket.emit('change_password', {
+      currentPassword: current,
+      newPassword: next
+    });
+  });
+
+  function bindSocketHandlers() {
+    var socket = window._novynSocket;
+    if (!socket || bindSocketHandlers._bound) return;
+    bindSocketHandlers._bound = true;
+
+    socket.on('username_changed', function () {
+      hideModal(usernameModal);
+      resetUsernameForm();
+    });
+    socket.on('password_changed', function () {
+      if (lastPasswordValue && window._novynUpdateSession) {
+        window._novynUpdateSession(null, lastPasswordValue);
+      }
+      hideModal(passwordModal);
+      resetPasswordForm();
+    });
+    socket.on('username_change_failed', function (data) {
+      pendingUsername = false;
+      if (usernameSave) usernameSave.disabled = false;
+      toast(data && data.message ? data.message : 'Could not update username.', 'error');
+    });
+    socket.on('password_change_failed', function (data) {
+      pendingPassword = false;
+      if (passwordSave) passwordSave.disabled = false;
+      toast(data && data.message ? data.message : 'Could not update password.', 'error');
+    });
+  }
+  bindSocketHandlers();
 })();
 
 /* ── Mobile panel switching ─────────────────────────────────────────────────── */
@@ -554,6 +781,8 @@
     hideModal();
   });
 
-  // Expose avatar utils for app.js
+  // Expose helpers for settings + app.js
   window._novynAvatarUtils = { getAvatarById: getAvatarById, applyAvatarToEl: applyAvatarToEl, AVATARS: AVATARS };
+  window._novynOpenProfileModal = showModal;
+  window._novynCloseProfileModal = hideModal;
 })();

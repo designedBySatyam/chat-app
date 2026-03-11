@@ -32,9 +32,6 @@
               <button class="icon-btn mob-close-btn" id="mobSidebarClose" aria-label="Close menu" title="Close menu">
                 <svg viewBox="0 0 24 24"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
               </button>
-              <button class="icon-btn" id="themeToggle" aria-label="Toggle theme" title="Toggle theme">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-              </button>
               <button class="icon-btn" id="addFriendOpenBtn" aria-label="Add friend" title="Add friend">
                 <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
               </button>
@@ -81,6 +78,7 @@
           <input id="friendInput" type="text" maxlength="24" placeholder="Username to add…" autocomplete="off" required />
           <button type="submit" class="add-inline-btn">Add</button>
         </form>
+        <div id="friendSuggestions" class="friend-suggestions hidden" aria-live="polite"></div>
 
         <!-- Friend requests -->
         <ul id="requestList" class="chat-list" aria-live="polite" aria-label="Friend requests">
@@ -100,19 +98,26 @@
         <div class="sidebar-footer me-row">
           <div class="me-avatar-wrap">
             <div class="sidebar-me-av" id="meAvatarFooter">S</div>
-            <button class="profile-avatar-btn" id="profileBtn" data-profile-open type="button" title="Edit profile" aria-label="Edit profile">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
-            </button>
           </div>
           <div class="sidebar-me-info">
             <div class="my-name" id="meNameFooter">Satyam</div>
             <div class="my-status online-status">● Active now</div>
           </div>
-          <button class="icon-btn logout-btn" id="logoutBtn" title="Log out" aria-label="Log out">
-            <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        <div class="settings-wrap">
+          <button class="icon-btn settings-btn" id="settingsBtn" title="Settings" aria-label="Settings" aria-expanded="false">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82V22a2 2 0 1 1-4 0v-.12a1.65 1.65 0 0 0-1.33-1.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33H2a2 2 0 1 1 0-4h.12a1.65 1.65 0 0 0 1.6-1.33 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6c.38 0 .74-.13 1-.6a1.65 1.65 0 0 0 .33-1.82V2a2 2 0 1 1 4 0v.12a1.65 1.65 0 0 0 1.33 1.6 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c0 .38.13.74.6 1a1.65 1.65 0 0 0 1.82.33H22a2 2 0 1 1 0 4h-.12a1.65 1.65 0 0 0-1.6 1.33z"/></svg>
           </button>
+          <div id="settingsMenu" class="settings-menu hidden" role="menu" aria-label="Settings">
+            <button class="settings-item" type="button" data-settings-action="profile">Edit profile</button>
+            <button class="settings-item" type="button" data-settings-action="theme">Toggle theme</button>
+            <button class="settings-item" type="button" data-settings-action="username">Change username</button>
+            <button class="settings-item" type="button" data-settings-action="password">Change password</button>
+            <div class="settings-divider" aria-hidden="true"></div>
+            <button class="settings-item danger" type="button" data-settings-action="logout">Logout</button>
+          </div>
         </div>
-      </aside>
+      </div>
+    </aside>
 
       <!-- ══════════════════════════
            MAIN CHAT WINDOW
@@ -320,7 +325,7 @@
     <div id="profileModal" class="profile-modal" style="display:none;" role="dialog" aria-modal="true" aria-label="Edit Profile">
       <div class="profile-modal-backdrop"></div>
       <div class="profile-modal-card">
-        <div class="profile-modal-header">
+        <div class="profile-modal-hero">
           <div class="profile-modal-heading">
             <p class="profile-modal-eyebrow">PROFILE</p>
             <h3>Edit Profile</h3>
@@ -330,46 +335,68 @@
             <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
         </div>
-        <div class="profile-identity">
-          <div class="profile-avatar-preview">
-            <div class="profile-avatar-big" id="profileAvatarBig">?</div>
-            <p class="profile-avatar-hint">Choose an avatar</p>
-          </div>
-          <div class="profile-identity-copy">
-            <p class="profile-identity-title">Public identity</p>
-            <p class="profile-identity-desc">Shown in chats, replies, and friend list cards.</p>
-          </div>
-        </div>
-        <div class="profile-avatar-grid-wrap">
-          <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
-        </div>
-        <div class="profile-fields">
-          <div class="profile-field">
-            <label for="profileDisplayName">Display Name</label>
-            <input id="profileDisplayName" type="text" maxlength="32" placeholder="How friends see you" autocomplete="off" />
-          </div>
-          <div class="profile-field">
-            <label for="profileBio">Bio / Status</label>
-            <input id="profileBio" type="text" maxlength="120" placeholder="What are you up to?" autocomplete="off" />
-          </div>
-          <div class="profile-field-row">
-            <div class="profile-field">
-              <label for="profileAge">Age</label>
-              <input id="profileAge" type="number" min="1" max="120" placeholder="Age" />
+        <div class="profile-modal-body">
+          <section class="profile-identity">
+            <div class="profile-avatar-preview">
+              <div class="profile-avatar-big" id="profileAvatarBig">?</div>
+              <p class="profile-avatar-hint">Choose an avatar</p>
             </div>
-            <div class="profile-field">
-              <label for="profileGender">Gender</label>
-              <select id="profileGender">
-                <option value="">Prefer not to say</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Non-binary">Non-binary</option>
-                <option value="Other">Other</option>
-              </select>
+            <div class="profile-identity-copy">
+              <p class="profile-identity-title">Public identity</p>
+              <p class="profile-identity-desc">Shown in chats, replies, and friend list cards.</p>
             </div>
-          </div>
+          </section>
+          <section class="profile-avatar-section">
+            <div class="profile-section-header">
+              <div>
+                <p class="profile-section-kicker">Avatar Library</p>
+                <h4 class="profile-section-title">Choose your look</h4>
+              </div>
+              <span class="profile-section-hint">Tap to select</span>
+            </div>
+            <div class="profile-avatar-grid-wrap">
+              <div class="profile-avatar-grid" id="profileAvatarGrid"></div>
+            </div>
+          </section>
+          <section class="profile-fields-section">
+            <div class="profile-section-header">
+              <div>
+                <p class="profile-section-kicker">Details</p>
+                <h4 class="profile-section-title">How friends see you</h4>
+              </div>
+              <span class="profile-section-hint">Visible to friends</span>
+            </div>
+            <div class="profile-fields">
+              <div class="profile-field">
+                <label for="profileDisplayName">Display Name</label>
+                <input id="profileDisplayName" type="text" maxlength="32" placeholder="How friends see you" autocomplete="off" />
+              </div>
+              <div class="profile-field">
+                <label for="profileBio">Bio / Status</label>
+                <input id="profileBio" type="text" maxlength="120" placeholder="What are you up to?" autocomplete="off" />
+              </div>
+              <div class="profile-field-row">
+                <div class="profile-field">
+                  <label for="profileAge">Age</label>
+                  <input id="profileAge" type="number" min="1" max="120" placeholder="Age" />
+                </div>
+                <div class="profile-field">
+                  <label for="profileGender">Gender</label>
+                  <select id="profileGender">
+                    <option value="">Prefer not to say</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Non-binary">Non-binary</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </section>
         </div>
-        <button class="profile-save-btn" id="profileSaveBtn">Save Profile</button>
+        <div class="profile-modal-actions">
+          <button class="profile-save-btn" id="profileSaveBtn">Save Profile</button>
+        </div>
       </div>
     </div>
 
@@ -400,7 +427,14 @@
       <div class="call-modal-backdrop"></div>
       <div class="call-modal-card">
         <div class="call-header">
-          <p class="call-badge">VOICE CALL</p>
+          <p class="call-badge" id="callBadge">VOICE CALL</p>
+          <button class="icon-btn call-minimize-btn" id="callMinimizeBtn" type="button" aria-label="Minimize call" title="Minimize call">
+            <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+        </div>
+        <div class="call-video-stage">
+          <video id="callRemoteVideo" class="call-video remote hidden" autoplay playsinline></video>
+          <video id="callLocalVideo" class="call-video local hidden" autoplay playsinline muted></video>
         </div>
         <div class="call-avatar" id="callAvatar">?</div>
         <div class="call-peer" id="callPeerName">Friend</div>
@@ -417,6 +451,14 @@
             <svg viewBox="0 0 24 24"><path d="M11 5 6 9H3v6h3l5 4z"/><path d="M16 9a3 3 0 010 6"/><path d="M19 6a6 6 0 010 12"/></svg>
             <span>Speaker</span>
           </button>
+          <button class="call-icon-btn" id="callCameraBtn" type="button" aria-pressed="true" title="Camera">
+            <svg viewBox="0 0 24 24"><rect x="3" y="6" width="14" height="12" rx="2"/><path d="m21 8-4 3v2l4 3V8z"/></svg>
+            <span>Camera</span>
+          </button>
+          <button class="call-icon-btn" id="callFlipBtn" type="button" title="Switch camera">
+            <svg viewBox="0 0 24 24"><path d="M3 7h4l2-2h6l2 2h4"/><path d="M3 17h4l2 2h6l2-2h4"/><polyline points="8 12 6 10 4 12"/><polyline points="16 12 18 14 20 12"/></svg>
+            <span>Flip</span>
+          </button>
         </div>
         <div class="call-controls">
           <button class="call-control-btn accept" id="callAcceptBtn" type="button">Answer</button>
@@ -424,6 +466,65 @@
           <button class="call-control-btn hangup" id="callHangupBtn" type="button">End call</button>
         </div>
       </div>
+    </div>
+
+    <!-- Change Username Modal -->
+    <div id="usernameModal" class="confirm-modal" style="display:none;" role="dialog" aria-modal="true" aria-label="Change username">
+      <div class="confirm-modal-backdrop"></div>
+      <div class="confirm-modal-card settings-modal-card">
+        <div class="confirm-modal-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+        </div>
+        <h3>Change username</h3>
+        <p class="confirm-modal-desc">Your friends will see the new @handle immediately.</p>
+        <div class="settings-form">
+          <label for="usernameCurrentPassword">Current password</label>
+          <input id="usernameCurrentPassword" type="password" placeholder="Enter current password" autocomplete="current-password" />
+          <label for="usernameNew">New username</label>
+          <input id="usernameNew" type="text" maxlength="24" placeholder="New username" autocomplete="off" />
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="usernameCancel">Cancel</button>
+          <button class="settings-confirm" id="usernameSave">Update</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Change Password Modal -->
+    <div id="passwordModal" class="confirm-modal" style="display:none;" role="dialog" aria-modal="true" aria-label="Change password">
+      <div class="confirm-modal-backdrop"></div>
+      <div class="confirm-modal-card settings-modal-card">
+        <div class="confirm-modal-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+        </div>
+        <h3>Change password</h3>
+        <p class="confirm-modal-desc">Use at least 4 characters for a secure passphrase.</p>
+        <div class="settings-form">
+          <label for="passwordCurrent">Current password</label>
+          <input id="passwordCurrent" type="password" placeholder="Enter current password" autocomplete="current-password" />
+          <label for="passwordNew">New password</label>
+          <input id="passwordNew" type="password" minlength="4" placeholder="New password" autocomplete="new-password" />
+          <label for="passwordConfirm">Confirm new password</label>
+          <input id="passwordConfirm" type="password" minlength="4" placeholder="Confirm new password" autocomplete="new-password" />
+        </div>
+        <div class="confirm-modal-btns">
+          <button class="confirm-modal-cancel" id="passwordCancel">Cancel</button>
+          <button class="settings-confirm" id="passwordSave">Update</button>
+        </div>
+      </div>
+    </div>
+    <div id="callMini" class="call-mini hidden" role="button" aria-label="Return to call">
+      <div class="call-mini-avatar" id="callMiniAvatar">?</div>
+      <div class="call-mini-info">
+        <div class="call-mini-name" id="callMiniName">Friend</div>
+        <div class="call-mini-status" id="callMiniStatus">Calling...</div>
+      </div>
+      <div class="call-mini-time hidden" id="callMiniTime">00:00</div>
+      <button class="call-mini-end" id="callMiniEnd" type="button" aria-label="End call">End</button>
     </div>
     <audio id="callRemoteAudio" class="call-remote-audio" autoplay playsinline></audio>
 

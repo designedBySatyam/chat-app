@@ -598,6 +598,47 @@ function buildUsernameSuggestions(requestedName, count = 5) {
   return suggestions;
 }
 
+function buildFriendSearchSuggestions(query, me, limit = 6) {
+  const needle = normalizeName(query).replace(/[^a-z0-9_]/g, "");
+  if (!needle) return [];
+  const meKey = me ? normalizeName(me.username) : "";
+  const results = [];
+
+  users.forEach((user) => {
+    if (!user?.isRegistered) return;
+    const name = user.username || "";
+    const key = normalizeName(name);
+    if (!key || key === meKey) return;
+    if (!key.includes(needle)) return;
+    results.push(name);
+  });
+
+  results.sort((a, b) => {
+    const aKey = normalizeName(a);
+    const bKey = normalizeName(b);
+    const aStarts = aKey.startsWith(needle);
+    const bStarts = bKey.startsWith(needle);
+    if (aStarts !== bStarts) return aStarts ? -1 : 1;
+    return a.localeCompare(b);
+  });
+
+  const filtered = [];
+  for (const name of results) {
+    const key = normalizeName(name);
+    if (!key || !meKey) {
+      filtered.push(name);
+      continue;
+    }
+    const friend = users.get(key);
+    if (me.friends.has(key)) continue;
+    if (me.requests.has(key)) continue;
+    if (friend?.requests?.has(meKey)) continue;
+    filtered.push(name);
+    if (filtered.length >= limit) break;
+  }
+  return filtered.slice(0, limit);
+}
+
 function getConversationKey(userA, userB) {
   const a = normalizeName(userA);
   const b = normalizeName(userB);
@@ -616,6 +657,115 @@ function clearCallPair(userKey) {
   activeCalls.delete(userKey);
   if (peerKey) activeCalls.delete(peerKey);
   return peerKey;
+}
+
+function applyUsernameChange(userKey, newUsername) {
+  const oldKey = normalizeName(userKey);
+  const user = users.get(oldKey);
+  if (!user) {
+    return { ok: false, message: "User not found." };
+  }
+
+  const desired = toDisplayName(newUsername);
+  if (!desired) {
+    return { ok: false, message: "Username is required." };
+  }
+
+  const newKey = normalizeName(desired);
+  if (!newKey) {
+    return { ok: false, message: "Invalid username." };
+  }
+
+  const oldUsername = user.username || oldKey;
+  const sameKey = newKey === oldKey;
+  if (sameKey && desired === oldUsername) {
+    return { ok: false, message: "That's already your username." };
+  }
+
+  if (!sameKey) {
+    const existing = users.get(newKey);
+    if (existing) {
+      return { ok: false, message: "That username is already taken." };
+    }
+  }
+
+  if (activeCalls.has(oldKey)) {
+    return { ok: false, message: "End your call before changing username." };
+  }
+
+  if (!sameKey) {
+    users.delete(oldKey);
+    users.set(newKey, user);
+  }
+
+  user.username = desired;
+  user.isRegistered = true;
+
+  if (!sameKey && onlineUsers.has(oldKey)) {
+    const socketId = onlineUsers.get(oldKey);
+    onlineUsers.delete(oldKey);
+    onlineUsers.set(newKey, socketId);
+  }
+
+  if (!sameKey) {
+    users.forEach((other) => {
+      if (!other || other === user) return;
+      if (other.friends.has(oldKey)) {
+        other.friends.delete(oldKey);
+        other.friends.add(newKey);
+      }
+      if (other.requests.has(oldKey)) {
+        other.requests.delete(oldKey);
+        other.requests.add(newKey);
+      }
+      if (other.unread.has(oldKey)) {
+        const count = other.unread.get(oldKey);
+        other.unread.delete(oldKey);
+        other.unread.set(newKey, count);
+      }
+    });
+  }
+
+  const nextConversations = new Map();
+  conversations.forEach((messages, key) => {
+    const [a, b] = key.split("::");
+    const containsOld = a === oldKey || b === oldKey;
+    const newA = a === oldKey ? newKey : a;
+    const newB = b === oldKey ? newKey : b;
+    const nextKey = containsOld ? getConversationKey(newA, newB) : key;
+
+    if (containsOld) {
+      for (const msg of messages) {
+        if (normalizeName(msg.fromKey) === oldKey) {
+          msg.fromKey = newKey;
+          msg.from = desired;
+        }
+        if (normalizeName(msg.toKey) === oldKey) {
+          msg.toKey = newKey;
+          msg.to = desired;
+        }
+        if (msg.replyTo && normalizeName(msg.replyTo.from) === oldKey) {
+          msg.replyTo.from = desired;
+        }
+      }
+    }
+
+    if (nextConversations.has(nextKey)) {
+      nextConversations.set(nextKey, nextConversations.get(nextKey).concat(messages));
+    } else {
+      nextConversations.set(nextKey, messages);
+    }
+  });
+  conversations.clear();
+  nextConversations.forEach((value, key) => conversations.set(key, value));
+
+  return {
+    ok: true,
+    oldKey,
+    newKey,
+    oldUsername,
+    newUsername: desired,
+  };
 }
 
 function getRetentionCutoffMs() {
@@ -1056,6 +1206,20 @@ io.on("connection", (socket) => {
     }
   });
 
+  socket.on("friend_search", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const me = users.get(userKey);
+    if (!me) return;
+    const query = toDisplayName(payload?.query || payload);
+    if (!query) {
+      socket.emit("friend_suggestions", { query: "", suggestions: [] });
+      return;
+    }
+    const suggestions = buildFriendSearchSuggestions(query, me, 8);
+    socket.emit("friend_suggestions", { query, suggestions });
+  });
+
   socket.on("add_friend", (rawFriendName) => {
     const userKey = socket.data.userKey;
     if (!userKey) return;
@@ -1125,6 +1289,105 @@ io.on("connection", (socket) => {
     }
 
     schedulePersist();
+  });
+
+  socket.on("change_username", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const user = users.get(userKey);
+    if (!user) {
+      socket.emit("username_change_failed", { message: "User not found." });
+      return;
+    }
+
+    const currentPassword = toDisplayName(payload?.currentPassword || payload?.password);
+    const desired = toDisplayName(payload?.newUsername);
+
+    if (!currentPassword || !verifyPassword(currentPassword, user.passwordSalt, user.passwordHash)) {
+      socket.emit("username_change_failed", { message: "Incorrect password." });
+      return;
+    }
+
+    const result = applyUsernameChange(userKey, desired);
+    if (!result.ok) {
+      socket.emit("username_change_failed", { message: result.message || "Unable to change username." });
+      return;
+    }
+
+    socket.data.userKey = result.newKey;
+
+    // Update any sockets that had the old key as active chat
+    onlineUsers.forEach((socketId) => {
+      const friendSocket = io.sockets.sockets.get(socketId);
+      if (friendSocket?.data?.activeChatWith === result.oldKey) {
+        friendSocket.data.activeChatWith = result.newKey;
+      }
+    });
+
+    // Notify the user first
+    socket.emit("username_changed", {
+      oldUsername: result.oldUsername,
+      newUsername: result.newUsername,
+    });
+
+    const impacted = new Set();
+    users.forEach((other, otherKey) => {
+      if (!other || otherKey === result.newKey) return;
+      if (other.friends.has(result.newKey) || other.requests.has(result.newKey) || other.unread.has(result.newKey)) {
+        impacted.add(otherKey);
+      }
+    });
+
+    impacted.forEach((key) => {
+      const socketId = onlineUsers.get(key);
+      if (socketId) {
+        io.to(socketId).emit("friend_username_changed", {
+          oldUsername: result.oldUsername,
+          newUsername: result.newUsername,
+        });
+      }
+    });
+
+    impacted.forEach((key) => {
+      emitFriendList(key);
+      emitRequests(key);
+    });
+
+    emitFriendList(result.newKey);
+    emitRequests(result.newKey);
+    emitStatusToFriends(result.newKey, true);
+    schedulePersist();
+  });
+
+  socket.on("change_password", (payload) => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const user = users.get(userKey);
+    if (!user) {
+      socket.emit("password_change_failed", { message: "User not found." });
+      return;
+    }
+
+    const currentPassword = toDisplayName(payload?.currentPassword || payload?.password);
+    const nextPassword = toDisplayName(payload?.newPassword);
+
+    if (!currentPassword || !verifyPassword(currentPassword, user.passwordSalt, user.passwordHash)) {
+      socket.emit("password_change_failed", { message: "Incorrect password." });
+      return;
+    }
+    if (!nextPassword || nextPassword.length < MIN_PASSWORD_LENGTH) {
+      socket.emit("password_change_failed", {
+        message: `Use at least ${MIN_PASSWORD_LENGTH} characters in password.`,
+      });
+      return;
+    }
+
+    const secret = createPasswordSecret(nextPassword);
+    user.passwordSalt = secret.passwordSalt;
+    user.passwordHash = secret.passwordHash;
+    schedulePersist();
+
+    socket.emit("password_changed");
   });
 
   socket.on("accept_friend", (rawFriendName) => {
