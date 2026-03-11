@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#070b14" />
+    <meta name="theme-color" content="#06040f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Novyn</title>
@@ -272,15 +272,23 @@
               <div class="info-stat"><div class="info-stat-num" id="statMessages">—</div><div class="info-stat-label">Messages</div></div>
               <div class="info-stat"><div class="info-stat-num" id="statMedia">—</div><div class="info-stat-label">Media</div></div>
             </div>
-            <div class="info-stat-row">
-              <div class="info-stat"><div class="info-stat-num" id="statLinks">—</div><div class="info-stat-label">Links</div></div>
-              <div class="info-stat"><div class="info-stat-num" id="statFiles">—</div><div class="info-stat-label">Files</div></div>
-            </div>
+          <div class="info-stat-row">
+            <div class="info-stat"><div class="info-stat-num" id="statLinks">—</div><div class="info-stat-label">Links</div></div>
+            <div class="info-stat"><div class="info-stat-num" id="statFiles">—</div><div class="info-stat-label">Files</div></div>
           </div>
+        </div>
 
-          <!-- Shared Media -->
-          <div class="info-section">
-            <div class="info-section-title">Shared Media</div>
+        <!-- Call Log -->
+        <div class="info-section">
+          <div class="info-section-title">Call Log</div>
+          <div class="call-log-list" id="callLogList">
+            <div class="call-log-empty">No calls yet</div>
+          </div>
+        </div>
+
+        <!-- Shared Media -->
+        <div class="info-section">
+          <div class="info-section-title">Shared Media</div>
             <div class="media-grid">
               <div class="media-thumb" style="background:linear-gradient(135deg,#1a3a6a,#2f8ef4)">🏙️</div>
               <div class="media-thumb" style="background:linear-gradient(135deg,#1a2a4a,#164080)">💻</div>
@@ -397,7 +405,10 @@
         </div>
         <div class="call-avatar" id="callAvatar">?</div>
         <div class="call-peer" id="callPeerName">Friend</div>
-        <div class="call-status" id="callStatusText">Calling...</div>
+        <div class="call-status-row">
+          <div class="call-status" id="callStatusText">Calling...</div>
+          <div class="call-timer hidden" id="callDuration" aria-live="polite">00:00</div>
+        </div>
         <div class="call-actions">
           <button class="call-icon-btn" id="callMuteBtn" type="button" aria-pressed="false" title="Mute microphone">
             <svg viewBox="0 0 24 24"><path d="M12 1a3 3 0 00-3 3v7a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v1a7 7 0 01-14 0v-1"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>

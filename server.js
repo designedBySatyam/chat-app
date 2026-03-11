@@ -102,7 +102,7 @@ app.post("/upload-voice", upload.single("voice"), async (req, res) => {
 
 const io = new Server(server, {
   cors: {
-    origin: "*",
+    origin: process.env.ALLOWED_ORIGIN ? process.env.ALLOWED_ORIGIN.split(",") : "*",
   },
 });
 

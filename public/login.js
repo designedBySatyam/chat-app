@@ -113,7 +113,7 @@ function showUsernameSuggestions(requested, suggestions) {
 function setLoginLoading(isLoading) {
   if (!loginBtn) return;
   loginBtn.disabled = isLoading;
-  if (loginBtnText) loginBtnText.textContent = isLoading ? "Entering..." : "Enter Novyn";
+  if (loginBtnText) loginBtnText.textContent = isLoading ? "Entering..." : "Sign In";
   if (loginBtnArrow) loginBtnArrow.classList.toggle("hidden", isLoading);
   if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
 }

@@ -485,6 +485,55 @@ button:disabled { cursor: not-allowed; opacity: 0.32; filter: grayscale(0.4); tr
   box-shadow: var(--s2);
 }
 
+/* Update prompt */
+.update-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10010;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--r3);
+  background: var(--panel-bg);
+  border: 1px solid var(--border-2);
+  box-shadow: var(--s2);
+  color: var(--t1);
+  backdrop-filter: blur(18px);
+  max-width: min(92vw, 420px);
+}
+.update-toast-text { font-size: 0.82rem; line-height: 1.5; }
+.update-toast-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.update-toast-btn {
+  border-radius: var(--r2);
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.update-toast-btn.primary {
+  background: var(--g-brand);
+  color: #fff;
+  border-color: rgba(245,166,35,0.3);
+}
+.update-toast-btn.secondary {
+  background: var(--surface-2);
+  color: var(--t2);
+  border-color: var(--border-2);
+}
+.update-toast-btn.secondary:hover { background: var(--surface-h); color: var(--t1); }
+@media (max-width: 600px) {
+  .update-toast { left: 16px; right: 16px; transform: none; }
+}
+
 /* ══ Chat layout ══════════════════════════════════════ */
 .chat-layout {
   display: grid;

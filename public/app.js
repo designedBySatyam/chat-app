@@ -1,6 +1,6 @@
 const socketAvailable = typeof io === "function";
 const SOCKET_URL = window.location.origin.replace(/\/$/, "");
-const socket = socketAvailable ? io(SOCKET_URL) : { on() {}, emit() {} };
+const socket = socketAvailable ? io(SOCKET_URL) : { on() {}, emit() {}, connected: false };
 
 const loginCard         = document.getElementById("loginCard");
 const chatLayout        = document.getElementById("chatLayout");
@@ -12,8 +12,9 @@ const usernameSuggestions = document.getElementById("usernameSuggestions");
 const meName            = document.getElementById("meName");
 const addFriendForm     = document.getElementById("addFriendForm");
 const friendInput       = document.getElementById("friendInput");
-const requestList       = document.getElementById("requestList");
-const friendList        = document.getElementById("friendList");
+const chatLists         = document.querySelectorAll(".chat-list");
+const requestList       = document.getElementById("requestList") || chatLists[0] || null;
+const friendList        = document.getElementById("friendList") || chatLists[1] || null;
 const sidebarSearch     = document.getElementById("sidebarSearch");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
 const activeFriendPresenceLine = document.getElementById("activeFriendPresenceLine");
@@ -53,18 +54,20 @@ const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
 const messageSearchCount = document.getElementById("messageSearchCount");
 const callButton       = document.querySelector(".chat-header-actions .call-btn");
+const profileCallBtn   = document.querySelector(".profile-action-btn[data-action='call']");
+const profileVideoBtn  = document.querySelector(".profile-action-btn[data-action='video']");
 const callModal        = document.getElementById("callModal");
 const callAvatar       = document.getElementById("callAvatar");
 const callPeerName     = document.getElementById("callPeerName");
 const callStatusText   = document.getElementById("callStatusText");
+const callDurationText = document.getElementById("callDuration");
 const callMuteBtn      = document.getElementById("callMuteBtn");
 const callSpeakerBtn   = document.getElementById("callSpeakerBtn");
 const callAcceptBtn    = document.getElementById("callAcceptBtn");
 const callRejectBtn    = document.getElementById("callRejectBtn");
 const callHangupBtn    = document.getElementById("callHangupBtn");
 const callRemoteAudio  = document.getElementById("callRemoteAudio");
-const profileCallBtn   = document.querySelector('.profile-action-btn[data-action="call"]');
-const profileVideoBtn  = document.querySelector('.profile-action-btn[data-action="video"]');
+const callLogList      = document.getElementById("callLogList");
 const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
 const mobBackBtn        = document.getElementById("mobBackBtn");
@@ -77,6 +80,7 @@ const INCOMING_CALLS_ENABLED = true;
 let me           = "";
 let activeFriend = "";
 let friends      = [];
+let hasGreeted   = false;
 let requests     = [];
 let replyTo      = null;
 let searchPanelOpen = false;
@@ -95,6 +99,7 @@ const scrollState = {
 };
 const EMPTY_CONVERSATION_HINT = "Choose a conversation to start messaging.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
+const CALL_LOG_PREFIX = "__call_log__:";
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -338,8 +343,10 @@ function notifyIncomingMessage(message, options = {}) {
     const sender = findFriend(message.from);
     return sender ? getFriendDisplayName(sender) : message.from;
   })();
+  const callPreview = formatCallLogPreview(message.text, false);
+  const bodyText = callPreview || formatNotificationPreview(message.text);
   showSystemNotification(`New message from ${senderName}`, {
-    body: formatNotificationPreview(message.text),
+    body: formatNotificationPreview(bodyText),
     tag: `msg-${normalizeName(message.from) || "unknown"}`,
   });
 }
@@ -404,6 +411,7 @@ function setNetworkState(label, state) {
 // ─── Toast ────────────────────────────────────────────────────────────────────
 
 function showToast(message, type = "info") {
+  if (!toast) return;
   toast.textContent = message;
   toast.classList.remove("hidden", "error", "success");
   if (type === "error")   toast.classList.add("error");
@@ -463,6 +471,71 @@ function formatAudioTime(seconds) {
   const mins = Math.floor(safe / 60);
   const secs = Math.floor(safe % 60);
   return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function formatCallDuration(totalSeconds) {
+  const safe = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
+  const hours = Math.floor(safe / 3600);
+  const minutes = Math.floor((safe % 3600) / 60);
+  const seconds = safe % 60;
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function buildCallLogPayload(status, direction, durationSeconds) {
+  const safeStatus = String(status || "").trim() || "ended";
+  const safeDirection = String(direction || "").trim() || "outgoing";
+  const safeDuration = Number.isFinite(durationSeconds) ? Math.max(0, Math.floor(durationSeconds)) : 0;
+  return `${CALL_LOG_PREFIX}${safeStatus}|${safeDirection}|${safeDuration}`;
+}
+
+function parseCallLogPayload(rawText) {
+  const text = String(rawText || "");
+  if (!text.startsWith(CALL_LOG_PREFIX)) return null;
+  const body = text.slice(CALL_LOG_PREFIX.length);
+  const [status, direction, duration] = body.split("|");
+  if (!status) return null;
+  const seconds = Number.isFinite(Number(duration)) ? Math.max(0, Math.floor(Number(duration))) : 0;
+  return {
+    status: String(status || "").trim() || "ended",
+    direction: String(direction || "").trim() || "outgoing",
+    duration: seconds,
+  };
+}
+
+function invertCallDirection(direction) {
+  if (direction === "outgoing") return "incoming";
+  if (direction === "incoming") return "outgoing";
+  return direction || "outgoing";
+}
+
+function getCallLogDisplay(log, fromMe) {
+  const direction = fromMe ? log.direction : invertCallDirection(log.direction);
+  const title = direction === "incoming" ? "Incoming call" : "Outgoing call";
+  let subtitle = "Call";
+  if (log.status === "ended") {
+    subtitle = log.duration > 0 ? `Call ended · ${formatCallDuration(log.duration)}` : "Call ended";
+  } else if (log.status === "cancelled") {
+    subtitle = "Call cancelled";
+  } else if (log.status === "declined") {
+    subtitle = "Call declined";
+  } else if (log.status === "missed") {
+    subtitle = "Missed call";
+  } else if (log.status === "busy") {
+    subtitle = "User busy";
+  } else if (log.status === "unavailable") {
+    subtitle = "User unavailable";
+  }
+  return { title, subtitle, direction };
+}
+
+function formatCallLogPreview(rawText, fromMe) {
+  const log = parseCallLogPayload(rawText);
+  if (!log) return "";
+  const display = getCallLogDisplay(log, fromMe);
+  return `📞 ${display.subtitle}`;
 }
 
 function formatLastSeen(iso) {
@@ -551,6 +624,55 @@ function syncProfilePanelStats() {
   profileStatLinks.textContent = String(linkCount);
   profileStatMedia.textContent = String(mediaCount);
   profileStatFiles.textContent = String(fileCount);
+}
+
+function syncCallLogPanel() {
+  if (!callLogList) return;
+  if (!activeFriend) {
+    callLogList.innerHTML = '<div class="call-log-empty">No calls yet</div>';
+    return;
+  }
+  const messages = Array.isArray(conversationMessages) ? conversationMessages : [];
+  const logs = messages.filter((msg) => parseCallLogPayload(msg?.text));
+  if (!logs.length) {
+    callLogList.innerHTML = '<div class="call-log-empty">No calls yet</div>';
+    return;
+  }
+
+  callLogList.innerHTML = "";
+  logs
+    .slice(-5)
+    .reverse()
+    .forEach((message) => {
+      const log = parseCallLogPayload(message.text);
+      if (!log) return;
+      const fromMe = normalizeName(message.from) === normalizeName(me);
+      const display = getCallLogDisplay(log, fromMe);
+
+      const item = document.createElement("div");
+      item.className = `call-log-item ${display.direction === "incoming" ? "incoming" : "outgoing"}`;
+
+      const icon = document.createElement("div");
+      icon.className = "call-log-item-icon";
+      icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81 19.79 19.79 0 01.22 1.2 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16h-.08z"/></svg>`;
+
+      const content = document.createElement("div");
+      content.className = "call-log-item-content";
+      const title = document.createElement("div");
+      title.className = "call-log-item-title";
+      title.textContent = display.title;
+      const subtitle = document.createElement("div");
+      subtitle.className = "call-log-item-subtitle";
+      subtitle.textContent = display.subtitle;
+      content.append(title, subtitle);
+
+      const time = document.createElement("div");
+      time.className = "call-log-item-time";
+      time.textContent = prettyTime(message.timestamp);
+
+      item.append(icon, content, time);
+      callLogList.appendChild(item);
+    });
 }
 
 function syncProfilePanel(friend) {
@@ -1055,6 +1177,9 @@ function renderIncomingMessageMeta(metaEl, message) {
 function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
   const isDeleted = Boolean(message.deletedAt);
+  const rawText = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
+  const callLog = !isDeleted ? parseCallLogPayload(rawText) : null;
+  const displayText = callLog ? formatCallLogPreview(rawText, mine) : rawText;
   const dateKey = getLocalDateKey(message.timestamp);
   const fullTimestamp = formatFullTimestamp(message.timestamp);
 
@@ -1066,15 +1191,18 @@ function buildMessageElement(message, skipAnimation = false) {
   row.dataset.tsFull = fullTimestamp;
   if (fullTimestamp) row.title = fullTimestamp;
   row.dataset.messageFrom = message.from;
-  row.dataset.messageText = isDeleted ? DELETED_MESSAGE_TEXT : message.text;
+  row.dataset.messageText = displayText || "";
   row.dataset.searchText = [
     row.dataset.messageFrom,
-    row.dataset.messageText,
+    displayText || "",
     message.replyTo?.text || "",
     message.replyTo?.from || "",
   ].join(" ");
   if (isDeleted) {
     row.classList.add("message-deleted");
+  }
+  if (callLog) {
+    row.classList.add("call-log");
   }
 
   if (message.reactions && Object.keys(message.reactions).length) {
@@ -1085,16 +1213,17 @@ function buildMessageElement(message, skipAnimation = false) {
     }
   }
 
-  const meta        = document.createElement("span");
-  meta.className    = "message-meta";
-  if (mine) {
-    row.dataset.timeLabel = prettyTime(message.timestamp);
-    renderMineMessageMeta(meta, row.dataset.timeLabel, getMessageStatusKey(message));
-  } else {
-    renderIncomingMessageMeta(meta, message);
+  if (!callLog) {
+    const meta        = document.createElement("span");
+    meta.className    = "message-meta";
+    if (mine) {
+      row.dataset.timeLabel = prettyTime(message.timestamp);
+      renderMineMessageMeta(meta, row.dataset.timeLabel, getMessageStatusKey(message));
+    } else {
+      renderIncomingMessageMeta(meta, message);
+    }
+    row.append(meta);
   }
-
-  row.append(meta);
 
   if (message.replyTo && !isDeleted) {
     const rq      = document.createElement("div");
@@ -1126,10 +1255,35 @@ function buildMessageElement(message, skipAnimation = false) {
     body.textContent = DELETED_MESSAGE_TEXT;
     body.classList.add("message-body-deleted");
   } else {
-    const rawText = String(message.text || "").trim();
-    const isAudio = /^\/uploads\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(rawText) ||
-      /^https?:\/\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(rawText);
-    if (isAudio) {
+    const trimmedText = String(message.text || "").trim();
+    const isAudio = /^\/uploads\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(trimmedText) ||
+      /^https?:\/\/.+\.(webm|wav|mp3|ogg)(\?.*)?$/i.test(trimmedText);
+    if (callLog) {
+      const log = getCallLogDisplay(callLog, mine);
+      const card = document.createElement("div");
+      card.className = `call-log-card ${log.direction === "incoming" ? "incoming" : "outgoing"}`;
+
+      const icon = document.createElement("div");
+      icon.className = "call-log-icon";
+      icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81 19.79 19.79 0 01.22 1.2 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16h-.08z"/></svg>`;
+
+      const content = document.createElement("div");
+      content.className = "call-log-content";
+      const title = document.createElement("div");
+      title.className = "call-log-title";
+      title.textContent = log.title;
+      const subtitle = document.createElement("div");
+      subtitle.className = "call-log-subtitle";
+      subtitle.textContent = log.subtitle;
+      content.append(title, subtitle);
+
+      const time = document.createElement("div");
+      time.className = "call-log-time";
+      time.textContent = prettyTime(message.timestamp);
+
+      card.append(icon, content, time);
+      body.appendChild(card);
+    } else if (isAudio) {
       const audioCard = document.createElement("div");
       audioCard.className = "audio-card";
 
@@ -1155,7 +1309,7 @@ function buildMessageElement(message, skipAnimation = false) {
       const audio = document.createElement("audio");
       audio.className = "audio-el";
       audio.preload = "metadata";
-      audio.src = rawText;
+      audio.src = trimmedText;
       audio.setAttribute("playsinline", "");
 
       const syncUI = () => {
@@ -1230,6 +1384,7 @@ function appendMessage(message, skipAnimation = false, withSeparator = true) {
   }
 
   syncProfilePanelStats();
+  syncCallLogPanel();
 }
 
 function updateStats() {
@@ -1268,6 +1423,7 @@ function renderMessages(messages) {
     renderMessagesEmptyState("No messages yet. Say hello!");
     applyMessageSearch();
     syncProfilePanelStats();
+    syncCallLogPanel();
     return;
   }
 
@@ -1281,6 +1437,7 @@ function renderMessages(messages) {
   if (window._novynFAB) window._novynFAB.reset();
   applyMessageSearch();
   syncProfilePanelStats();
+  syncCallLogPanel();
 }
 
 function markConversationMessageDeleted(messageId, deletedAt, replacementText = DELETED_MESSAGE_TEXT) {
@@ -1320,6 +1477,7 @@ function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_T
 // ─── Requests ────────────────────────────────────────────────────────────────
 
 function renderRequests() {
+  if (!requestList) return;
   requestList.innerHTML = "";
   updateStats();
 
@@ -1365,13 +1523,16 @@ function friendPreview(friend) {
     if (bio) return bio;
     return friend.online ? "Online now" : "No messages yet";
   }
-  if (normalizeName(friend.lastFrom) === normalizeName(me)) {
-    return `You: ${friend.lastMessage}`;
+  const fromMe = normalizeName(friend.lastFrom) === normalizeName(me);
+  const callPreview = formatCallLogPreview(friend.lastMessage, fromMe);
+  const previewText = callPreview || friend.lastMessage;
+  if (fromMe) {
+    return `You: ${previewText}`;
   }
   if (friend.lastFrom) {
-    return `${getFriendDisplayName(friend)}: ${friend.lastMessage}`;
+    return `${getFriendDisplayName(friend)}: ${previewText}`;
   }
-  return friend.lastMessage;
+  return previewText;
 }
 
 function findFriend(username) {
@@ -1529,10 +1690,13 @@ function setActiveFriend(username) {
   renderFriends();
 
   // Focus input after selecting friend (better UX, especially on desktop)
-  setTimeout(() => messageInput.focus(), 50);
+  if (messageInput) {
+    setTimeout(() => messageInput.focus(), 50);
+  }
 }
 
 function renderFriends() {
+  if (!friendList) return;
   friendList.innerHTML = "";
   updateStats();
 
@@ -1622,7 +1786,7 @@ const loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") 
 function setLoginLoading(isLoading) {
   if (!loginBtn) return;
   loginBtn.disabled = isLoading;
-  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering…" : "Enter Novyn";
+  if (loginBtnText)    loginBtnText.textContent = isLoading ? "Entering…" : "Sign In";
   if (loginBtnArrow)   loginBtnArrow.classList.toggle("hidden", isLoading);
   if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
 }
@@ -2306,15 +2470,17 @@ document.addEventListener("keydown", (e) => {
 });
 
 // Stop typing indicator when input loses focus
-messageInput.addEventListener("blur", () => stopLocalTyping());
+if (messageInput) {
+  messageInput.addEventListener("blur", () => stopLocalTyping());
 
-// Allow Shift+Enter to send (optional quality-of-life)
-messageInput.addEventListener("keydown", (e) => {
-  if (e.key === "Enter" && !e.shiftKey && !messageInput.disabled) {
-    e.preventDefault();
-    sendActiveMessage();
-  }
-});
+  // Allow Shift+Enter to send (optional quality-of-life)
+  messageInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey && !messageInput.disabled) {
+      e.preventDefault();
+      sendActiveMessage();
+    }
+  });
+}
 
 // ─── Socket events ────────────────────────────────────────────────────────────
 
@@ -2369,7 +2535,10 @@ socket.on("register_success", (data) => {
   ) {
     setActiveFriend(previousActiveFriend);
   }
-  showToast(`Welcome to Novyn, @${me}! ✨`, "success");
+  if (!hasGreeted) {
+    hasGreeted = true;
+    showToast(`Welcome to Novyn, @${me}! ✨`, "success");
+  }
 });
 
 socket.on("username_unavailable", (data) => {
@@ -2392,7 +2561,7 @@ socket.on("auth_failed", (data) => {
     return;
   }
   if (Array.isArray(suggestions) && suggestions.length) {
-    showUsernameSuggestions(usernameInput.value.trim() || "This username", suggestions);
+    showUsernameSuggestions(usernameInput ? usernameInput.value.trim() || "This username" : "This username", suggestions);
   }
   setLoginLoading(false);
   showToast(message, "error");
@@ -2487,7 +2656,8 @@ socket.on("private_message", (message) => {
     if (isIncoming) {
       const sender = findFriend(message.from);
       const senderName = sender ? getFriendDisplayName(sender) : message.from;
-      const preview = String(message.text || "");
+      const callPreview = formatCallLogPreview(message.text, false);
+      const preview = callPreview || String(message.text || "");
       showToast(`💬 ${senderName}: ${preview.slice(0, 40)}${preview.length > 40 ? "..." : ""}`);
       playIncomingPing();
       notifyIncomingMessage(message, { senderName });
