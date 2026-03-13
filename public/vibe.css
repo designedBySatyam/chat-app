@@ -3059,6 +3059,10 @@ body.info-open .info-scrim {
     height: 100vh;
     height: 100dvh;
   }
+  .sidebar-head,
+  .chat-header {
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  }
   .sidebar, .chat-window {
     position: absolute;
     top: 0; left: 0; right: 0; bottom: 0;
@@ -3089,6 +3093,14 @@ body.info-open .info-scrim {
     transform: none;
     bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     white-space: normal;
+  }
+  button,
+  .icon-btn,
+  .tool-btn,
+  .send-btn,
+  .friend-btn,
+  .chat-item {
+    touch-action: manipulation;
   }
 }
 
@@ -3183,6 +3195,28 @@ body.info-open .info-scrim {
   body.mobile-theme .chat-input-area {
     border-top-color: rgba(37,99,235,0.18);
   }
+}
+
+body.mobile-lite .sidebar,
+body.mobile-lite .chat-window,
+body.mobile-lite .info-panel,
+body.mobile-lite .chat-header,
+body.mobile-lite .sidebar-head,
+body.mobile-lite .chat-input-area,
+body.mobile-lite .settings-menu,
+body.mobile-lite .reaction-picker,
+body.mobile-lite .toast,
+body.mobile-lite .update-toast,
+body.mobile-lite .call-modal-backdrop {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+
+body.mobile-lite * {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
 }
 
 .mob-back-btn { display: none; }

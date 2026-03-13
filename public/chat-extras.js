@@ -395,23 +395,45 @@
   var backBtn = document.getElementById('mobBackBtn');
   function isMobile() { return window.innerWidth <= BP; }
   function isThemeMobile() { return window.innerWidth <= THEME_BP; }
+  function isLowPower() {
+    var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var lowMemory = typeof navigator !== 'undefined' && navigator.deviceMemory && navigator.deviceMemory <= 4;
+    var saveData = typeof navigator !== 'undefined' && navigator.connection && navigator.connection.saveData;
+    return !!(reduceMotion || lowMemory || saveData);
+  }
   function syncMobileTheme() {
     document.body.classList.toggle('mobile-theme', isThemeMobile());
   }
-  function showPanel(panel) {
+  function syncMobilePerf() {
+    document.body.classList.toggle('mobile-lite', isMobile() || isLowPower());
+  }
+  function replaceState(view) {
+    if (!isMobile()) return;
+    if (history.state && history.state.novynView === view) return;
+    history.replaceState({ novynView: view }, '');
+  }
+  function pushState(view) {
+    if (!isMobile()) return;
+    if (history.state && history.state.novynView === view) return;
+    history.pushState({ novynView: view }, '');
+  }
+  function showPanel(panel, opts) {
     if (!sidebar || !chat) return;
+    var silent = opts && opts.silent;
     if (panel === 'chat') {
       sidebar.setAttribute('data-mob-hidden', 'true');
       chat.removeAttribute('data-mob-hidden');
       document.body.classList.add('mob-chat-open');
       document.body.classList.remove('mob-list-open');
       if (backBtn) backBtn.setAttribute('data-visible', 'true');
+      if (!silent) pushState('chat');
     } else {
       chat.setAttribute('data-mob-hidden', 'true');
       sidebar.removeAttribute('data-mob-hidden');
       document.body.classList.remove('mob-chat-open');
       document.body.classList.add('mob-list-open');
       if (backBtn) backBtn.removeAttribute('data-visible');
+      if (!silent) replaceState('friends');
     }
   }
   window._novynPanels = {
@@ -425,6 +447,35 @@
   backBtn && backBtn.addEventListener('click', function () {
     if (isMobile()) showPanel('friends');
   });
+  window.addEventListener('popstate', function (e) {
+    if (!isMobile()) return;
+    var view = e.state && e.state.novynView;
+    if (view === 'chat') {
+      showPanel('chat', { silent: true });
+      return;
+    }
+    showPanel('friends', { silent: true });
+    document.body.classList.remove('info-open');
+  });
+  (function bindNativeBack() {
+    var cap = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.App;
+    if (!cap || !cap.addListener) return;
+    cap.addListener('backButton', function (data) {
+      if (document.body.classList.contains('info-open')) {
+        document.body.classList.remove('info-open');
+        return;
+      }
+      if (isMobile() && document.body.classList.contains('mob-chat-open')) {
+        showPanel('friends', { silent: true });
+        return;
+      }
+      if (data && data.canGoBack) {
+        window.history.back();
+      } else if (cap.exitApp) {
+        cap.exitApp();
+      }
+    });
+  })();
   window.addEventListener('resize', function () {
     if (!isMobile()) {
       if (sidebar) sidebar.removeAttribute('data-mob-hidden');
@@ -433,11 +484,14 @@
       document.body.classList.remove('mob-list-open');
     }
     syncMobileTheme();
+    syncMobilePerf();
   });
   if (isMobile()) {
     document.body.classList.add('mob-list-open');
+    replaceState('friends');
   }
   syncMobileTheme();
+  syncMobilePerf();
   new MutationObserver(function () {
     var layout = document.getElementById('chatLayout');
     if (layout && !layout.classList.contains('hidden') && isMobile()) showPanel('friends');
