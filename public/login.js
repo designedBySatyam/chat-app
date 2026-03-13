@@ -30,6 +30,8 @@ const forgotLink = document.getElementById("forgotLink");
 const authPanel = document.querySelector(".auth-right-inner");
 const themeToggle = document.getElementById("themeToggle");
 const THEME_KEY = "novyn-theme";
+const themeMedia = window.matchMedia ? window.matchMedia("(prefers-color-scheme: light)") : null;
+let currentThemeMode = "dark";
 
 let pendingCredentials = null;
 let pendingProfile = null;
@@ -54,8 +56,17 @@ function storeTheme(mode) {
   }
 }
 
+function resolveTheme(mode) {
+  if (mode === "system") {
+    return themeMedia && themeMedia.matches ? "light" : "dark";
+  }
+  return mode;
+}
+
 function applyTheme(mode) {
-  const isLight = mode === "light";
+  currentThemeMode = mode;
+  const resolved = resolveTheme(mode);
+  const isLight = resolved === "light";
   document.documentElement.classList.toggle("light", isLight);
   if (themeToggle) {
     themeToggle.setAttribute("aria-pressed", isLight ? "true" : "false");
@@ -63,15 +74,27 @@ function applyTheme(mode) {
 }
 
 const savedTheme = readStoredTheme();
-if (savedTheme === "light" || savedTheme === "dark") {
+if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
   applyTheme(savedTheme);
 } else {
-  applyTheme("dark");
+  applyTheme("system");
+}
+
+if (themeMedia) {
+  const handler = () => {
+    if (currentThemeMode === "system") applyTheme("system");
+  };
+  if (typeof themeMedia.addEventListener === "function") {
+    themeMedia.addEventListener("change", handler);
+  } else if (typeof themeMedia.addListener === "function") {
+    themeMedia.addListener(handler);
+  }
 }
 
 if (themeToggle) {
   themeToggle.addEventListener("click", () => {
-    const next = document.documentElement.classList.contains("light") ? "dark" : "light";
+    const resolved = resolveTheme(currentThemeMode);
+    const next = resolved === "light" ? "dark" : "light";
     applyTheme(next);
     storeTheme(next);
   });

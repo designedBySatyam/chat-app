@@ -49,10 +49,20 @@ const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
 const sendButton        = messageForm ? messageForm.querySelector('button[type="submit"]') : null;
 const voiceBtn          = document.getElementById("voiceBtn");
+const voiceStatus       = document.getElementById("voiceStatus");
+const voiceTimer        = document.getElementById("voiceTimer");
+const voiceLabel        = document.getElementById("voiceLabel");
+const voiceCancelBtn    = document.getElementById("voiceCancelBtn");
+const voiceStopBtn      = document.getElementById("voiceStopBtn");
+const voiceProgress     = document.getElementById("voiceProgress");
+const voiceProgressBar  = document.getElementById("voiceProgressBar");
+const voiceProgressText = document.getElementById("voiceProgressText");
 const messageSearchToggle = document.getElementById("messageSearchToggle");
 const messageSearchPanel = document.getElementById("messageSearchPanel");
 const messageSearchInput = document.getElementById("messageSearchInput");
 const messageSearchClear = document.getElementById("messageSearchClear");
+const messageSearchPrev  = document.getElementById("messageSearchPrev");
+const messageSearchNext  = document.getElementById("messageSearchNext");
 const messageSearchCount = document.getElementById("messageSearchCount");
 const callButton       = document.querySelector(".chat-header-actions .call-btn");
 const videoButton      = document.querySelector(".chat-header-actions .video-btn");
@@ -99,6 +109,11 @@ let requests     = [];
 let replyTo      = null;
 let searchPanelOpen = false;
 let friendSearchQuery = "";
+const searchState = {
+  hits: [],
+  index: -1,
+  query: "",
+};
 const friendSuggestState = {
   timer: null,
   lastQuery: "",
@@ -106,6 +121,15 @@ const friendSuggestState = {
 let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
 let conversationMessages = [];
 let pendingUnreadJump = { friendKey: "", count: 0 };
+let messageWindowStart = 0;
+let messageWindowEnd = 0;
+let loadOlderBtn = null;
+const MAX_VISIBLE_MESSAGES = 200;
+const MESSAGE_WINDOW_PAGE = 80;
+const pendingQueue = [];
+const pendingByTempId = new Map();
+let networkStateLabel = "";
+let networkStateMode = "";
 window._novynProfile = myProfile;
 
 const localTyping = {
@@ -258,6 +282,7 @@ function formatFullTimestamp(iso) {
 }
 
 function getMessageStatusKey(message) {
+  if (message?.pending) return "pending";
   if (message?.seenAt) return "seen";
   if (message?.deliveredAt) return "delivered";
   return "sent";
@@ -496,12 +521,19 @@ function isNearBottom() {
 
 // ─── Network state ────────────────────────────────────────────────────────────
 
-function setNetworkState(label, state) {
+function renderNetworkState() {
   if (!connectionLabel || !networkPill) return;
-  connectionLabel.textContent = label;
+  const queuedSuffix = pendingQueue.length ? ` · ${pendingQueue.length} queued` : "";
+  connectionLabel.textContent = `${networkStateLabel || ""}${queuedSuffix}`;
   networkPill.classList.remove("connected", "offline");
-  if (state === "connected") networkPill.classList.add("connected");
-  if (state === "offline")   networkPill.classList.add("offline");
+  if (networkStateMode === "connected") networkPill.classList.add("connected");
+  if (networkStateMode === "offline")   networkPill.classList.add("offline");
+}
+
+function setNetworkState(label, state) {
+  networkStateLabel = label;
+  networkStateMode = state;
+  renderNetworkState();
 }
 
 // ─── Toast ────────────────────────────────────────────────────────────────────
@@ -597,6 +629,17 @@ function prettyTime(iso) {
   return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function formatFriendTime(iso) {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) {
+    return prettyTime(iso);
+  }
+  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+}
+
 function formatAudioTime(seconds) {
   const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
   const mins = Math.floor(safe / 60);
@@ -646,21 +689,28 @@ function getCallLogDisplay(log, fromMe) {
   const direction = fromMe ? log.direction : invertCallDirection(log.direction);
   const title = direction === "incoming" ? "Incoming call" : "Outgoing call";
   let subtitle = "Call";
+  let statusLabel = "Ended";
   const isIncoming = direction === "incoming";
   if (log.status === "ended") {
     subtitle = log.duration > 0 ? `Call ended · ${formatCallDuration(log.duration)}` : "Call ended";
+    statusLabel = "Ended";
   } else if (log.status === "cancelled") {
     subtitle = isIncoming ? "Missed call" : "Call cancelled";
+    statusLabel = "Cancelled";
   } else if (log.status === "declined") {
     subtitle = isIncoming ? "Missed call" : "Call declined";
+    statusLabel = "Declined";
   } else if (log.status === "missed") {
     subtitle = "Missed call";
+    statusLabel = "Missed";
   } else if (log.status === "busy") {
     subtitle = isIncoming ? "Missed call" : "User busy";
+    statusLabel = "Busy";
   } else if (log.status === "unavailable") {
     subtitle = isIncoming ? "Missed call" : "User unavailable";
+    statusLabel = "Unavailable";
   }
-  return { title, subtitle, direction };
+  return { title, subtitle, direction, status: log.status, statusLabel };
 }
 
 function formatCallLogPreview(rawText, fromMe) {
@@ -796,13 +846,27 @@ function syncCallLogPanel() {
       const subtitle = document.createElement("div");
       subtitle.className = "call-log-item-subtitle";
       subtitle.textContent = display.subtitle;
-      content.append(title, subtitle);
+      const status = document.createElement("div");
+      status.className = "call-status-pill";
+      status.textContent = display.statusLabel || "Call";
+      content.append(title, subtitle, status);
 
       const time = document.createElement("div");
       time.className = "call-log-item-time";
       time.textContent = prettyTime(message.timestamp);
 
-      item.append(icon, content, time);
+      const actionBtn = document.createElement("button");
+      actionBtn.type = "button";
+      actionBtn.className = "call-log-action";
+      actionBtn.title = "Call back";
+      actionBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.09 9.81 19.79 19.79 0 01.22 1.2 2 2 0 012.22 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16h-.08z"/></svg>`;
+      actionBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        startVoiceCall();
+      });
+
+      item.addEventListener("click", () => startVoiceCall());
+      item.append(icon, content, time, actionBtn);
       callLogList.appendChild(item);
     });
 }
@@ -998,10 +1062,100 @@ function resetMessageSearch() {
   applyMessageSearch();
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function highlightText(text, query) {
+  if (!query) return escapeHtml(text);
+  const source = String(text || "");
+  const lower = source.toLowerCase();
+  const needle = String(query || "").toLowerCase();
+  if (!needle) return escapeHtml(source);
+  let result = "";
+  let start = 0;
+  while (true) {
+    const idx = lower.indexOf(needle, start);
+    if (idx === -1) {
+      result += escapeHtml(source.slice(start));
+      break;
+    }
+    result += escapeHtml(source.slice(start, idx));
+    result += `<mark class="msg-highlight">${escapeHtml(source.slice(idx, idx + needle.length))}</mark>`;
+    start = idx + needle.length;
+  }
+  return result;
+}
+
+function updateMessageHighlight(row, query) {
+  if (!row) return;
+  if (row.classList.contains("call-log") || row.classList.contains("message-deleted")) return;
+  const body = row.querySelector(".message-body");
+  if (!body || body.querySelector(".audio-card")) return;
+  const raw = body.dataset.rawText || row.dataset.messageText || "";
+  if (!body.dataset.rawText) body.dataset.rawText = raw;
+  if (!query) {
+    body.textContent = raw;
+    return;
+  }
+  body.innerHTML = highlightText(raw, query);
+}
+
+function clearSearchFocus() {
+  for (const hit of searchState.hits) {
+    hit.classList.remove("search-focus");
+  }
+}
+
+function setSearchFocus(index, scroll = true) {
+  if (!searchState.hits.length) return;
+  clearSearchFocus();
+  const safeIndex = Math.max(0, Math.min(searchState.hits.length - 1, index));
+  searchState.index = safeIndex;
+  const target = searchState.hits[safeIndex];
+  if (target) {
+    target.classList.add("search-focus");
+    if (scroll) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+}
+
+function jumpSearchResult(delta) {
+  if (!searchState.hits.length) return;
+  const next = searchState.index + delta;
+  if (next < 0) {
+    setSearchFocus(searchState.hits.length - 1);
+  } else if (next >= searchState.hits.length) {
+    setSearchFocus(0);
+  } else {
+    setSearchFocus(next);
+  }
+}
+
+function updateSearchNavButtons() {
+  const hasHits = searchState.hits.length > 0;
+  if (messageSearchPrev) messageSearchPrev.disabled = !hasHits;
+  if (messageSearchNext) messageSearchNext.disabled = !hasHits;
+}
+
 function applyMessageSearch() {
   const query = getSearchQuery();
   const messageNodes = Array.from(messagesEl.querySelectorAll("article.message"));
   let visibleCount = 0;
+  const previousQuery = searchState.query;
+
+  searchState.hits = [];
+  searchState.query = query;
+  if (previousQuery !== query) {
+    searchState.index = -1;
+    clearSearchFocus();
+  }
 
   for (const row of messageNodes) {
     const searchable = normalizeSearchText(
@@ -1009,7 +1163,11 @@ function applyMessageSearch() {
     );
     const match = !query || searchable.includes(query);
     row.classList.toggle("search-hidden", !match);
-    if (match) visibleCount += 1;
+    if (match) {
+      visibleCount += 1;
+      if (query) searchState.hits.push(row);
+    }
+    updateMessageHighlight(row, query && match ? query : "");
   }
 
   const separatorNodes = Array.from(messagesEl.querySelectorAll(".message-date-separator"));
@@ -1037,31 +1195,52 @@ function applyMessageSearch() {
     }
   }
 
+  updateSearchNavButtons();
   syncMessageSearchUi();
 }
 
 // ─── Reply UI ─────────────────────────────────────────────────────────────────
 
 const replyBanner = (() => {
-  const banner     = document.createElement("div");
-  banner.id        = "replyBanner";
-  banner.className = "reply-banner hidden";
-  const preview    = document.createElement("span");
-  preview.className = "reply-preview-text";
-  banner.appendChild(preview);
-  const closeBtn   = document.createElement("button");
-  closeBtn.type    = "button";
-  closeBtn.className = "reply-cancel-btn";
-  closeBtn.innerHTML = "✕";
+  const existing = document.getElementById("replyBanner");
+  const banner = existing || document.createElement("div");
+  if (!existing) {
+    banner.id = "replyBanner";
+    banner.className = "reply-banner hidden";
+  }
+  let preview = banner.querySelector(".reply-preview-text");
+  if (!preview) {
+    preview = document.createElement("span");
+    preview.className = "reply-preview-text";
+    banner.appendChild(preview);
+  }
+  let closeBtn = banner.querySelector(".reply-cancel-btn");
+  if (!closeBtn) {
+    closeBtn = document.createElement("button");
+    closeBtn.type = "button";
+    closeBtn.className = "reply-cancel-btn";
+    closeBtn.innerHTML = "✕";
+    banner.appendChild(closeBtn);
+  }
   closeBtn.addEventListener("click", clearReply);
-  banner.appendChild(closeBtn);
-  messageForm.parentNode.insertBefore(banner, messageForm);
+  banner.addEventListener("click", (e) => {
+    if (e.target.closest(".reply-cancel-btn")) return;
+    if (replyTo && replyTo.id) focusMessageById(replyTo.id);
+  });
+  if (!existing && messageForm && messageForm.parentNode) {
+    messageForm.parentNode.insertBefore(banner, messageForm);
+  }
   return { banner, preview };
 })();
 
 function setReply(message) {
   replyTo = { id: message.id, from: message.from, text: message.text };
-  replyBanner.preview.textContent = `Replying to ${message.from}: ${message.text.slice(0, 60)}${message.text.length > 60 ? "…" : ""}`;
+  const friend = findFriend(message.from);
+  const fromLabel = friend ? getFriendDisplayName(friend) : message.from;
+  const raw = String(message.text || "").replace(/\s+/g, " ").trim();
+  const snippet = raw.length > 70 ? `${raw.slice(0, 70)}…` : raw;
+  replyBanner.preview.textContent = `Replying to ${fromLabel}: "${snippet}"`;
+  replyBanner.banner.dataset.replyId = message.id || "";
   replyBanner.banner.classList.remove("hidden");
   messageInput.focus();
 }
@@ -1070,6 +1249,7 @@ function clearReply() {
   replyTo = null;
   replyBanner.banner.classList.add("hidden");
   replyBanner.preview.textContent = "";
+  replyBanner.banner.dataset.replyId = "";
 }
 
 const messageContextMenu = (() => {
@@ -1235,6 +1415,9 @@ const messageContextMenu = (() => {
 
 function renderMessagesEmptyState(text) {
   clearMessages();
+  messageWindowStart = 0;
+  messageWindowEnd = 0;
+  loadOlderBtn = null;
   hideTypingIndicator();
 
   const hint = text || EMPTY_CONVERSATION_HINT;
@@ -1284,6 +1467,12 @@ function renderMineMessageMeta(metaEl, timeText, statusKey) {
   const status = document.createElement("span");
   status.className = `message-status message-status-${statusKey}`;
 
+  if (statusKey === "pending") {
+    status.textContent = "…";
+    metaEl.append(time, status);
+    return;
+  }
+
   const tickA = document.createElement("span");
   tickA.className = "tick";
   tickA.textContent = "✓";
@@ -1306,6 +1495,16 @@ function renderIncomingMessageMeta(metaEl, message) {
   metaEl.textContent = `${senderName} · ${time}`;
 }
 
+function focusMessageById(messageId) {
+  if (!messageId || !messagesEl) return;
+  const orig = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
+  if (orig) {
+    orig.scrollIntoView({ behavior: "smooth", block: "center" });
+    orig.classList.add("highlight-flash");
+    setTimeout(() => orig.classList.remove("highlight-flash"), 1200);
+  }
+}
+
 function buildMessageElement(message, skipAnimation = false) {
   const mine = normalizeName(message.from) === normalizeName(me);
   const isDeleted = Boolean(message.deletedAt);
@@ -1318,6 +1517,7 @@ function buildMessageElement(message, skipAnimation = false) {
   const row       = document.createElement("article");
   row.className   = `message ${mine ? "me" : "them"}${skipAnimation ? " no-anim" : ""}`;
   if (message.id) row.dataset.messageId = message.id;
+  if (message.clientTempId) row.dataset.clientTempId = message.clientTempId;
   row.dataset.dateKey = dateKey;
   row.dataset.timestamp = message.timestamp || "";
   row.dataset.tsFull = fullTimestamp;
@@ -1332,6 +1532,9 @@ function buildMessageElement(message, skipAnimation = false) {
   ].join(" ");
   if (isDeleted) {
     row.classList.add("message-deleted");
+  }
+  if (message.pending) {
+    row.classList.add("pending");
   }
   if (callLog) {
     row.classList.add("call-log");
@@ -1370,12 +1573,7 @@ function buildMessageElement(message, skipAnimation = false) {
     rt.className  = "reply-quote-text";
     rt.textContent = message.replyTo.text.slice(0, 80) + (message.replyTo.text.length > 80 ? "…" : "");
     rq.addEventListener("click", () => {
-      const orig = messagesEl.querySelector(`[data-message-id="${message.replyTo.id}"]`);
-      if (orig) {
-        orig.scrollIntoView({ behavior: "smooth", block: "center" });
-        orig.classList.add("highlight-flash");
-        setTimeout(() => orig.classList.remove("highlight-flash"), 1200);
-      }
+      focusMessageById(message.replyTo.id);
     });
     rq.append(ra, rt);
     row.append(rq);
@@ -1407,7 +1605,10 @@ function buildMessageElement(message, skipAnimation = false) {
       const subtitle = document.createElement("div");
       subtitle.className = "call-log-subtitle";
       subtitle.textContent = log.subtitle;
-      content.append(title, subtitle);
+      const status = document.createElement("div");
+      status.className = "call-status-pill";
+      status.textContent = log.statusLabel || "Call";
+      content.append(title, subtitle, status);
 
       const time = document.createElement("div");
       time.className = "call-log-time";
@@ -1486,6 +1687,7 @@ function buildMessageElement(message, skipAnimation = false) {
       body.appendChild(audioCard);
     } else {
       body.textContent = message.text;
+      body.dataset.rawText = message.text;
     }
   }
 
@@ -1493,7 +1695,7 @@ function buildMessageElement(message, skipAnimation = false) {
   return row;
 }
 
-function appendMessage(message, skipAnimation = false, withSeparator = true) {
+function appendMessage(message, skipAnimation = false, withSeparator = true, skipSearch = false) {
   const emptyNode = messagesEl.querySelector(".messages-empty");
   if (emptyNode) emptyNode.remove();
   const preserveTop = messagesEl.scrollTop;
@@ -1506,7 +1708,7 @@ function appendMessage(message, skipAnimation = false, withSeparator = true) {
   const row = buildMessageElement(message, skipAnimation);
 
   messagesEl.appendChild(row);
-  applyMessageSearch();
+  if (!skipSearch) applyMessageSearch();
   if (shouldAutoScroll) {
     const mine = normalizeName(message.from) === normalizeName(me);
     scrollToBottom(skipAnimation || mine);
@@ -1517,6 +1719,83 @@ function appendMessage(message, skipAnimation = false, withSeparator = true) {
 
   syncProfilePanelStats();
   syncCallLogPanel();
+}
+
+function ensureLoadOlderButton() {
+  if (!messagesEl) return null;
+  if (!loadOlderBtn) {
+    loadOlderBtn = document.createElement("button");
+    loadOlderBtn.type = "button";
+    loadOlderBtn.className = "messages-load-older hidden";
+    loadOlderBtn.textContent = "Load older messages";
+    loadOlderBtn.addEventListener("click", loadOlderMessages);
+  }
+  if (!loadOlderBtn.parentNode) {
+    messagesEl.prepend(loadOlderBtn);
+  }
+  return loadOlderBtn;
+}
+
+function updateLoadOlderButton() {
+  const btn = ensureLoadOlderButton();
+  if (!btn) return;
+  btn.classList.toggle("hidden", messageWindowStart <= 0);
+}
+
+function setMessageWindowToLatest() {
+  messageWindowEnd = conversationMessages.length;
+  messageWindowStart = Math.max(0, messageWindowEnd - MAX_VISIBLE_MESSAGES);
+}
+
+function renderMessageWindow(options = {}) {
+  if (!messagesEl) return;
+  const preserveScroll = options.preserveScroll;
+  const prevScrollTop = preserveScroll ? messagesEl.scrollTop : 0;
+  const prevScrollHeight = preserveScroll ? messagesEl.scrollHeight : 0;
+  clearMessages();
+  ensureLoadOlderButton();
+
+  if (!Number.isFinite(messageWindowEnd) || messageWindowEnd <= 0) {
+    messageWindowEnd = conversationMessages.length;
+  }
+  messageWindowEnd = Math.min(conversationMessages.length, messageWindowEnd);
+  if (messageWindowEnd - messageWindowStart > MAX_VISIBLE_MESSAGES) {
+    messageWindowStart = Math.max(0, messageWindowEnd - MAX_VISIBLE_MESSAGES);
+  }
+
+  for (let i = messageWindowStart; i < messageWindowEnd; i += 1) {
+    const msg = conversationMessages[i];
+    if (!msg) continue;
+    if (options.withSeparator !== false) appendDateSeparator(msg.timestamp);
+    const row = buildMessageElement(msg, true);
+    messagesEl.appendChild(row);
+  }
+
+  updateLoadOlderButton();
+  if (!options.skipSearch) applyMessageSearch();
+  if (preserveScroll) {
+    const nextHeight = messagesEl.scrollHeight;
+    const delta = nextHeight - prevScrollHeight;
+    messagesEl.scrollTop = prevScrollTop + delta;
+  }
+}
+
+function loadOlderMessages() {
+  if (messageWindowStart <= 0) return;
+  messageWindowStart = Math.max(0, messageWindowStart - MESSAGE_WINDOW_PAGE);
+  messageWindowEnd = Math.min(conversationMessages.length, messageWindowStart + MAX_VISIBLE_MESSAGES);
+  renderMessageWindow({ preserveScroll: true });
+}
+
+function hasNewerMessages() {
+  return messageWindowEnd < conversationMessages.length;
+}
+
+function showLatestMessages() {
+  setMessageWindowToLatest();
+  renderMessageWindow();
+  scrollToBottom(true);
+  scrollState.pinnedToBottom = true;
 }
 
 function updateStats() {
@@ -1575,7 +1854,6 @@ function scrollToUnreadStart() {
 }
 
 function renderMessages(messages) {
-  clearMessages();
   conversationMessages = Array.isArray(messages) ? messages.slice() : [];
 
   if (!conversationMessages.length) {
@@ -1586,10 +1864,8 @@ function renderMessages(messages) {
     return;
   }
 
-  // Render all historical messages instantly (no animation per bubble)
-  for (const message of conversationMessages) {
-    appendMessage(message, /* skipAnimation */ true, /* withSeparator */ true);
-  }
+  setMessageWindowToLatest();
+  renderMessageWindow({ skipSearch: true });
 
   // Jump to first unread message when available, otherwise bottom
   const jumpedToUnread = scrollToUnreadStart();
@@ -1625,6 +1901,7 @@ function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_T
   if (body) {
     body.textContent = replacementText;
     body.classList.add("message-body-deleted");
+    body.dataset.rawText = replacementText;
   }
 
   const replyQuote = row.querySelector(".reply-quote");
@@ -1877,8 +2154,16 @@ function renderFriends() {
   const filteredFriends = query
     ? friends.filter((friend) => getFriendSearchBlob(friend).includes(query))
     : friends;
+  const sortedFriends = filteredFriends.slice().sort((a, b) => {
+    const aTs = a.lastTimestamp || "";
+    const bTs = b.lastTimestamp || "";
+    if (aTs && bTs) return bTs.localeCompare(aTs);
+    if (aTs) return -1;
+    if (bTs) return 1;
+    return String(a.username || "").localeCompare(String(b.username || ""));
+  });
 
-  if (!filteredFriends.length) {
+  if (!sortedFriends.length) {
     const empty       = document.createElement("li");
     empty.className   = "item-card list-empty";
     empty.textContent = friends.length
@@ -1890,7 +2175,7 @@ function renderFriends() {
     return;
   }
 
-  for (const friend of filteredFriends) {
+  for (const friend of sortedFriends) {
     const li      = document.createElement("li");
     li.className  = "item-card";
 
@@ -1921,16 +2206,23 @@ function renderFriends() {
       name.title = friend.username;
     }
 
-    const statusLine = document.createElement("span");
-    statusLine.className = `friend-status${friend.online ? " online" : " offline"}`;
-    statusLine.textContent = friend.online ? "Online" : formatLastSeen(friend.lastSeenAt);
-    statusLine.title = statusLine.textContent;
+    const preview = document.createElement("span");
+    preview.className = "chat-preview";
+    preview.textContent = friendPreview(friend);
+    preview.title = preview.textContent;
 
-    main.append(name, statusLine);
+    main.append(name, preview);
 
     const side      = document.createElement("div");
     side.className  = "friend-side chat-right";
 
+    const timeText = formatFriendTime(friend.lastTimestamp);
+    if (timeText) {
+      const time = document.createElement("span");
+      time.className = "chat-time";
+      time.textContent = timeText;
+      side.appendChild(time);
+    }
     const unreadCount = Number(friend.unreadCount) || 0;
     if (unreadCount > 0) {
       const unread        = document.createElement("span");
@@ -2068,15 +2360,57 @@ const unfriendConfirm = document.getElementById("unfriendConfirm");
 const unfriendModalTitle = document.getElementById("unfriendModalTitle");
 const unfriendModalDesc  = document.getElementById("unfriendModalDesc");
 let pendingUnfriendTarget = "";
+let unfriendFocusReturn = null;
+let unfriendTrapCleanup = null;
+
+function getModalFocusable(modal) {
+  if (!modal) return [];
+  const nodes = modal.querySelectorAll("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+  return Array.from(nodes).filter((el) => !el.disabled && el.offsetParent !== null);
+}
+
+function trapModalFocus(modal) {
+  const onKey = (e) => {
+    if (e.key !== "Tab") return;
+    const focusable = getModalFocusable(modal);
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+  modal.addEventListener("keydown", onKey);
+  return () => modal.removeEventListener("keydown", onKey);
+}
 
 function showUnfriendModal(target) {
   pendingUnfriendTarget = target;
   if (unfriendModalTitle) unfriendModalTitle.textContent = `Unfriend @${target}?`;
   if (unfriendModalDesc)  unfriendModalDesc.textContent  = `This will also clear your chat history with @${target}.`;
-  if (unfriendModal) unfriendModal.style.display = "flex";
+  if (unfriendModal) {
+    unfriendFocusReturn = document.activeElement;
+    unfriendModal.style.display = "flex";
+    if (unfriendTrapCleanup) unfriendTrapCleanup();
+    unfriendTrapCleanup = trapModalFocus(unfriendModal);
+    const focusable = getModalFocusable(unfriendModal);
+    if (focusable.length) focusable[0].focus();
+  }
 }
 function hideUnfriendModal() {
   if (unfriendModal) unfriendModal.style.display = "none";
+  if (unfriendTrapCleanup) {
+    unfriendTrapCleanup();
+    unfriendTrapCleanup = null;
+  }
+  if (unfriendFocusReturn && typeof unfriendFocusReturn.focus === "function") {
+    unfriendFocusReturn.focus();
+  }
+  unfriendFocusReturn = null;
   pendingUnfriendTarget = "";
 }
 
@@ -2129,6 +2463,9 @@ const voiceState = {
   timeout: null,
   isRecording: false,
   uploading: false,
+  cancelNext: false,
+  startedAt: 0,
+  timerId: null,
 };
 
 const ICE_SERVERS = window.NOVYN_ICE_SERVERS || [
@@ -2159,6 +2496,8 @@ const callState = {
 function resetVoiceState() {
   if (voiceState.timeout) clearTimeout(voiceState.timeout);
   voiceState.timeout = null;
+  if (voiceState.timerId) clearInterval(voiceState.timerId);
+  voiceState.timerId = null;
   if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
     voiceState.recorder.stop();
   }
@@ -2169,36 +2508,77 @@ function resetVoiceState() {
   voiceState.stream = null;
   voiceState.chunks = [];
   voiceState.isRecording = false;
+  voiceState.cancelNext = false;
+  voiceState.startedAt = 0;
   if (voiceBtn) {
     voiceBtn.classList.remove("recording");
     voiceBtn.setAttribute("aria-pressed", "false");
     voiceBtn.disabled = messageInput?.disabled;
   }
+  if (voiceStatus) voiceStatus.classList.add("hidden");
+  if (voiceLabel) voiceLabel.textContent = "Recording...";
+  if (voiceTimer) voiceTimer.textContent = "0:00";
+  if (voiceProgress) voiceProgress.classList.add("hidden");
+  if (voiceProgressBar) voiceProgressBar.style.transform = "scaleX(0)";
+  if (voiceProgressText) voiceProgressText.textContent = "Uploading... 0%";
+  if (voiceCancelBtn) voiceCancelBtn.disabled = false;
+  if (voiceStopBtn) voiceStopBtn.disabled = false;
 }
 
 async function uploadVoiceBlob(blob) {
   if (!blob || !activeFriend) return;
   voiceState.uploading = true;
+  if (voiceStatus) voiceStatus.classList.remove("hidden");
+  if (voiceLabel) voiceLabel.textContent = "Uploading...";
+  if (voiceProgress) voiceProgress.classList.remove("hidden");
+  if (voiceProgressBar) voiceProgressBar.style.transform = "scaleX(0)";
+  if (voiceProgressText) voiceProgressText.textContent = "Uploading... 0%";
+  if (voiceCancelBtn) voiceCancelBtn.disabled = true;
+  if (voiceStopBtn) voiceStopBtn.disabled = true;
   try {
     const formData = new FormData();
     formData.append("voice", blob, `voice-${Date.now()}.webm`);
-    const resp = await fetch("/upload-voice", { method: "POST", body: formData });
-    const data = await resp.json().catch(() => ({}));
-    if (!resp.ok) throw new Error(data?.error || "Upload failed");
+    const data = await new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", "/upload-voice");
+      xhr.upload.onprogress = (evt) => {
+        if (!evt.lengthComputable) return;
+        const pct = Math.max(0, Math.min(1, evt.loaded / evt.total));
+        if (voiceProgressBar) voiceProgressBar.style.transform = `scaleX(${pct})`;
+        if (voiceProgressText) voiceProgressText.textContent = `Uploading... ${Math.round(pct * 100)}%`;
+      };
+      xhr.onload = () => {
+        const isOk = xhr.status >= 200 && xhr.status < 300;
+        let payload = {};
+        try { payload = JSON.parse(xhr.responseText || "{}"); } catch (_) {}
+        if (!isOk) {
+          reject(new Error(payload?.error || "Upload failed"));
+          return;
+        }
+        resolve(payload);
+      };
+      xhr.onerror = () => reject(new Error("Upload failed"));
+      xhr.send(formData);
+    });
     if (!data?.url) throw new Error("No URL returned");
-    socket.emit("private_message", { to: activeFriend, text: data.url });
+    sendMessagePayload({ to: activeFriend, text: data.url });
     showToast("Voice message sent", "success");
   } catch (err) {
     console.error(err);
     showToast("Voice upload failed", "error");
   } finally {
     voiceState.uploading = false;
+    if (voiceProgress) voiceProgress.classList.add("hidden");
+    if (voiceCancelBtn) voiceCancelBtn.disabled = false;
+    if (voiceStopBtn) voiceStopBtn.disabled = false;
+    if (voiceStatus) voiceStatus.classList.add("hidden");
   }
 }
 
-function stopVoiceRecording() {
+function stopVoiceRecording(cancelled = false) {
   if (!voiceState.isRecording) return;
   voiceState.isRecording = false;
+  voiceState.cancelNext = cancelled;
   if (voiceState.timeout) clearTimeout(voiceState.timeout);
   voiceState.timeout = null;
   if (voiceState.recorder && voiceState.recorder.state !== "inactive") {
@@ -2233,13 +2613,20 @@ async function startVoiceRecording() {
     voiceState.recorder = recorder;
     voiceState.chunks = [];
     voiceState.isRecording = true;
+    voiceState.cancelNext = false;
+    voiceState.startedAt = Date.now();
 
     recorder.ondataavailable = (evt) => {
       if (evt?.data?.size > 0) voiceState.chunks.push(evt.data);
     };
     recorder.onstop = async () => {
       const blob = new Blob(voiceState.chunks, { type: "audio/webm" });
+      const cancelled = voiceState.cancelNext;
       resetVoiceState();
+      if (cancelled) {
+        showToast("Recording discarded", "info");
+        return;
+      }
       await uploadVoiceBlob(blob);
     };
 
@@ -2247,6 +2634,23 @@ async function startVoiceRecording() {
     voiceBtn.classList.add("recording");
     voiceBtn.setAttribute("aria-pressed", "true");
     voiceBtn.title = "Stop recording";
+    if (voiceStatus) voiceStatus.classList.remove("hidden");
+    if (voiceLabel) voiceLabel.textContent = "Recording...";
+    if (voiceTimer) voiceTimer.textContent = "0:00";
+    if (voiceProgress) voiceProgress.classList.add("hidden");
+    if (voiceProgressBar) voiceProgressBar.style.transform = "scaleX(0)";
+    if (voiceProgressText) voiceProgressText.textContent = "Uploading... 0%";
+    if (voiceCancelBtn) voiceCancelBtn.disabled = false;
+    if (voiceStopBtn) voiceStopBtn.disabled = false;
+
+    if (voiceState.timerId) clearInterval(voiceState.timerId);
+    voiceState.timerId = setInterval(() => {
+      if (!voiceState.startedAt) return;
+      const secs = Math.max(0, Math.floor((Date.now() - voiceState.startedAt) / 1000));
+      const mins = Math.floor(secs / 60);
+      const rem = String(secs % 60).padStart(2, "0");
+      if (voiceTimer) voiceTimer.textContent = `${mins}:${rem}`;
+    }, 500);
 
     voiceState.timeout = setTimeout(() => {
       showToast("Recording auto-stopped at 60s", "info");
@@ -2828,15 +3232,98 @@ async function handleCallSignal(payload) {
   }
 }
 
+function createClientTempId() {
+  return `tmp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function removePendingFromQueue(tempId) {
+  if (!tempId) return;
+  const idx = pendingQueue.findIndex((item) => item.tempId === tempId);
+  if (idx >= 0) pendingQueue.splice(idx, 1);
+}
+
+function queuePendingMessage(payload) {
+  if (!payload || !payload.to || !payload.text) return;
+  const tempId = payload.clientTempId || createClientTempId();
+  const timestamp = new Date().toISOString();
+  const wasAtLatest = !hasNewerMessages();
+
+  const message = {
+    id: tempId,
+    clientTempId: tempId,
+    from: me || "You",
+    to: payload.to,
+    text: payload.text,
+    timestamp,
+    deliveredAt: null,
+    seenAt: null,
+    pending: true,
+    replyTo: payload.replyTo || null,
+    reactions: {},
+  };
+
+  conversationMessages.push(message);
+  friends = friends.map((f) =>
+    normalizeName(f.username) === normalizeName(payload.to)
+      ? { ...f, lastMessage: payload.text, lastFrom: me, lastTimestamp: timestamp }
+      : f
+  );
+  renderFriends();
+  pendingByTempId.set(tempId, message);
+  pendingQueue.push({ tempId, payload: { ...payload, clientTempId: tempId } });
+  renderNetworkState();
+
+  if (wasAtLatest && activeFriend && normalizeName(payload.to) === normalizeName(activeFriend)) {
+    messageWindowEnd = conversationMessages.length;
+    appendMessage(message);
+    if (messagesEl && messagesEl.querySelectorAll("article.message").length > MAX_VISIBLE_MESSAGES) {
+      setMessageWindowToLatest();
+      renderMessageWindow();
+    }
+  }
+  return tempId;
+}
+
+function flushPendingQueue() {
+  if (!socketAvailable || !socket.connected) {
+    renderNetworkState();
+    return;
+  }
+  if (!pendingQueue.length) {
+    renderNetworkState();
+    return;
+  }
+  const queue = pendingQueue.splice(0);
+  queue.forEach((item) => {
+    socket.emit("private_message", item.payload);
+  });
+  renderNetworkState();
+}
+
+function sendMessagePayload(payload) {
+  if (!payload || !payload.to || !payload.text) return;
+  if (!socketAvailable || !socket.connected) {
+    queuePendingMessage(payload);
+    showToast("Message queued. We'll send when you're back online.", "info");
+    return;
+  }
+  const tempId = payload.clientTempId || createClientTempId();
+  socket.emit("private_message", { ...payload, clientTempId: tempId });
+  return tempId;
+}
+
 function sendActiveMessage() {
   const text = messageInput.value.trim();
   if (!activeFriend) { showToast("Choose a friend first.", "error"); return; }
   if (!text) return;
 
+  if (hasNewerMessages()) {
+    showLatestMessages();
+  }
   stopLocalTyping();
   const payload = { to: activeFriend, text };
   if (replyTo) payload.replyTo = replyTo;
-  socket.emit("private_message", payload);
+  sendMessagePayload(payload);
   messageInput.value = "";
   if (sendButton) sendButton.classList.remove("ready");
   clearReply();
@@ -2860,6 +3347,12 @@ if (voiceBtn) {
       startVoiceRecording();
     }
   });
+}
+if (voiceCancelBtn) {
+  voiceCancelBtn.addEventListener("click", () => stopVoiceRecording(true));
+}
+if (voiceStopBtn) {
+  voiceStopBtn.addEventListener("click", () => stopVoiceRecording(false));
 }
 
 if (callButton) {
@@ -2913,6 +3406,18 @@ messageInput.addEventListener("input", () => {
 
 if (messageSearchInput) {
   messageSearchInput.addEventListener("input", applyMessageSearch);
+  messageSearchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      jumpSearchResult(e.shiftKey ? -1 : 1);
+    }
+  });
+}
+if (messageSearchPrev) {
+  messageSearchPrev.addEventListener("click", () => jumpSearchResult(-1));
+}
+if (messageSearchNext) {
+  messageSearchNext.addEventListener("click", () => jumpSearchResult(1));
 }
 if (messageSearchToggle) {
   messageSearchToggle.addEventListener("click", (e) => {
@@ -3218,10 +3723,55 @@ socket.on("history", (data) => {
 });
 
 socket.on("private_message", (message) => {
+  const tempId = message?.clientTempId || "";
+  if (tempId && pendingByTempId.has(tempId) && normalizeName(message.from) === normalizeName(me)) {
+    const pendingMessage = pendingByTempId.get(tempId);
+    Object.assign(pendingMessage, message, { pending: false, clientTempId: tempId });
+    pendingByTempId.delete(tempId);
+    removePendingFromQueue(tempId);
+    renderNetworkState();
+
+    const row = messagesEl.querySelector(`[data-client-temp-id="${tempId}"]`);
+    if (row) {
+      row.dataset.messageId = message.id;
+      row.dataset.timestamp = message.timestamp || "";
+      row.dataset.tsFull = formatFullTimestamp(message.timestamp);
+      if (row.dataset.tsFull) row.title = row.dataset.tsFull;
+      row.classList.remove("pending");
+      row.dataset.messageText = message.text || row.dataset.messageText;
+      row.dataset.searchText = [
+        row.dataset.messageFrom || "",
+        row.dataset.messageText || "",
+        message.replyTo?.text || "",
+        message.replyTo?.from || "",
+      ].join(" ");
+      const body = row.querySelector(".message-body");
+      if (body) {
+        body.dataset.rawText = message.text || body.dataset.rawText || "";
+      }
+      const metaEl = row.querySelector(".message-meta");
+      if (metaEl) {
+        row.dataset.timeLabel = prettyTime(message.timestamp);
+        renderMineMessageMeta(metaEl, row.dataset.timeLabel, getMessageStatusKey(pendingMessage));
+      }
+    }
+    applyMessageSearch();
+    return;
+  }
+
   const other =
     normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
   const isIncoming = normalizeName(message.from) !== normalizeName(me);
   const isActiveThread = activeFriend && normalizeName(other) === normalizeName(activeFriend);
+
+  if (other) {
+    friends = friends.map((f) =>
+      normalizeName(f.username) === normalizeName(other)
+        ? { ...f, lastMessage: message.text, lastFrom: message.from, lastTimestamp: message.timestamp || f.lastTimestamp }
+        : f
+    );
+    renderFriends();
+  }
 
   if (!isActiveThread) {
     // Message is for a different conversation — just show a toast
@@ -3244,7 +3794,14 @@ socket.on("private_message", (message) => {
   }
 
   conversationMessages.push(message);
-  appendMessage(message);
+  if (!hasNewerMessages()) {
+    messageWindowEnd = conversationMessages.length;
+    appendMessage(message);
+    if (messagesEl && messagesEl.querySelectorAll("article.message").length > MAX_VISIBLE_MESSAGES) {
+      setMessageWindowToLatest();
+      renderMessageWindow();
+    }
+  }
   // Only bump the unread FAB counter for incoming messages, not our own
   if (normalizeName(message.from) !== normalizeName(me)) {
     if (window._novynFAB) window._novynFAB.bump();
@@ -3371,6 +3928,7 @@ socket.on("error_message", (data) => {
 socket.on("connect", () => {
   setNetworkState("Connected", "connected");
   authenticateStoredSession(true);
+  flushPendingQueue();
 });
 
 socket.on("disconnect", () => {
@@ -3459,6 +4017,11 @@ window._novynSocket = socket;
 window._novynMe = () => me;
 window._novynActiveFriend = () => activeFriend;
 window._novynToast = showToast;
+window._novynMessageWindow = {
+  hasNewer: hasNewerMessages,
+  showLatest: showLatestMessages,
+  loadOlder: loadOlderMessages,
+};
 window._novynUpdateSession = (nextUsername, nextPassword) => {
   const stored = readStoredSession() || {};
   const username = nextUsername || stored.username || me;

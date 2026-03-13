@@ -1,0 +1,8 @@
+{
+  "appId": "com.novyn.app",
+  "appName": "Novyn",
+  "webDir": "public",
+  "server": {
+    "url": "https://novyn-live.onrender.com"
+  }
+}

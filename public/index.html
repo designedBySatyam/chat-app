@@ -106,7 +106,20 @@
           </button>
           <div id="settingsMenu" class="settings-menu hidden" role="menu" aria-label="Settings">
             <button class="settings-item" type="button" data-settings-action="profile">Edit profile</button>
-            <button class="settings-item" type="button" data-settings-action="theme">Toggle theme</button>
+            <div class="settings-section-title">Theme</div>
+            <button class="settings-item settings-item-radio" type="button" data-settings-action="theme" data-theme="system" role="menuitemradio" aria-checked="false">
+              <span>System</span>
+              <span class="settings-check" aria-hidden="true">✓</span>
+            </button>
+            <button class="settings-item settings-item-radio" type="button" data-settings-action="theme" data-theme="dark" role="menuitemradio" aria-checked="false">
+              <span>Dark</span>
+              <span class="settings-check" aria-hidden="true">✓</span>
+            </button>
+            <button class="settings-item settings-item-radio" type="button" data-settings-action="theme" data-theme="light" role="menuitemradio" aria-checked="false">
+              <span>Light</span>
+              <span class="settings-check" aria-hidden="true">✓</span>
+            </button>
+            <div class="settings-divider" aria-hidden="true"></div>
             <button class="settings-item" type="button" data-settings-action="username">Change username</button>
             <button class="settings-item" type="button" data-settings-action="password">Change password</button>
             <div class="settings-divider" aria-hidden="true"></div>
@@ -156,6 +169,12 @@
           <div class="chat-search-row">
             <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input id="messageSearchInput" type="text" placeholder="Search in conversation…" autocomplete="off" />
+            <button class="search-nav-btn" id="messageSearchPrev" type="button" aria-label="Previous match" title="Previous match">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 15 12 9 18 15"/></svg>
+            </button>
+            <button class="search-nav-btn" id="messageSearchNext" type="button" aria-label="Next match" title="Next match">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
             <button id="messageSearchClear" type="button">Clear</button>
           </div>
           <span id="messageSearchCount" class="search-count hidden" aria-live="polite"></span>
@@ -195,6 +214,23 @@
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
             <span class="reply-preview-text" id="replyPreviewText">Replying to…</span>
             <button class="reply-cancel-btn" id="replyCancelBtn" aria-label="Cancel reply" type="button">✕</button>
+          </div>
+          <div id="voiceStatus" class="voice-status hidden" role="status" aria-live="polite">
+            <div class="voice-status-main">
+              <span class="voice-dot" aria-hidden="true"></span>
+              <span class="voice-timer" id="voiceTimer">0:00</span>
+              <span class="voice-label" id="voiceLabel">Recording...</span>
+            </div>
+            <div class="voice-status-actions">
+              <button class="voice-action voice-cancel" id="voiceCancelBtn" type="button">Cancel</button>
+              <button class="voice-action voice-stop" id="voiceStopBtn" type="button">Stop</button>
+            </div>
+            <div class="voice-progress hidden" id="voiceProgress" aria-live="polite">
+              <span class="voice-progress-track">
+                <span class="voice-progress-bar" id="voiceProgressBar"></span>
+              </span>
+              <span class="voice-progress-text" id="voiceProgressText">Uploading... 0%</span>
+            </div>
           </div>
           <form id="messageForm" class="input-toolbar" autocomplete="off">
             <button type="button" class="tool-btn" aria-label="Emoji">

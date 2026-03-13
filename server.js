@@ -1541,6 +1541,8 @@ io.on("connection", (socket) => {
 
     const to = toDisplayName(payload?.to);
     const text = withUploadToken(payload?.text);
+    const clientTempId = String(payload?.clientTempId || "").trim();
+    const safeClientTempId = clientTempId.slice(0, 64);
     const toKey = normalizeName(to);
 
     if (!text) return;
@@ -1572,6 +1574,7 @@ io.on("connection", (socket) => {
       deletedAt: null,
       reactions: {},
     };
+    if (safeClientTempId) message.clientTempId = safeClientTempId;
     if (payload?.replyTo && payload.replyTo.id) {
       message.replyTo = {
         id: toDisplayName(payload.replyTo.id),
