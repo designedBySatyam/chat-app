@@ -2838,6 +2838,7 @@ function sendActiveMessage() {
   if (replyTo) payload.replyTo = replyTo;
   socket.emit("private_message", payload);
   messageInput.value = "";
+  if (sendButton) sendButton.classList.remove("ready");
   clearReply();
 
   // Keep scroll pinned to bottom after sending
@@ -2903,6 +2904,9 @@ if (callMini) {
 }
 
 messageInput.addEventListener("input", () => {
+  if (sendButton) {
+    sendButton.classList.toggle("ready", messageInput.value.trim().length > 0);
+  }
   if (!activeFriend) return;
   messageInput.value.trim() ? markLocalTyping() : stopLocalTyping();
 });

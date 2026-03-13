@@ -5,22 +5,57 @@
 
 /* ── Theme toggle ───────────────────────────────────────────────────────────── */
 (function () {
-  var root  = document.documentElement;
-  var btn   = document.getElementById('themeToggle');
-  var STORE = 'novyn-theme';
-  function applyTheme(t) {
-    t === 'light' ? root.classList.add('light') : root.classList.remove('light');
-    try { localStorage.setItem(STORE, t); } catch(e) {}
+  var root = document.documentElement;
+  var btn = document.getElementById('themeToggle');
+  var THEME_KEY = 'novyn-theme';
+
+  function readStoredTheme() {
+    try {
+      return localStorage.getItem(THEME_KEY);
+    } catch (e) {
+      return null;
+    }
   }
+
+  function storeTheme(mode) {
+    try {
+      localStorage.setItem(THEME_KEY, mode);
+    } catch (e) {}
+  }
+
+  function applyTheme(mode) {
+    var isLight = mode === 'light';
+    root.classList.toggle('light', isLight);
+    if (btn) {
+      btn.setAttribute('aria-pressed', isLight ? 'true' : 'false');
+    }
+  }
+
+  var savedTheme = readStoredTheme();
+  if (savedTheme === 'light' || savedTheme === 'dark') {
+    applyTheme(savedTheme);
+  } else {
+    applyTheme('dark');
+  }
+
   function toggleTheme() {
-    applyTheme(root.classList.contains('light') ? 'dark' : 'light');
+    var next = root.classList.contains('light') ? 'dark' : 'light';
+    applyTheme(next);
+    storeTheme(next);
   }
-  var saved = 'dark';
-  try { saved = localStorage.getItem(STORE) || 'dark'; } catch(e) {}
-  applyTheme(saved);
-  btn && btn.addEventListener('click', toggleTheme);
+
+  if (btn) {
+    btn.addEventListener('click', function () {
+      toggleTheme();
+    });
+  }
+
   window._novynToggleTheme = toggleTheme;
-  window._novynSetTheme = applyTheme;
+  window._novynSetTheme = function (mode) {
+    if (mode !== 'light' && mode !== 'dark') return;
+    applyTheme(mode);
+    storeTheme(mode);
+  };
   window._novynGetTheme = function () { return root.classList.contains('light') ? 'light' : 'dark'; };
 })();
 
@@ -409,6 +444,113 @@
     if (len >= MAX) counter.classList.add('limit');
     else if (len >= WARN) counter.classList.add('warn');
   });
+})();
+
+/* ── Composer emoji picker ─────────────────────────────────────────────────── */
+(function () {
+  var form = document.getElementById('messageForm');
+  var input = document.getElementById('messageInput');
+  if (!form || !input) return;
+
+  var emojiBtn = form.querySelector('.tool-btn[aria-label="Emoji"]');
+  if (!emojiBtn) return;
+
+  var EMOJIS = [
+    "\u{1F600}", "\u{1F603}", "\u{1F604}", "\u{1F601}", "\u{1F606}", "\u{1F60D}",
+    "\u{1F618}", "\u{1F61C}", "\u{1F923}", "\u{1F602}", "\u{1F622}", "\u{1F62D}",
+    "\u{1F389}", "\u{1F525}", "\u{1F44D}", "\u{1F44F}", "\u{1F64C}", "\u{1F680}",
+    "\u2764\uFE0F", "\u{1F48E}", "\u{1F31F}", "\u{1F4AF}", "\u{1F381}", "\u{1F60E}"
+  ];
+
+  var picker = null;
+
+  function insertEmoji(emoji) {
+    var start = input.selectionStart;
+    var end = input.selectionEnd;
+    if (typeof start !== 'number' || typeof end !== 'number') {
+      start = input.value.length;
+      end = input.value.length;
+    }
+    var max = Number(input.maxLength);
+    if (!Number.isFinite(max) || max <= 0) max = Infinity;
+    var nextLen = input.value.length - (end - start) + emoji.length;
+    if (nextLen > max) return;
+
+    var before = input.value.slice(0, start);
+    var after = input.value.slice(end);
+    input.value = before + emoji + after;
+    var cursor = start + emoji.length;
+    if (input.setSelectionRange) input.setSelectionRange(cursor, cursor);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.focus();
+  }
+
+  function closePicker() {
+    if (!picker) return;
+    picker.remove();
+    picker = null;
+    emojiBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function positionPicker() {
+    if (!picker) return;
+    var rect = emojiBtn.getBoundingClientRect();
+    var pickerRect = picker.getBoundingClientRect();
+    var margin = 8;
+    var left = rect.left;
+    var top = rect.top - pickerRect.height - 8;
+    if (top < margin) top = rect.bottom + 8;
+    if (left + pickerRect.width > window.innerWidth - margin) {
+      left = window.innerWidth - pickerRect.width - margin;
+    }
+    if (left < margin) left = margin;
+    picker.style.left = left + 'px';
+    picker.style.top = top + 'px';
+  }
+
+  function openPicker() {
+    closePicker();
+    picker = document.createElement('div');
+    picker.className = 'emoji-picker';
+    picker.setAttribute('role', 'dialog');
+    picker.setAttribute('aria-label', 'Emoji picker');
+
+    EMOJIS.forEach(function (emoji) {
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.textContent = emoji;
+      btn.title = emoji;
+      btn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        insertEmoji(emoji);
+        closePicker();
+      });
+      picker.appendChild(btn);
+    });
+
+    picker.style.position = 'fixed';
+    picker.style.zIndex = '9999';
+    document.body.appendChild(picker);
+    emojiBtn.setAttribute('aria-expanded', 'true');
+    requestAnimationFrame(positionPicker);
+  }
+
+  emojiBtn.setAttribute('aria-expanded', 'false');
+  emojiBtn.addEventListener('click', function (e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (picker) { closePicker(); return; }
+    openPicker();
+  });
+
+  form.addEventListener('submit', closePicker);
+  document.addEventListener('click', function (e) {
+    if (!picker) return;
+    if (emojiBtn.contains(e.target) || picker.contains(e.target)) return;
+    closePicker();
+  });
+  window.addEventListener('resize', closePicker);
+  window.addEventListener('scroll', closePicker, true);
 })();
 
 /* ── Emoji Reactions + Reply button ─────────────────────────────────────────── */

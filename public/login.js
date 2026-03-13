@@ -17,8 +17,77 @@ const loginBtnSpinner = loginBtn ? loginBtn.querySelector(".login-btn-spinner") 
 const connectionLabel = document.getElementById("connectionLabel");
 const networkPill = document.getElementById("networkPill");
 const toast = document.getElementById("toast");
+const authTabs = document.querySelectorAll("[data-auth-tab]");
+const signupFields = document.getElementById("signupFields");
+const genderGroup = document.getElementById("genderGroup");
+const fullNameInput = document.getElementById("fullNameInput");
+const ageInput = document.getElementById("ageInput");
+const genderInput = document.getElementById("genderInput");
+const genderButtons = document.querySelectorAll("[data-gender]");
+const authHeadline = document.getElementById("authHeadline");
+const authSubhead = document.getElementById("authSubhead");
+const forgotLink = document.getElementById("forgotLink");
+const authPanel = document.querySelector(".auth-right-inner");
+const themeToggle = document.getElementById("themeToggle");
+const THEME_KEY = "novyn-theme";
 
 let pendingCredentials = null;
+let pendingProfile = null;
+let pendingProfileUpdate = false;
+let authMode = "signin";
+let authSwitchReady = false;
+let authSwitchTimer = null;
+
+function readStoredTheme() {
+  try {
+    return localStorage.getItem(THEME_KEY);
+  } catch (_) {
+    return null;
+  }
+}
+
+function storeTheme(mode) {
+  try {
+    localStorage.setItem(THEME_KEY, mode);
+  } catch (_) {
+    // Ignore storage failures.
+  }
+}
+
+function applyTheme(mode) {
+  const isLight = mode === "light";
+  document.documentElement.classList.toggle("light", isLight);
+  if (themeToggle) {
+    themeToggle.setAttribute("aria-pressed", isLight ? "true" : "false");
+  }
+}
+
+const savedTheme = readStoredTheme();
+if (savedTheme === "light" || savedTheme === "dark") {
+  applyTheme(savedTheme);
+} else {
+  applyTheme("dark");
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener("click", () => {
+    const next = document.documentElement.classList.contains("light") ? "dark" : "light";
+    applyTheme(next);
+    storeTheme(next);
+  });
+}
+
+function triggerAuthTransition(direction) {
+  if (!authPanel) return;
+  authPanel.style.setProperty("--swap-dir", direction === 1 ? "1" : "-1");
+  authPanel.classList.remove("is-switching");
+  void authPanel.offsetWidth;
+  authPanel.classList.add("is-switching");
+  clearTimeout(authSwitchTimer);
+  authSwitchTimer = setTimeout(() => {
+    authPanel.classList.remove("is-switching");
+  }, 360);
+}
 
 function readStoredSession() {
   try {
@@ -78,6 +147,65 @@ function showToast(message, type = "info") {
   }, 2800);
 }
 
+function isEmptyProfile(profile) {
+  if (!profile) return true;
+  return !profile.displayName && !profile.age && !profile.gender && !profile.bio && !profile.avatarId;
+}
+
+function getSubmitLabel() {
+  return authMode === "signup" ? "Create Account" : "Sign In";
+}
+
+function getLoadingLabel() {
+  return authMode === "signup" ? "Creating..." : "Entering...";
+}
+
+function setAuthMode(mode) {
+  const nextMode = mode === "signup" ? "signup" : "signin";
+  const prevMode = authMode;
+  authMode = nextMode;
+  authTabs.forEach((btn) => {
+    const isActive = btn.dataset.authTab === authMode;
+    btn.classList.toggle("is-active", isActive);
+    btn.setAttribute("aria-selected", isActive ? "true" : "false");
+  });
+
+  if (signupFields) signupFields.setAttribute("aria-hidden", authMode !== "signup");
+  if (genderGroup) genderGroup.setAttribute("aria-hidden", authMode !== "signup");
+  if (forgotLink) forgotLink.style.display = authMode === "signin" ? "" : "none";
+  if (authHeadline) authHeadline.textContent = authMode === "signup" ? "Join Novyn" : "Welcome back";
+  if (authSubhead) {
+    authSubhead.textContent =
+      authMode === "signup"
+        ? "Create your account and start chatting."
+        : "Sign in to continue your conversations.";
+  }
+  if (loginBtnText && !loginBtn?.disabled) loginBtnText.textContent = getSubmitLabel();
+  if (passwordInput) {
+    passwordInput.autocomplete = authMode === "signup" ? "new-password" : "current-password";
+  }
+
+  if (authSwitchReady && prevMode !== authMode) {
+    triggerAuthTransition(authMode === "signup" ? 1 : -1);
+  }
+  authSwitchReady = true;
+}
+
+function setLoginLoading(isLoading) {
+  if (!loginBtn) return;
+  loginBtn.disabled = isLoading;
+  if (loginBtnText) loginBtnText.textContent = isLoading ? getLoadingLabel() : getSubmitLabel();
+  if (loginBtnArrow) loginBtnArrow.classList.toggle("hidden", isLoading);
+  if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
+}
+
+function finalizeAuth() {
+  setLoginLoading(false);
+  if (passwordInput) passwordInput.value = "";
+  clearUsernameSuggestions();
+  redirectToDashboard();
+}
+
 function clearUsernameSuggestions() {
   if (!usernameHint || !usernameSuggestions) return;
   usernameHint.textContent = "";
@@ -110,18 +238,28 @@ function showUsernameSuggestions(requested, suggestions) {
   usernameSuggestions.classList.toggle("hidden", list.length === 0);
 }
 
-function setLoginLoading(isLoading) {
-  if (!loginBtn) return;
-  loginBtn.disabled = isLoading;
-  if (loginBtnText) loginBtnText.textContent = isLoading ? "Entering..." : "Sign In";
-  if (loginBtnArrow) loginBtnArrow.classList.toggle("hidden", isLoading);
-  if (loginBtnSpinner) loginBtnSpinner.classList.toggle("hidden", !isLoading);
-}
-
 const existingSession = readStoredSession();
 if (existingSession) {
   redirectToDashboard();
 }
+
+authTabs.forEach((btn) => {
+  btn.addEventListener("click", () => setAuthMode(btn.dataset.authTab));
+});
+
+genderButtons.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    genderButtons.forEach((item) => {
+      item.classList.remove("is-active");
+      item.setAttribute("aria-pressed", "false");
+    });
+    btn.classList.add("is-active");
+    btn.setAttribute("aria-pressed", "true");
+    if (genderInput) genderInput.value = btn.dataset.gender || "";
+  });
+});
+
+setAuthMode(authMode);
 
 if (loginForm) {
   loginForm.addEventListener("submit", (event) => {
@@ -133,6 +271,15 @@ if (loginForm) {
     if (!username || !password) return;
 
     pendingCredentials = { username, password };
+    pendingProfile = null;
+    if (authMode === "signup") {
+      const displayName = fullNameInput ? fullNameInput.value.trim() : "";
+      const age = ageInput ? String(ageInput.value || "").trim() : "";
+      const gender = genderInput ? String(genderInput.value || "").trim() : "";
+      if (displayName || age || gender) {
+        pendingProfile = { displayName, age, gender };
+      }
+    }
     setLoginLoading(true);
     socket.emit("register", pendingCredentials);
   });
@@ -147,10 +294,20 @@ socket.on("register_success", (data) => {
     writeStoredSession({ username: data.username, password: session.password });
   }
   pendingCredentials = null;
-  setLoginLoading(false);
-  if (passwordInput) passwordInput.value = "";
-  clearUsernameSuggestions();
-  redirectToDashboard();
+
+  const shouldApplyProfile =
+    authMode === "signup" && pendingProfile && isEmptyProfile(data?.profile);
+
+  if (shouldApplyProfile) {
+    pendingProfileUpdate = true;
+    socket.emit("update_profile", pendingProfile);
+    pendingProfile = null;
+    // Wait for profile_updated before redirecting.
+    return;
+  }
+
+  pendingProfile = null;
+  finalizeAuth();
 });
 
 socket.on("username_unavailable", (data) => {
@@ -162,6 +319,8 @@ socket.on("username_unavailable", (data) => {
 
 socket.on("auth_failed", (data) => {
   pendingCredentials = null;
+  pendingProfile = null;
+  pendingProfileUpdate = false;
   clearStoredSession();
   setLoginLoading(false);
   clearUsernameSuggestions();
@@ -175,6 +334,12 @@ socket.on("error_message", (data) => {
   showToast(data?.message || "Something went wrong.", "error");
 });
 
+socket.on("profile_updated", () => {
+  if (!pendingProfileUpdate) return;
+  pendingProfileUpdate = false;
+  finalizeAuth();
+});
+
 socket.on("connect", () => {
   setNetworkState("Connected", "connected");
   if (pendingCredentials) {
@@ -185,6 +350,7 @@ socket.on("connect", () => {
 socket.on("disconnect", () => {
   setNetworkState("Disconnected", "offline");
   if (pendingCredentials) setLoginLoading(false);
+  pendingProfileUpdate = false;
 });
 
 socket.on("connect_error", () => {
@@ -194,4 +360,10 @@ socket.on("connect_error", () => {
 if (!socketAvailable) {
   setNetworkState("Realtime unavailable", "offline");
   showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
+}
+
+if (forgotLink) {
+  forgotLink.addEventListener("click", () => {
+    showToast("Password recovery is not available yet.", "info");
+  });
 }
