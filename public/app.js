@@ -1211,7 +1211,7 @@ function getContactBucket(friend) {
 function syncProfilePanelStats() {
   if (!profileStatMessages || !profileStatMedia || !profileStatLinks || !profileStatFiles) return;
   const messages = Array.isArray(conversationMessages) ? conversationMessages : [];
-  const linkRegex = /https?:\/\/\S+/i;
+  const linkRegex = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[\/?#][^\s<]*)?/i;
   const mediaRegex = /\.(png|jpe?g|gif|webp|mp4|mov|webm|mp3|wav|ogg)(\?|#|$)/i;
   const fileRegex = /\.(pdf|zip|rar|7z|docx?|pptx?|xlsx?)(\?|#|$)/i;
 
@@ -1929,7 +1929,7 @@ function renderIncomingMessageMeta(metaEl, message) {
 
 function appendMessageTextWithLinks(container, text) {
   const raw = String(text || "");
-  const urlRegex = /https?:\/\/[^\s<]+/gi;
+  const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-z0-9-]+(?:\.[a-z0-9-]+)+(?:[\/?#][^\s<]*)?/gi;
   const parts = raw.split(urlRegex);
   const matches = raw.match(urlRegex) || [];
   if (!matches.length) {
@@ -1941,7 +1941,8 @@ function appendMessageTextWithLinks(container, text) {
     if (matches[i]) {
       const link = document.createElement("a");
       link.className = "message-link";
-      link.href = matches[i];
+      const href = /^https?:\/\//i.test(matches[i]) ? matches[i] : `https://${matches[i]}`;
+      link.href = href;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = matches[i];
