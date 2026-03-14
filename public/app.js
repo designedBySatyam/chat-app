@@ -99,7 +99,7 @@ const callMiniTime     = document.getElementById("callMiniTime");
 const callMiniEnd      = document.getElementById("callMiniEnd");
 const callLogList      = document.getElementById("callLogList");
 const callHistoryList  = document.getElementById("callHistoryList");
-const navRailButtons   = Array.from(document.querySelectorAll(".nav-btn[data-rail]"));
+const navRailButtons   = Array.from(document.querySelectorAll(".tab-btn[data-rail], .nav-btn[data-rail]"));
 const navSettingsBtn   = document.getElementById("navSettingsBtn");
 const settingsPanel    = document.getElementById("settingsPanel");
 const settingsCloseBtn = document.getElementById("settingsCloseBtn");
@@ -2964,6 +2964,9 @@ if (navRailButtons.length) {
       }
       if (settingsOpen) setSettingsOpen(false);
       setSidebarView(view);
+      if (window.innerWidth <= MOBILE_BP) {
+        showSidebarOnMobile();
+      }
     });
   });
 }

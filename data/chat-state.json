@@ -93,7 +93,9 @@
       "friends": [
         "test2"
       ],
-      "requests": [],
+      "requests": [
+        "testing"
+      ],
       "unread": [
         [
           "test2",
@@ -163,7 +165,7 @@
       "unread": [
         [
           "test11",
-          0
+          1
         ]
       ],
       "pushSubs": [],
@@ -175,7 +177,7 @@
       "gender": "Non-binary",
       "displayName": "lolll",
       "bio": "huhlhlhlhl",
-      "lastSeenAt": ""
+      "lastSeenAt": "2026-03-14T14:15:21.755Z"
     },
     {
       "key": "bunnyjii",
@@ -226,7 +228,7 @@
       "gender": "",
       "displayName": "",
       "bio": "",
-      "lastSeenAt": ""
+      "lastSeenAt": "2026-03-14T13:37:47.776Z"
     }
   ],
   "conversations": [
@@ -930,6 +932,20 @@
           "seenAt": "2026-03-14T12:19:37.002Z",
           "deletedAt": null,
           "reactions": {}
+        },
+        {
+          "id": "1773497885856-dn2w0i",
+          "from": "test11",
+          "to": "test2",
+          "fromKey": "test11",
+          "toKey": "test2",
+          "text": "/uploads/voice-1773497885840-ba67ba.webm?token=8664f3a71381f6c2a633021f9034c2b6431801fee678c6d74dc30ca8017d9f0d",
+          "timestamp": "2026-03-14T14:18:05.855Z",
+          "deliveredAt": null,
+          "seenAt": null,
+          "deletedAt": null,
+          "reactions": {},
+          "clientTempId": "tmp-mmqeumo1-mrn9xm"
         }
       ]
     }
