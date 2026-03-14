@@ -1,14 +1,10 @@
-const CACHE_NAME = "novyn-shell-v33";
+const CACHE_NAME = "novyn-shell-v37";
 const APP_SHELL = [
   "/",
   "/index.html",
   "/login.html",
-  "/styles.css",
-  "/vibe.css",
   "/login.css",
   "/dashboard.css",
-  "/revamp.css",
-  "/room-theme.css",
   "/app.js",
   "/chat-extras.js",
   "/login.js",

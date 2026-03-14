@@ -937,6 +937,31 @@ function buildFriendList(forUser) {
   return list;
 }
 
+function buildDiscoverOnlineList(forUser, limit = 20) {
+  const userKey = normalizeName(forUser);
+  const me = users.get(userKey);
+  if (!me) return [];
+
+  const exclude = new Set([userKey, ...me.friends, ...me.requests]);
+  const list = [];
+
+  for (const onlineKey of onlineUsers.keys()) {
+    if (exclude.has(onlineKey)) continue;
+    const user = users.get(onlineKey);
+    if (!user || !user.isRegistered) continue;
+    list.push({
+      username: user.username || onlineKey,
+      displayName: user.displayName || "",
+      avatarId: user.avatarId || "",
+      bio: user.bio || "",
+      lastSeenAt: user.lastSeenAt || "",
+    });
+  }
+
+  list.sort((a, b) => a.username.localeCompare(b.username));
+  return list.slice(0, limit);
+}
+
 function emitFriendList(username) {
   const userKey = normalizeName(username);
   const socketId = onlineUsers.get(userKey);
@@ -1218,6 +1243,13 @@ io.on("connection", (socket) => {
     }
     const suggestions = buildFriendSearchSuggestions(query, me, 8);
     socket.emit("friend_suggestions", { query, suggestions });
+  });
+
+  socket.on("discover_online", () => {
+    const userKey = socket.data.userKey;
+    if (!userKey) return;
+    const list = buildDiscoverOnlineList(userKey, 30);
+    socket.emit("discover_online", { users: list });
   });
 
   socket.on("add_friend", (rawFriendName) => {

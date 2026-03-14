@@ -8,8 +8,12 @@
   var root = document.documentElement;
   var btn = document.getElementById('themeToggle');
   var settingsMenu = document.getElementById('settingsMenu');
+  var settingsPanel = document.getElementById('settingsPanel');
   var themeItems = settingsMenu
     ? settingsMenu.querySelectorAll('[data-settings-action="theme"][data-theme]')
+    : [];
+  var themePanelItems = settingsPanel
+    ? settingsPanel.querySelectorAll('[data-settings-action="theme"][data-theme]')
     : [];
   var THEME_KEY = 'novyn-theme';
   var media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: light)') : null;
@@ -36,12 +40,26 @@
     return mode;
   }
 
+  function syncThemeItemState(item, isActive) {
+    if (!item) return;
+    item.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    if (item.classList) item.classList.toggle('active', isActive);
+  }
+
   function updateMenuState() {
-    if (!themeItems || !themeItems.length) return;
-    for (var i = 0; i < themeItems.length; i++) {
-      var item = themeItems[i];
-      var isActive = item && item.dataset.theme === currentMode;
-      if (item) item.setAttribute('aria-checked', isActive ? 'true' : 'false');
+    if (themeItems && themeItems.length) {
+      for (var i = 0; i < themeItems.length; i++) {
+        var item = themeItems[i];
+        var isActive = item && item.dataset.theme === currentMode;
+        syncThemeItemState(item, isActive);
+      }
+    }
+    if (themePanelItems && themePanelItems.length) {
+      for (var j = 0; j < themePanelItems.length; j++) {
+        var panelItem = themePanelItems[j];
+        var panelActive = panelItem && panelItem.dataset.theme === currentMode;
+        syncThemeItemState(panelItem, panelActive);
+      }
     }
   }
 
@@ -112,7 +130,20 @@
 (function () {
   var settingsBtn = document.getElementById('settingsBtn');
   var settingsMenu = document.getElementById('settingsMenu');
-  if (!settingsBtn || !settingsMenu) return;
+  var settingsPanel = document.getElementById('settingsPanel');
+  if (!settingsBtn && !settingsMenu && !settingsPanel) return;
+
+  var disableSettingsMenu = true;
+
+  if (settingsBtn) {
+    settingsBtn.disabled = true;
+    settingsBtn.setAttribute('aria-disabled', 'true');
+    settingsBtn.setAttribute('tabindex', '-1');
+    settingsBtn.classList.add('is-disabled');
+  }
+  if (settingsMenu) settingsMenu.classList.add('hidden');
+
+
 
   var usernameModal = document.getElementById('usernameModal');
   var passwordModal = document.getElementById('passwordModal');
@@ -191,12 +222,28 @@
   }
 
   function openMenu() {
+    if (!settingsMenu || !settingsBtn) return;
     settingsMenu.classList.remove('hidden');
     settingsBtn.setAttribute('aria-expanded', 'true');
   }
   function closeMenu() {
+    if (!settingsMenu || !settingsBtn) return;
     settingsMenu.classList.add('hidden');
     settingsBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  function openSettingsPanel() {
+    if (window._novynOpenSettingsPanel) {
+      window._novynOpenSettingsPanel();
+      return true;
+    }
+    return false;
+  }
+
+  function closeSettingsPanel() {
+    if (window._novynCloseSettingsPanel) {
+      window._novynCloseSettingsPanel();
+    }
   }
 
   function showModal(modal) {
@@ -221,22 +268,9 @@
     lastPasswordValue = '';
   }
 
-  settingsBtn.addEventListener('click', function (e) {
-    e.stopPropagation();
-    settingsMenu.classList.contains('hidden') ? openMenu() : closeMenu();
-  });
-
-  document.addEventListener('click', function (e) {
-    if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
-      closeMenu();
-    }
-  });
-
-  settingsMenu.addEventListener('click', function (e) {
-    var actionBtn = e.target.closest('[data-settings-action]');
+  function handleSettingsAction(actionBtn) {
     if (!actionBtn) return;
     var action = actionBtn.dataset.settingsAction;
-    closeMenu();
 
     if (action === 'profile') {
       if (window._novynOpenProfileModal) {
@@ -268,7 +302,43 @@
       try { sessionStorage.removeItem('novyn-session'); } catch (e) {}
       window.location.replace('/');
     }
+  }
+
+  if (settingsBtn && !disableSettingsMenu) {
+    settingsBtn.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (!settingsMenu) return;
+      settingsMenu.classList.contains('hidden') ? openMenu() : closeMenu();
+    });
+  }
+
+  document.addEventListener('click', function (e) {
+    if (disableSettingsMenu) return;
+    if (!settingsMenu || !settingsBtn) return;
+    if (!settingsMenu.contains(e.target) && !settingsBtn.contains(e.target)) {
+      closeMenu();
+    }
   });
+
+  if (settingsMenu && !disableSettingsMenu) {
+    settingsMenu.addEventListener('click', function (e) {
+      var actionBtn = e.target.closest('[data-settings-action]');
+      if (!actionBtn) return;
+      closeMenu();
+      handleSettingsAction(actionBtn);
+    });
+  }
+
+  if (settingsPanel) {
+    settingsPanel.addEventListener('click', function (e) {
+      var actionBtn = e.target.closest('[data-settings-action]');
+      if (!actionBtn) return;
+      handleSettingsAction(actionBtn);
+      if (actionBtn.dataset.settingsAction !== 'theme') {
+        closeSettingsPanel();
+      }
+    });
+  }
 
   usernameCancel && usernameCancel.addEventListener('click', function () {
     hideModal(usernameModal);
@@ -489,6 +559,7 @@
   if (isMobile()) {
     document.body.classList.add('mob-list-open');
     replaceState('friends');
+    showPanel('friends', { silent: true });
   }
   syncMobileTheme();
   syncMobilePerf();
@@ -506,6 +577,31 @@
   var closeBtn = document.getElementById('infoCloseBtn');
   if (!infoPanel || !toggleBtn) return;
 
+  function resetInfoScroll() {
+    var inner = infoPanel.querySelector('.info-inner');
+    if (!inner) return;
+    inner.scrollTop = 0;
+    if (inner.scrollTo) inner.scrollTo({ top: 0, behavior: 'auto' });
+    infoPanel.scrollTop = 0;
+    requestAnimationFrame(function () {
+      inner.scrollTop = 0;
+      if (inner.scrollTo) inner.scrollTo({ top: 0, behavior: 'auto' });
+    });
+    setTimeout(function () {
+      inner.scrollTop = 0;
+      if (inner.scrollTo) inner.scrollTo({ top: 0, behavior: 'auto' });
+    }, 350);
+  }
+
+  var lastInfoOpen = document.body.classList.contains('info-open');
+  if (lastInfoOpen) resetInfoScroll();
+  var infoObserver = new MutationObserver(function () {
+    var nowOpen = document.body.classList.contains('info-open');
+    if (nowOpen && !lastInfoOpen) resetInfoScroll();
+    lastInfoOpen = nowOpen;
+  });
+  infoObserver.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+
   function canOpenInfo() {
     return document.body.classList.contains('friend-selected');
   }
@@ -513,6 +609,7 @@
     if (!canOpenInfo()) return;
     document.body.classList.add('info-open');
     toggleBtn.setAttribute('aria-expanded', 'true');
+    resetInfoScroll();
   }
   function closePanel() {
     document.body.classList.remove('info-open');
@@ -521,7 +618,11 @@
   function togglePanel() {
     if (!canOpenInfo()) return;
     document.body.classList.toggle('info-open');
-    toggleBtn.setAttribute('aria-expanded', document.body.classList.contains('info-open') ? 'true' : 'false');
+    var isOpen = document.body.classList.contains('info-open');
+    toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    if (isOpen) {
+      resetInfoScroll();
+    }
   }
 
   toggleBtn.addEventListener('click', function (e) {
@@ -1102,6 +1203,9 @@
     }
     lastProfileFocus = null;
   }
+
+  window._novynOpenProfileModal = showModal;
+  window._novynCloseProfileModal = hideModal;
 
   openButtons.forEach(function(btn) {
     btn.addEventListener('click', showModal);

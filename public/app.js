@@ -47,6 +47,12 @@ const networkPill       = document.getElementById("networkPill");
 const requestCount      = document.getElementById("requestCount");
 const friendCount       = document.getElementById("friendCount");
 const onlineCount       = document.getElementById("onlineCount");
+const contactsRequestsBtn = document.getElementById("contactsRequestsBtn");
+const contactsRequestsPanel = document.getElementById("contactsRequestsPanel");
+const contactsRequestsBadge = document.getElementById("contactsRequestsBadge");
+const discoverPanel    = document.getElementById("discoverPanel");
+const discoverList     = document.getElementById("discoverList");
+const discoverEmpty    = document.getElementById("discoverEmpty");
 const sendButton        = messageForm ? messageForm.querySelector('button[type="submit"]') : null;
 const voiceBtn          = document.getElementById("voiceBtn");
 const voiceStatus       = document.getElementById("voiceStatus");
@@ -92,6 +98,17 @@ const callMiniStatus   = document.getElementById("callMiniStatus");
 const callMiniTime     = document.getElementById("callMiniTime");
 const callMiniEnd      = document.getElementById("callMiniEnd");
 const callLogList      = document.getElementById("callLogList");
+const callHistoryList  = document.getElementById("callHistoryList");
+const navRailButtons   = Array.from(document.querySelectorAll(".nav-btn[data-rail]"));
+const navSettingsBtn   = document.getElementById("navSettingsBtn");
+const settingsPanel    = document.getElementById("settingsPanel");
+const settingsCloseBtn = document.getElementById("settingsCloseBtn");
+const settingsAvatar   = document.getElementById("settingsAvatar");
+const settingsProfileName = document.getElementById("settingsProfileName");
+const settingsProfileHandle = document.getElementById("settingsProfileHandle");
+const sidebarBrand = document.querySelector(".app-brand");
+const sidebarTopActions = document.querySelector(".sidebar-top-actions");
+const callFilterButtons = Array.from(document.querySelectorAll("[data-call-filter]"));
 const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
 const mobBackBtn        = document.getElementById("mobBackBtn");
@@ -106,9 +123,14 @@ let activeFriend = "";
 let friends      = [];
 let hasGreeted   = false;
 let requests     = [];
+let discoverUsers = [];
 let replyTo      = null;
 let searchPanelOpen = false;
 let friendSearchQuery = "";
+let sidebarView = "messages";
+let settingsOpen = false;
+let callFilter = "all";
+const sidebarBrandHTML = sidebarBrand ? sidebarBrand.innerHTML : "";
 const searchState = {
   hits: [],
   index: -1,
@@ -121,6 +143,7 @@ const friendSuggestState = {
 let myProfile    = { avatarId: "", displayName: "", age: "", gender: "", bio: "" };
 let conversationMessages = [];
 let pendingUnreadJump = { friendKey: "", count: 0 };
+let lastInfoPanelFriendKey = "";
 let messageWindowStart = 0;
 let messageWindowEnd = 0;
 let loadOlderBtn = null;
@@ -143,6 +166,8 @@ const scrollState = {
 const EMPTY_CONVERSATION_HINT = "Choose a conversation to start messaging.";
 const DELETED_MESSAGE_TEXT = "This message was deleted.";
 const CALL_LOG_PREFIX = "__call_log__:";
+const CALL_HISTORY_KEY = "novyn-call-history";
+const MAX_CALL_HISTORY = 200;
 
 // ─── Utilities ───────────────────────────────────────────────────────────────
 
@@ -152,6 +177,278 @@ function normalizeName(value) {
 
 function normalizeSearchText(value) {
   return String(value || "").trim().toLowerCase();
+}
+
+function setSidebarView(nextView, options = {}) {
+  const allowed = ["messages", "calls", "contacts", "discover"];
+  const view = allowed.includes(nextView) ? nextView : "messages";
+  const prevView = sidebarView;
+  sidebarView = view;
+  document.body.dataset.rail = view;
+  navRailButtons.forEach((btn) => {
+    const btnView = btn.dataset.rail || "";
+    if (btnView === "settings") return;
+    btn.classList.toggle("active", btnView === view);
+  });
+  if (sidebarBrand) {
+    if (view === "messages") {
+      sidebarBrand.innerHTML = sidebarBrandHTML || "Novyn";
+    } else if (view === "calls") {
+      sidebarBrand.textContent = "Calls";
+    } else if (view === "contacts") {
+      sidebarBrand.textContent = "Contacts";
+    } else if (view === "discover") {
+      sidebarBrand.textContent = "Discover";
+    }
+  }
+  if (sidebarTopActions) {
+    sidebarTopActions.style.display = view === "messages" ? "" : "none";
+  }
+  if (networkPill) {
+    networkPill.style.display = view === "messages" ? "" : "none";
+  }
+  if (sidebarSearch) {
+    if (view === "calls") {
+      sidebarSearch.placeholder = "Search calls...";
+    } else if (view === "contacts") {
+      sidebarSearch.placeholder = "Search contacts...";
+    } else if (view === "discover") {
+      sidebarSearch.placeholder = "Find people or groups...";
+    } else {
+      sidebarSearch.placeholder = "Search friends...";
+    }
+  }
+  if (view === "discover") {
+    requestDiscoverOnline();
+  }
+  if (view === "contacts" && prevView !== "contacts") {
+    if (sidebarSearch && sidebarSearch.value) sidebarSearch.value = "";
+    if (friendSearchQuery) friendSearchQuery = "";
+  }
+  if (view !== "calls" && callFilter !== "all") {
+    setCallFilter("all");
+  }
+  if (view !== "contacts") {
+    setRequestsPanelOpen(false);
+  }
+  if (!options.silent) {
+    renderRequests();
+    renderFriends();
+    renderCallHistory();
+    renderDiscover();
+  }
+}
+
+function setRequestsPanelOpen(nextState) {
+  if (!contactsRequestsPanel || !contactsRequestsBtn) return;
+  const isOpen = Boolean(nextState);
+  contactsRequestsPanel.classList.toggle("is-open", isOpen);
+  contactsRequestsPanel.setAttribute("aria-hidden", isOpen ? "false" : "true");
+  contactsRequestsBtn.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+
+function updateRequestsBadge() {
+  if (!contactsRequestsBadge) return;
+  const count = requests.length || 0;
+  if (count > 0) {
+    contactsRequestsBadge.textContent = count > 99 ? "99+" : String(count);
+    contactsRequestsBadge.style.display = "";
+  } else {
+    contactsRequestsBadge.style.display = "none";
+  }
+}
+
+function setSettingsOpen(nextState) {
+  if (!settingsPanel) return;
+  settingsOpen = Boolean(nextState);
+  document.body.classList.toggle("settings-open", settingsOpen);
+  settingsPanel.setAttribute("aria-hidden", settingsOpen ? "false" : "true");
+  if (navSettingsBtn) navSettingsBtn.classList.toggle("active", settingsOpen);
+  if (settingsOpen) {
+    navRailButtons.forEach((btn) => {
+      const btnView = btn.dataset.rail || "";
+      if (btnView && btnView !== "settings") btn.classList.remove("active");
+    });
+    document.body.dataset.rail = "settings";
+    syncSettingsPanel();
+  } else {
+    setSidebarView(sidebarView, { silent: true });
+  }
+}
+
+function syncSettingsPanel() {
+  if (!settingsPanel) return;
+  const handle = me ? `@${me}` : "@you";
+  if (settingsProfileName) settingsProfileName.textContent = getMyDisplayName();
+  if (settingsProfileHandle) settingsProfileHandle.textContent = handle;
+  if (settingsAvatar) {
+    const fallback = (me || "?").slice(0, 2).toUpperCase();
+    if (myProfile.avatarId && window._novynAvatarUtils) {
+      window._novynAvatarUtils.applyAvatarToEl(settingsAvatar, myProfile.avatarId, fallback);
+    } else {
+      settingsAvatar.textContent = fallback;
+      settingsAvatar.style.background = "";
+    }
+  }
+}
+
+function setCallFilter(nextFilter) {
+  const allowed = ["all", "missed", "video"];
+  callFilter = allowed.includes(nextFilter) ? nextFilter : "all";
+  callFilterButtons.forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.callFilter === callFilter);
+  });
+  renderCallHistory();
+}
+
+function collectCallHistoryEntries() {
+  const entries = [];
+  const seen = new Set();
+  const pushEntry = (friend, message, log) => {
+    if (!friend || !message) return;
+    const key = `${normalizeName(friend.username)}|${message.timestamp || ""}|${message.text || ""}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    entries.push({ friend, message, log });
+  };
+
+  const cached = readCallHistoryCache();
+  cached.forEach((entry) => {
+    if (!entry || !entry.text) return;
+    const log = parseCallLogPayload(entry.text);
+    if (!log) return;
+    const friendName = String(entry.friend || "").trim();
+    if (!friendName) return;
+    const friend = findFriend(friendName) || { username: friendName, displayName: "" };
+    pushEntry(friend, {
+      text: entry.text,
+      timestamp: entry.timestamp || "",
+      from: entry.from || friendName,
+    }, log);
+  });
+
+  friends.forEach((friend) => {
+    const rawText = friend?.lastMessage || "";
+    if (!rawText) return;
+    const log = parseCallLogPayload(rawText);
+    if (!log) return;
+    pushEntry(friend, {
+      text: rawText,
+      timestamp: friend.lastTimestamp || "",
+      from: friend.lastFrom || friend.username || "",
+    }, log);
+  });
+
+  if (activeFriend && Array.isArray(conversationMessages)) {
+    const friend = findFriend(activeFriend) || { username: activeFriend, displayName: "" };
+    conversationMessages.forEach((message) => {
+      if (!message) return;
+      const log = parseCallLogPayload(message.text);
+      if (!log) return;
+      pushEntry(friend, message, log);
+    });
+  }
+
+  return entries;
+}
+
+function renderCallHistory() {
+  if (!callHistoryList) return;
+  callHistoryList.innerHTML = "";
+
+  const query = friendSearchQuery;
+  const entries = collectCallHistoryEntries();
+  const filtered = entries.filter((entry) => {
+    const log = entry.log || parseCallLogPayload(entry.message?.text || "");
+    if (!log) return false;
+    if (callFilter === "missed") {
+      const missedStatuses = ["missed", "declined", "busy", "unavailable", "cancelled"];
+      if (!missedStatuses.includes(log.status)) return false;
+    }
+    if (callFilter === "video") {
+      if (log.mediaType && log.mediaType !== "video") return false;
+    }
+    if (!query) return true;
+    const name = getFriendDisplayName(entry.friend || {});
+    const handle = entry.friend?.username || "";
+    return normalizeSearchText(`${name} ${handle}`).includes(query);
+  });
+
+  if (!filtered.length) {
+    const empty = document.createElement("li");
+    empty.className = "item-card list-empty";
+    const rawQuery = sidebarSearch ? sidebarSearch.value.trim() : "";
+    empty.textContent = query ? `No calls match "${rawQuery || friendSearchQuery}"` : "No calls yet";
+    callHistoryList.appendChild(empty);
+    return;
+  }
+
+  filtered.sort((a, b) => {
+    const aTs = a.message?.timestamp || a.friend?.lastTimestamp || "";
+    const bTs = b.message?.timestamp || b.friend?.lastTimestamp || "";
+    if (aTs && bTs) return bTs.localeCompare(aTs);
+    if (aTs) return -1;
+    if (bTs) return 1;
+    return 0;
+  });
+
+  filtered.forEach((entry) => {
+    const friend = entry.friend || {};
+    const message = entry.message || {};
+    const log = entry.log || parseCallLogPayload(message.text);
+    if (!log) return;
+    const fromMe = normalizeName(message.from) === normalizeName(me);
+    const display = getCallLogDisplay(log, fromMe);
+    const timeText = formatFriendTime(message.timestamp || friend.lastTimestamp || "");
+    const isBadStatus = ["cancelled", "declined", "missed", "busy", "unavailable"].includes(display.status);
+    const isNeutralStatus = display.status === "ended";
+    const statusClass = isNeutralStatus ? "neutral" : (isBadStatus ? "bad" : "good");
+
+    const item = document.createElement("li");
+    const mediaClass = log.mediaType === "video" ? "video" : "audio";
+    item.className = `call-log-item ${display.direction === "incoming" ? "incoming" : "outgoing"} status-${statusClass} ${mediaClass}`;
+
+    const icon = document.createElement("div");
+    icon.className = "call-log-item-icon";
+    icon.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></svg>`;
+
+    const content = document.createElement("div");
+    content.className = "call-log-item-content";
+    const title = document.createElement("div");
+    title.className = "call-log-item-title";
+    title.textContent = getFriendDisplayName(friend);
+    const subtitle = document.createElement("div");
+    subtitle.className = "call-log-item-subtitle";
+    subtitle.textContent = display.subtitle;
+    const status = document.createElement("div");
+    status.className = `call-status-pill ${statusClass}`;
+    status.textContent = display.title;
+    content.append(title, subtitle, status);
+
+    const time = document.createElement("div");
+    time.className = "call-log-item-time";
+    time.textContent = timeText || "";
+
+    const actionBtn = document.createElement("button");
+    actionBtn.type = "button";
+    actionBtn.className = "call-log-action";
+    actionBtn.title = "Call back";
+    actionBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.18h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.96a16 16 0 0 0 6 6l.92-.92a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21.73 16.92z"/></svg>`;
+    actionBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (friend?.username) {
+        setActiveFriend(friend.username);
+        setTimeout(() => startVoiceCall(), 240);
+      }
+    });
+
+    item.addEventListener("click", () => {
+      if (friend?.username) setActiveFriend(friend.username);
+    });
+
+    item.append(icon, content, time, actionBtn);
+    callHistoryList.appendChild(item);
+  });
 }
 
 function showChatOnMobile() {
@@ -647,6 +944,58 @@ function formatAudioTime(seconds) {
   return `${mins}:${String(secs).padStart(2, "0")}`;
 }
 
+const WAVE_BAR_COUNT = 28;
+const WAVE_BAR_MIN = 4;
+const WAVE_BAR_MAX = 24;
+
+function hashStringToSeed(value) {
+  const str = String(value || "");
+  let h = 2166136261;
+  for (let i = 0; i < str.length; i += 1) {
+    h ^= str.charCodeAt(i);
+    h += (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24);
+  }
+  return h >>> 0;
+}
+
+function seededRng(seed) {
+  let s = seed >>> 0;
+  return () => {
+    s = (s + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t ^= t + Math.imul(t ^ (t >>> 7), 61 | t);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+function buildWaveform(waveformEl, seed) {
+  if (!waveformEl) return;
+  const rng = seededRng(seed);
+  waveformEl.innerHTML = "";
+  for (let i = 0; i < WAVE_BAR_COUNT; i += 1) {
+    const bar = document.createElement("span");
+    bar.className = "wv-bar pending";
+    const height = Math.round(WAVE_BAR_MIN + rng() * (WAVE_BAR_MAX - WAVE_BAR_MIN));
+    bar.style.height = `${height}px`;
+    waveformEl.appendChild(bar);
+  }
+}
+
+function updateWaveformProgress(waveformEl, progress) {
+  if (!waveformEl) return;
+  const bars = waveformEl.querySelectorAll(".wv-bar");
+  const played = Math.round(Math.max(0, Math.min(1, progress)) * bars.length);
+  bars.forEach((bar, i) => {
+    if (i < played) {
+      bar.classList.add("played");
+      bar.classList.remove("pending");
+    } else {
+      bar.classList.add("pending");
+      bar.classList.remove("played");
+    }
+  });
+}
+
 function formatCallDuration(totalSeconds) {
   const safe = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
   const hours = Math.floor(safe / 3600);
@@ -658,25 +1007,89 @@ function formatCallDuration(totalSeconds) {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-function buildCallLogPayload(status, direction, durationSeconds) {
+function buildCallLogPayload(status, direction, durationSeconds, mediaType) {
   const safeStatus = String(status || "").trim() || "ended";
   const safeDirection = String(direction || "").trim() || "outgoing";
   const safeDuration = Number.isFinite(durationSeconds) ? Math.max(0, Math.floor(durationSeconds)) : 0;
-  return `${CALL_LOG_PREFIX}${safeStatus}|${safeDirection}|${safeDuration}`;
+  const safeMedia = String(mediaType || "").trim() || "audio";
+  return `${CALL_LOG_PREFIX}${safeStatus}|${safeDirection}|${safeDuration}|${safeMedia}`;
 }
 
 function parseCallLogPayload(rawText) {
   const text = String(rawText || "");
   if (!text.startsWith(CALL_LOG_PREFIX)) return null;
   const body = text.slice(CALL_LOG_PREFIX.length);
-  const [status, direction, duration] = body.split("|");
+  const [status, direction, duration, mediaType] = body.split("|");
   if (!status) return null;
   const seconds = Number.isFinite(Number(duration)) ? Math.max(0, Math.floor(Number(duration))) : 0;
   return {
     status: String(status || "").trim() || "ended",
     direction: String(direction || "").trim() || "outgoing",
     duration: seconds,
+    mediaType: String(mediaType || "").trim() || "audio",
   };
+}
+
+function getCallHistoryStorageKey() {
+  const userKey = normalizeName(me || "");
+  return userKey ? `${CALL_HISTORY_KEY}:${userKey}` : CALL_HISTORY_KEY;
+}
+
+function readCallHistoryCache() {
+  const key = getCallHistoryStorageKey();
+  try {
+    const raw = localStorage.getItem(key);
+    const parsed = JSON.parse(raw || "[]");
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function writeCallHistoryCache(list) {
+  const key = getCallHistoryStorageKey();
+  try {
+    localStorage.setItem(key, JSON.stringify(list.slice(0, MAX_CALL_HISTORY)));
+  } catch (_) {}
+}
+
+function addCallHistoryEntry(entry) {
+  if (!entry || !entry.friend || !entry.text) return false;
+  if (!me) return false;
+  const list = readCallHistoryCache();
+  const entryId = entry.id
+    ? String(entry.id)
+    : `${normalizeName(entry.friend)}|${entry.timestamp || ""}|${entry.text}`;
+  if (list.some((item) => item._id === entryId)) return false;
+  list.unshift({
+    _id: entryId,
+    friend: entry.friend,
+    text: entry.text,
+    timestamp: entry.timestamp || "",
+    from: entry.from || "",
+  });
+  writeCallHistoryCache(list);
+  return true;
+}
+
+function cacheCallLogMessage(message) {
+  const log = parseCallLogPayload(message?.text);
+  if (!log) return false;
+  const other = normalizeName(message?.from) === normalizeName(me) ? message?.to : message?.from;
+  const friend = String(other || "").trim();
+  if (!friend) return false;
+  return addCallHistoryEntry({
+    id: message.id,
+    friend,
+    text: message.text,
+    timestamp: message.timestamp || "",
+    from: message.from || "",
+  });
+}
+
+function cacheCallLogMessages(messages) {
+  if (!Array.isArray(messages)) return;
+  messages.forEach((msg) => cacheCallLogMessage(msg));
 }
 
 function invertCallDirection(direction) {
@@ -687,27 +1100,31 @@ function invertCallDirection(direction) {
 
 function getCallLogDisplay(log, fromMe) {
   const direction = fromMe ? log.direction : invertCallDirection(log.direction);
-  const title = direction === "incoming" ? "Incoming call" : "Outgoing call";
-  let subtitle = "Call";
+  const isVideo = log.mediaType === "video";
+  const mediaLabel = isVideo ? "Video call" : "Call";
+  const title = direction === "incoming"
+    ? (isVideo ? "Incoming video" : "Incoming call")
+    : (isVideo ? "Outgoing video" : "Outgoing call");
+  let subtitle = mediaLabel;
   let statusLabel = "Ended";
   const isIncoming = direction === "incoming";
   if (log.status === "ended") {
-    subtitle = log.duration > 0 ? `Call ended · ${formatCallDuration(log.duration)}` : "Call ended";
+    subtitle = log.duration > 0 ? `${mediaLabel} ended - ${formatCallDuration(log.duration)}` : `${mediaLabel} ended`;
     statusLabel = "Ended";
   } else if (log.status === "cancelled") {
-    subtitle = isIncoming ? "Missed call" : "Call cancelled";
+    subtitle = isIncoming ? `Missed ${mediaLabel.toLowerCase()}` : `${mediaLabel} cancelled`;
     statusLabel = "Cancelled";
   } else if (log.status === "declined") {
-    subtitle = isIncoming ? "Missed call" : "Call declined";
+    subtitle = isIncoming ? `Missed ${mediaLabel.toLowerCase()}` : `${mediaLabel} declined`;
     statusLabel = "Declined";
   } else if (log.status === "missed") {
-    subtitle = "Missed call";
+    subtitle = `Missed ${mediaLabel.toLowerCase()}`;
     statusLabel = "Missed";
   } else if (log.status === "busy") {
-    subtitle = isIncoming ? "Missed call" : "User busy";
+    subtitle = isIncoming ? `Missed ${mediaLabel.toLowerCase()}` : "User busy";
     statusLabel = "Busy";
   } else if (log.status === "unavailable") {
-    subtitle = isIncoming ? "Missed call" : "User unavailable";
+    subtitle = isIncoming ? `Missed ${mediaLabel.toLowerCase()}` : "User unavailable";
     statusLabel = "Unavailable";
   }
   return { title, subtitle, direction, status: log.status, statusLabel };
@@ -782,6 +1199,15 @@ function getFriendPresenceText(friend) {
   return statusText;
 }
 
+function getContactBucket(friend) {
+  if (friend?.online) return "online";
+  const last = new Date(friend?.lastSeenAt || "");
+  if (Number.isNaN(last.getTime())) return "offline";
+  const diffMinutes = (Date.now() - last.getTime()) / 60000;
+  if (diffMinutes <= 60) return "away";
+  return "offline";
+}
+
 function syncProfilePanelStats() {
   if (!profileStatMessages || !profileStatMedia || !profileStatLinks || !profileStatFiles) return;
   const messages = Array.isArray(conversationMessages) ? conversationMessages : [];
@@ -847,7 +1273,10 @@ function syncCallLogPanel() {
       subtitle.className = "call-log-item-subtitle";
       subtitle.textContent = display.subtitle;
       const status = document.createElement("div");
-      status.className = "call-status-pill";
+      const isBadStatus = ["cancelled", "declined", "missed", "busy", "unavailable"].includes(display.status);
+      const isNeutralStatus = display.status === "ended";
+      const statusClass = isNeutralStatus ? "neutral" : (isBadStatus ? "bad" : "good");
+      status.className = `call-status-pill ${statusClass}`;
       status.textContent = display.statusLabel || "Call";
       content.append(title, subtitle, status);
 
@@ -869,6 +1298,8 @@ function syncCallLogPanel() {
       item.append(icon, content, time, actionBtn);
       callLogList.appendChild(item);
     });
+
+  renderCallHistory();
 }
 
 function syncProfilePanel(friend) {
@@ -1100,7 +1531,8 @@ function updateMessageHighlight(row, query) {
   const raw = body.dataset.rawText || row.dataset.messageText || "";
   if (!body.dataset.rawText) body.dataset.rawText = raw;
   if (!query) {
-    body.textContent = raw;
+    body.innerHTML = "";
+    appendMessageTextWithLinks(body, raw);
     return;
   }
   body.innerHTML = highlightText(raw, query);
@@ -1495,6 +1927,29 @@ function renderIncomingMessageMeta(metaEl, message) {
   metaEl.textContent = `${senderName} · ${time}`;
 }
 
+function appendMessageTextWithLinks(container, text) {
+  const raw = String(text || "");
+  const urlRegex = /https?:\/\/[^\s<]+/gi;
+  const parts = raw.split(urlRegex);
+  const matches = raw.match(urlRegex) || [];
+  if (!matches.length) {
+    container.textContent = raw;
+    return;
+  }
+  for (let i = 0; i < parts.length; i += 1) {
+    if (parts[i]) container.appendChild(document.createTextNode(parts[i]));
+    if (matches[i]) {
+      const link = document.createElement("a");
+      link.className = "message-link";
+      link.href = matches[i];
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = matches[i];
+      container.appendChild(link);
+    }
+  }
+}
+
 function focusMessageById(messageId) {
   if (!messageId || !messagesEl) return;
   const orig = messagesEl.querySelector(`[data-message-id="${messageId}"]`);
@@ -1606,7 +2061,10 @@ function buildMessageElement(message, skipAnimation = false) {
       subtitle.className = "call-log-subtitle";
       subtitle.textContent = log.subtitle;
       const status = document.createElement("div");
-      status.className = "call-status-pill";
+      const isBadStatus = ["cancelled", "declined", "missed", "busy", "unavailable"].includes(log.status);
+      const isNeutralStatus = log.status === "ended";
+      const statusClass = isNeutralStatus ? "neutral" : (isBadStatus ? "bad" : "good");
+      status.className = `call-status-pill ${statusClass}`;
       status.textContent = log.statusLabel || "Call";
       content.append(title, subtitle, status);
 
@@ -1617,6 +2075,7 @@ function buildMessageElement(message, skipAnimation = false) {
       card.append(icon, content, time);
       body.appendChild(card);
     } else if (isAudio) {
+      body.classList.add("message-audio");
       const audioCard = document.createElement("div");
       audioCard.className = "audio-card";
 
@@ -1629,11 +2088,10 @@ function buildMessageElement(message, skipAnimation = false) {
         <svg class="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>
       `;
 
-      const track = document.createElement("div");
-      track.className = "audio-track";
-      const progress = document.createElement("span");
-      progress.className = "audio-progress";
-      track.appendChild(progress);
+      const waveform = document.createElement("div");
+      waveform.className = "audio-waveform";
+      const seedValue = message.id || message.clientTempId || message.timestamp || trimmedText;
+      buildWaveform(waveform, hashStringToSeed(seedValue));
 
       const time = document.createElement("span");
       time.className = "audio-time";
@@ -1650,13 +2108,15 @@ function buildMessageElement(message, skipAnimation = false) {
         const dur = audio.duration || 0;
         time.textContent = `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`;
         const pct = dur > 0 ? (cur / dur) : 0;
-        progress.style.transform = `scaleX(${Math.min(1, Math.max(0, pct))})`;
+        updateWaveformProgress(waveform, pct);
       };
 
       audio.addEventListener("loadedmetadata", syncUI);
       audio.addEventListener("timeupdate", syncUI);
+      updateWaveformProgress(waveform, 0);
       audio.addEventListener("ended", () => {
         audioCard.classList.remove("is-playing");
+        updateWaveformProgress(waveform, 0);
         syncUI();
       });
       audio.addEventListener("play", () => audioCard.classList.add("is-playing"));
@@ -1675,18 +2135,18 @@ function buildMessageElement(message, skipAnimation = false) {
         }
       });
 
-      track.addEventListener("pointerdown", (e) => {
+      waveform.addEventListener("pointerdown", (e) => {
         if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
-        const rect = track.getBoundingClientRect();
+        const rect = waveform.getBoundingClientRect();
         const pct = (e.clientX - rect.left) / rect.width;
         audio.currentTime = Math.max(0, Math.min(audio.duration, pct * audio.duration));
         syncUI();
       });
 
-      audioCard.append(playBtn, track, time, audio);
+      audioCard.append(playBtn, waveform, time, audio);
       body.appendChild(audioCard);
     } else {
-      body.textContent = message.text;
+      appendMessageTextWithLinks(body, message.text);
       body.dataset.rawText = message.text;
     }
   }
@@ -1914,12 +2374,91 @@ function applyDeletedMessageToDom(messageId, replacementText = DELETED_MESSAGE_T
   if (reactions) reactions.innerHTML = "";
 }
 
+function requestDiscoverOnline() {
+  if (!socket || !socket.emit) return;
+  if (!isDashboardPage || !me) return;
+  socket.emit("discover_online");
+}
+
+function setDiscoverUsers(list) {
+  discoverUsers = Array.isArray(list) ? list.slice() : [];
+  renderDiscover();
+}
+
+function renderDiscover() {
+  if (!discoverPanel || !discoverList) return;
+  discoverList.innerHTML = "";
+  const meKey = normalizeName(me);
+  const friendKeys = new Set(friends.map((friend) => normalizeName(friend.username)));
+  const requestKeys = new Set(requests.map((name) => normalizeName(name)));
+  const query = friendSearchQuery;
+  const filtered = discoverUsers.filter((user) => {
+    const username = String(user?.username || "").trim();
+    if (!username) return false;
+    const key = normalizeName(username);
+    if (!key || key === meKey) return false;
+    if (friendKeys.has(key) || requestKeys.has(key)) return false;
+    if (query) {
+      const searchBlob = normalizeSearchText(`${user?.displayName || ""} ${username} ${user?.bio || ""}`);
+      if (!searchBlob.includes(query)) return false;
+    }
+    return true;
+  });
+  if (discoverEmpty) {
+    discoverEmpty.style.display = filtered.length ? "none" : "";
+  }
+  if (!filtered.length) return;
+
+  filtered.forEach((user) => {
+    const item = document.createElement("div");
+    item.className = "discover-item";
+
+    const avatar = document.createElement("div");
+    avatar.className = "discover-avatar";
+    const fallback = String(user?.username || "").slice(0, 2).toUpperCase();
+    if (user?.avatarId && window._novynAvatarUtils) {
+      window._novynAvatarUtils.applyAvatarToEl(avatar, user.avatarId, fallback || "?");
+    } else {
+      avatar.textContent = fallback || "?";
+    }
+
+    const meta = document.createElement("div");
+    meta.className = "discover-meta";
+    const name = document.createElement("div");
+    name.className = "discover-name";
+    const displayName = cleanDisplayName(user?.displayName);
+    name.textContent = displayName || user?.username || "User";
+    const sub = document.createElement("div");
+    sub.className = "discover-sub";
+    const bio = cleanDisplayName(user?.bio);
+    sub.textContent = bio ? `Online now · ${bio}` : "Online now";
+    meta.append(name, sub);
+
+    const action = document.createElement("button");
+    action.className = "discover-action";
+    action.type = "button";
+    action.textContent = "Add";
+    action.addEventListener("click", () => {
+      if (action.disabled) return;
+      action.disabled = true;
+      action.classList.add("is-disabled");
+      action.textContent = "Requested";
+      if (user?.username) socket.emit("add_friend", user.username);
+    });
+
+    item.append(avatar, meta, action);
+    discoverList.appendChild(item);
+  });
+}
+
+
 // ─── Requests ────────────────────────────────────────────────────────────────
 
 function renderRequests() {
   if (!requestList) return;
   requestList.innerHTML = "";
   updateStats();
+  updateRequestsBadge();
 
   const query = friendSearchQuery;
   const filteredRequests = query
@@ -1999,6 +2538,15 @@ function applyInfoAvatar(avatarEl, avatarId, fallbackText) {
   avatarEl.textContent = fallbackText || "?";
 }
 
+function maybeResetInfoPanelScroll() {
+  if (!document.body || !document.body.classList.contains("info-open")) return;
+  const nextKey = activeFriend ? normalizeName(activeFriend) : "me";
+  if (!nextKey || nextKey === lastInfoPanelFriendKey) return;
+  const inner = document.querySelector(".info-inner");
+  if (inner) inner.scrollTop = 0;
+  lastInfoPanelFriendKey = nextKey;
+}
+
 function syncInfoPanel() {
   if (!infoPanelName || !infoPanelAvatar || !infoPanelHandle || !infoPanelStatus) return;
 
@@ -2008,6 +2556,7 @@ function syncInfoPanel() {
       infoPanelName.textContent = "Loading...";
       infoPanelHandle.textContent = "";
       setInfoPanelStatus("● Offline", "offline");
+      maybeResetInfoPanelScroll();
       return;
     }
 
@@ -2021,6 +2570,7 @@ function syncInfoPanel() {
     );
     setInfoPanelStatus(friend.online ? "● Online" : "● Offline", friend.online ? "online" : "offline");
     infoPanelStatus.title = friend.online ? "Online now" : formatLastSeen(friend.lastSeenAt);
+    maybeResetInfoPanelScroll();
     return;
   }
 
@@ -2031,7 +2581,9 @@ function syncInfoPanel() {
   applyInfoAvatar(infoPanelAvatar, myProfile.avatarId, (me || "You").slice(0, 2).toUpperCase());
   setInfoPanelStatus("● You", "me");
   infoPanelStatus.title = "Your profile";
+  maybeResetInfoPanelScroll();
 }
+
 
 function renderActiveFriendPresence() {
   if (document.body) {
@@ -2051,7 +2603,7 @@ function renderActiveFriendPresence() {
     activeFriendAvatar.style.background = "";
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Select a friend to start chatting";
-      activeFriendPresenceLine.classList.remove("online");
+      activeFriendPresenceLine.classList.remove("online", "offline");
     }
     syncProfilePanel();
     return;
@@ -2062,7 +2614,7 @@ function renderActiveFriendPresence() {
     activePresence.classList.add("hidden");
     if (activeFriendPresenceLine) {
       activeFriendPresenceLine.textContent = "Loading contact status...";
-      activeFriendPresenceLine.classList.remove("online");
+      activeFriendPresenceLine.classList.remove("online", "offline");
     }
     syncProfilePanel();
     return;
@@ -2090,8 +2642,10 @@ function renderActiveFriendPresence() {
     : `${friend.username} is offline`;
 
   if (activeFriendPresenceLine) {
-    activeFriendPresenceLine.textContent = getFriendPresenceText(friend);
+    const statusText = friend.online ? "Online now" : formatLastSeen(friend.lastSeenAt);
+    activeFriendPresenceLine.textContent = statusText;
     activeFriendPresenceLine.classList.toggle("online", !!friend.online);
+    activeFriendPresenceLine.classList.toggle("offline", !friend.online);
   }
 
   syncProfilePanel(friend);
@@ -2111,9 +2665,37 @@ function syncRemoveFriendButton() {
   }
 }
 
+function clearActiveFriendSelection() {
+  if (activeFriend) stopLocalTyping(activeFriend);
+  activeFriend = "";
+  pendingUnreadJump = { friendKey: "", count: 0 };
+  setActiveChatTarget("");
+  conversationMessages = [];
+  clearReply();
+  resetMessageSearch();
+  if (activeFriendLabel) {
+    activeFriendLabel.textContent = "Select a conversation";
+    activeFriendLabel.title = "";
+  }
+  if (activeFriendPresenceLine) {
+    activeFriendPresenceLine.textContent = "Choose a friend to start messaging";
+    activeFriendPresenceLine.classList.remove("online", "offline");
+  }
+  renderActiveFriendPresence();
+  syncRemoveFriendButton();
+  setComposerEnabled(false);
+  renderMessagesEmptyState(EMPTY_CONVERSATION_HINT);
+  renderFriends();
+}
+
 function setActiveFriend(username) {
   if (activeFriend && normalizeName(activeFriend) !== normalizeName(username)) {
     stopLocalTyping(activeFriend);
+  }
+
+  if (!username) {
+    clearActiveFriendSelection();
+    return;
   }
 
   if (username) {
@@ -2150,11 +2732,16 @@ function renderFriends() {
   friendList.innerHTML = "";
   updateStats();
 
+  const isContactsView = sidebarView === "contacts";
+  const isMessagesView = sidebarView === "messages";
   const query = friendSearchQuery;
   const filteredFriends = query
     ? friends.filter((friend) => getFriendSearchBlob(friend).includes(query))
     : friends;
   const sortedFriends = filteredFriends.slice().sort((a, b) => {
+    if (sidebarView === "contacts") {
+      return getFriendDisplayName(a).localeCompare(getFriendDisplayName(b));
+    }
     const aTs = a.lastTimestamp || "";
     const bTs = b.lastTimestamp || "";
     if (aTs && bTs) return bTs.localeCompare(aTs);
@@ -2175,7 +2762,7 @@ function renderFriends() {
     return;
   }
 
-  for (const friend of sortedFriends) {
+  const renderFriendRow = (friend) => {
     const li      = document.createElement("li");
     li.className  = "item-card";
 
@@ -2208,36 +2795,76 @@ function renderFriends() {
 
     const preview = document.createElement("span");
     preview.className = "chat-preview";
-    preview.textContent = friendPreview(friend);
+    preview.textContent = (isContactsView || isMessagesView) ? getFriendPresenceText(friend) : friendPreview(friend);
     preview.title = preview.textContent;
+    if (isContactsView || isMessagesView) {
+      preview.classList.toggle("status-online", !!friend.online);
+      preview.classList.toggle("status-offline", !friend.online);
+    }
 
     main.append(name, preview);
 
-    const side      = document.createElement("div");
-    side.className  = "friend-side chat-right";
+    if (!isContactsView) {
+      const side      = document.createElement("div");
+      side.className  = "friend-side chat-right";
 
-    const timeText = formatFriendTime(friend.lastTimestamp);
-    if (timeText) {
-      const time = document.createElement("span");
-      time.className = "chat-time";
-      time.textContent = timeText;
-      side.appendChild(time);
-    }
-    const unreadCount = Number(friend.unreadCount) || 0;
-    if (unreadCount > 0) {
-      const unread        = document.createElement("span");
-      unread.className    = "unread-badge";
-      unread.textContent  = unreadCount > 99 ? "99+" : String(unreadCount);
-      side.appendChild(unread);
-    }
+      if (!isMessagesView) {
+        const timeText = formatFriendTime(friend.lastTimestamp);
+        if (timeText) {
+          const time = document.createElement("span");
+          time.className = "chat-time";
+          time.textContent = timeText;
+          side.appendChild(time);
+        }
+      }
+      const unreadCount = Number(friend.unreadCount) || 0;
+      if (unreadCount > 0) {
+        const unread        = document.createElement("span");
+        unread.className    = "unread-badge";
+        unread.textContent  = unreadCount > 99 ? "99+" : String(unreadCount);
+        side.appendChild(unread);
+      }
 
-    btn.append(main, side);
+      if (side.childNodes.length) {
+        btn.append(main, side);
+      } else {
+        btn.append(main);
+      }
+    } else {
+      btn.append(main);
+    }
     li.appendChild(btn);
     friendList.appendChild(li);
+  };
+
+  if (isContactsView) {
+    const grouped = { online: [], away: [], offline: [] };
+    sortedFriends.forEach((friend) => {
+      const bucket = getContactBucket(friend);
+      if (grouped[bucket]) grouped[bucket].push(friend);
+    });
+    const order = ["online", "away", "offline"];
+    const labels = { online: "Online", away: "Away", offline: "Offline" };
+
+    order.forEach((bucket) => {
+      const list = grouped[bucket];
+      if (!list || !list.length) return;
+      const label = document.createElement("li");
+      label.className = "contact-section-label";
+      label.textContent = `${labels[bucket]} — ${list.length}`;
+      friendList.appendChild(label);
+      list
+        .slice()
+        .sort((a, b) => getFriendDisplayName(a).localeCompare(getFriendDisplayName(b)))
+        .forEach(renderFriendRow);
+    });
+  } else {
+    sortedFriends.forEach(renderFriendRow);
   }
 
   renderActiveFriendPresence();
   syncRemoveFriendButton();
+  renderCallHistory();
 }
 
 // ─── Form handlers ────────────────────────────────────────────────────────────
@@ -2319,14 +2946,50 @@ if (sidebarSearch) {
     friendSearchQuery = normalizeSearchText(sidebarSearch.value);
     renderRequests();
     renderFriends();
+    renderCallHistory();
+    renderDiscover();
   };
   sidebarSearch.addEventListener("input", applyFriendSearch);
   sidebarSearch.addEventListener("search", applyFriendSearch);
 }
 
+if (navRailButtons.length) {
+  navRailButtons.forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      const view = btn.dataset.rail || "";
+      if (!view) return;
+      if (view === "settings") {
+        setSettingsOpen(!settingsOpen);
+        return;
+      }
+      if (settingsOpen) setSettingsOpen(false);
+      setSidebarView(view);
+    });
+  });
+}
+
+if (callFilterButtons.length) {
+  callFilterButtons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const filter = btn.dataset.callFilter || "all";
+      setCallFilter(filter);
+    });
+  });
+}
+
+if (settingsCloseBtn) {
+  settingsCloseBtn.addEventListener("click", () => setSettingsOpen(false));
+}
+
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && settingsOpen) {
+    setSettingsOpen(false);
+  }
+});
+
 if (mobBackBtn) {
   mobBackBtn.addEventListener("click", () => {
-    setActiveChatTarget("");
+    clearActiveFriendSelection();
     showSidebarOnMobile();
   });
 }
@@ -2466,6 +3129,7 @@ const voiceState = {
   cancelNext: false,
   startedAt: 0,
   timerId: null,
+  pendingTempId: "",
 };
 
 const ICE_SERVERS = window.NOVYN_ICE_SERVERS || [
@@ -2510,6 +3174,7 @@ function resetVoiceState() {
   voiceState.isRecording = false;
   voiceState.cancelNext = false;
   voiceState.startedAt = 0;
+  voiceState.pendingTempId = "";
   if (voiceBtn) {
     voiceBtn.classList.remove("recording");
     voiceBtn.setAttribute("aria-pressed", "false");
@@ -2527,6 +3192,7 @@ function resetVoiceState() {
 
 async function uploadVoiceBlob(blob) {
   if (!blob || !activeFriend) return;
+  const targetFriend = activeFriend;
   voiceState.uploading = true;
   if (voiceStatus) voiceStatus.classList.remove("hidden");
   if (voiceLabel) voiceLabel.textContent = "Uploading...";
@@ -2535,6 +3201,11 @@ async function uploadVoiceBlob(blob) {
   if (voiceProgressText) voiceProgressText.textContent = "Uploading... 0%";
   if (voiceCancelBtn) voiceCancelBtn.disabled = true;
   if (voiceStopBtn) voiceStopBtn.disabled = true;
+  if (targetFriend) {
+    const tempId = createClientTempId();
+    voiceState.pendingTempId = tempId;
+    queuePendingMessage({ to: targetFriend, text: "Uploading voice message...", clientTempId: tempId }, { queue: false, updateFriends: false });
+  }
   try {
     const formData = new FormData();
     formData.append("voice", blob, `voice-${Date.now()}.webm`);
@@ -2561,10 +3232,30 @@ async function uploadVoiceBlob(blob) {
       xhr.send(formData);
     });
     if (!data?.url) throw new Error("No URL returned");
-    sendMessagePayload({ to: activeFriend, text: data.url });
+    if (voiceState.pendingTempId) {
+      const tempId = voiceState.pendingTempId;
+      voiceState.pendingTempId = "";
+      updatePendingMessageText(tempId, data.url);
+      const pendingMsg = pendingByTempId.get(tempId);
+      if (pendingMsg) {
+        friends = friends.map((f) =>
+          normalizeName(f.username) === normalizeName(targetFriend)
+            ? { ...f, lastMessage: pendingMsg.text, lastFrom: me, lastTimestamp: pendingMsg.timestamp }
+            : f
+        );
+        renderFriends();
+      }
+      sendMessagePayload({ to: targetFriend, text: data.url, clientTempId: tempId }, { optimistic: false });
+    } else {
+      sendMessagePayload({ to: targetFriend, text: data.url });
+    }
     showToast("Voice message sent", "success");
   } catch (err) {
     console.error(err);
+    if (voiceState.pendingTempId) {
+      removePendingMessage(voiceState.pendingTempId);
+      voiceState.pendingTempId = "";
+    }
     showToast("Voice upload failed", "error");
   } finally {
     voiceState.uploading = false;
@@ -2741,8 +3432,13 @@ function scheduleReconnectTimeout() {
 function maybeSendCallLog(status) {
   if (!callState.isCaller || !callState.peer || callState.logSent) return;
   const duration = status === "ended" ? getCallDurationSeconds() : 0;
-  const payload = buildCallLogPayload(status, "outgoing", duration);
-  socket.emit("private_message", { to: callState.peer, text: payload });
+  const payload = buildCallLogPayload(status, "outgoing", duration, callState.mediaType);
+  const tempId = createClientTempId();
+  const target = callState.peer;
+  if (activeFriend && normalizeName(activeFriend) === normalizeName(target)) {
+    queuePendingMessage({ to: target, text: payload, clientTempId: tempId }, { queue: false });
+  }
+  socket.emit("private_message", { to: target, text: payload, clientTempId: tempId });
   callState.logSent = true;
 }
 
@@ -3242,8 +3938,10 @@ function removePendingFromQueue(tempId) {
   if (idx >= 0) pendingQueue.splice(idx, 1);
 }
 
-function queuePendingMessage(payload) {
+function queuePendingMessage(payload, options = {}) {
   if (!payload || !payload.to || !payload.text) return;
+  const shouldQueue = options.queue !== false;
+  const shouldUpdateFriends = options.updateFriends !== false;
   const tempId = payload.clientTempId || createClientTempId();
   const timestamp = new Date().toISOString();
   const wasAtLatest = !hasNewerMessages();
@@ -3263,14 +3961,16 @@ function queuePendingMessage(payload) {
   };
 
   conversationMessages.push(message);
-  friends = friends.map((f) =>
-    normalizeName(f.username) === normalizeName(payload.to)
-      ? { ...f, lastMessage: payload.text, lastFrom: me, lastTimestamp: timestamp }
-      : f
-  );
-  renderFriends();
+  if (shouldUpdateFriends) {
+    friends = friends.map((f) =>
+      normalizeName(f.username) === normalizeName(payload.to)
+        ? { ...f, lastMessage: payload.text, lastFrom: me, lastTimestamp: timestamp }
+        : f
+    );
+    renderFriends();
+  }
   pendingByTempId.set(tempId, message);
-  pendingQueue.push({ tempId, payload: { ...payload, clientTempId: tempId } });
+  if (shouldQueue) pendingQueue.push({ tempId, payload: { ...payload, clientTempId: tempId } });
   renderNetworkState();
 
   if (wasAtLatest && activeFriend && normalizeName(payload.to) === normalizeName(activeFriend)) {
@@ -3282,6 +3982,31 @@ function queuePendingMessage(payload) {
     }
   }
   return tempId;
+}
+
+function updatePendingMessageText(tempId, text) {
+  if (!tempId) return;
+  const msg = pendingByTempId.get(tempId);
+  if (!msg) return;
+  msg.text = text;
+  const row = messagesEl ? messagesEl.querySelector(`[data-client-temp-id="${tempId}"]`) : null;
+  if (row) {
+    const newRow = buildMessageElement(msg, true);
+    row.replaceWith(newRow);
+  }
+  applyMessageSearch();
+}
+
+function removePendingMessage(tempId) {
+  if (!tempId) return;
+  pendingByTempId.delete(tempId);
+  removePendingFromQueue(tempId);
+  const idx = conversationMessages.findIndex((m) => m.clientTempId === tempId || m.id === tempId);
+  if (idx >= 0) conversationMessages.splice(idx, 1);
+  const row = messagesEl ? messagesEl.querySelector(`[data-client-temp-id="${tempId}"]`) : null;
+  if (row) row.remove();
+  messageWindowEnd = Math.min(messageWindowEnd, conversationMessages.length);
+  applyMessageSearch();
 }
 
 function flushPendingQueue() {
@@ -3300,14 +4025,17 @@ function flushPendingQueue() {
   renderNetworkState();
 }
 
-function sendMessagePayload(payload) {
+function sendMessagePayload(payload, options = {}) {
   if (!payload || !payload.to || !payload.text) return;
-  if (!socketAvailable || !socket.connected) {
-    queuePendingMessage(payload);
-    showToast("Message queued. We'll send when you're back online.", "info");
-    return;
-  }
   const tempId = payload.clientTempId || createClientTempId();
+  if (!socketAvailable || !socket.connected) {
+    queuePendingMessage({ ...payload, clientTempId: tempId }, { queue: true });
+    showToast("Message queued. We'll send when you're back online.", "info");
+    return tempId;
+  }
+  if (options.optimistic !== false) {
+    queuePendingMessage({ ...payload, clientTempId: tempId }, { queue: false });
+  }
   socket.emit("private_message", { ...payload, clientTempId: tempId });
   return tempId;
 }
@@ -3439,8 +4167,21 @@ if (messageSearchClear) {
     if (messageSearchInput) messageSearchInput.focus();
   });
 }
+if (contactsRequestsBtn) {
+  contactsRequestsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const next = !contactsRequestsPanel?.classList.contains("is-open");
+    setRequestsPanelOpen(next);
+  });
+}
 document.addEventListener("click", () => {
   if (searchPanelOpen) closeMessageSearchPanel();
+});
+document.addEventListener("click", (e) => {
+  if (!contactsRequestsPanel || !contactsRequestsBtn) return;
+  if (!contactsRequestsPanel.classList.contains("is-open")) return;
+  if (e.target.closest("#contactsRequestsPanel") || e.target.closest("#contactsRequestsBtn")) return;
+  setRequestsPanelOpen(false);
 });
 document.addEventListener("keydown", (e) => {
   const isFindShortcut = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "f";
@@ -3450,6 +4191,10 @@ document.addEventListener("keydown", (e) => {
     return;
   }
 
+  if (e.key === "Escape" && contactsRequestsPanel?.classList.contains("is-open")) {
+    setRequestsPanelOpen(false);
+    return;
+  }
   if (e.key === "Escape" && searchPanelOpen) {
     if (getSearchQuery()) {
       if (messageSearchInput) messageSearchInput.value = "";
@@ -3500,6 +4245,7 @@ socket.on("register_success", (data) => {
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
+  syncSettingsPanel();
   if (storedSession?.password) {
     writeStoredSession({ username: data.username, password: storedSession.password });
   }
@@ -3520,6 +4266,10 @@ socket.on("register_success", (data) => {
 
   renderRequests();
   renderFriends();
+  renderDiscover();
+  if (sidebarView === "discover") {
+    requestDiscoverOnline();
+  }
   if (
     previousActiveFriend &&
     friends.some((friend) => normalizeName(friend.username) === normalizeName(previousActiveFriend))
@@ -3568,22 +4318,33 @@ socket.on("friend_suggestions", (data) => {
   showFriendSuggestions(query, suggestions);
 });
 
+socket.on("discover_online", (data) => {
+  setDiscoverUsers(data?.users || []);
+});
+
 socket.on("friend_request_received", (data) => {
   showToast(`💬 ${data.from} sent you a friend request`);
   if (!requests.includes(data.from)) {
     requests = [...requests, data.from];
     renderRequests();
+    renderDiscover();
   }
   playIncomingPing();
 });
 
 socket.on("friend_request_sent", (data) => {
   showToast(`✓ Request sent to ${data.to}`, "success");
+  const target = String(data?.to || "").trim();
+  if (target) {
+    discoverUsers = discoverUsers.filter((user) => normalizeName(user?.username) !== normalizeName(target));
+    renderDiscover();
+  }
 });
 
 socket.on("requests_updated", (data) => {
   requests = data.requests || [];
   renderRequests();
+  renderDiscover();
 });
 
 socket.on("friend_request_accepted", (data) => {
@@ -3592,6 +4353,17 @@ socket.on("friend_request_accepted", (data) => {
 
 socket.on("friend_list_updated", (data) => {
   friends = data.friends || [];
+  friends.forEach((friend) => {
+    const rawText = friend?.lastMessage || "";
+    if (!rawText) return;
+    if (!parseCallLogPayload(rawText)) return;
+    addCallHistoryEntry({
+      friend: friend.username || "",
+      text: rawText,
+      timestamp: friend.lastTimestamp || "",
+      from: friend.lastFrom || friend.username || "",
+    });
+  });
 
   // If current chat partner was removed, reset
   if (activeFriend) {
@@ -3611,6 +4383,11 @@ socket.on("friend_list_updated", (data) => {
   }
 
   renderFriends();
+  renderCallHistory();
+  renderDiscover();
+  if (sidebarView === "discover") {
+    requestDiscoverOnline();
+  }
 });
 
 socket.on("friend_removed", (data) => {
@@ -3691,6 +4468,7 @@ socket.on("username_changed", (data) => {
     me = newUsername;
     renderMyName();
     applyMyAvatar();
+    syncSettingsPanel();
     const stored = readStoredSession();
     if (stored?.password) {
       writeStoredSession({ username: newUsername, password: stored.password });
@@ -3719,6 +4497,7 @@ socket.on("password_changed", () => {
 
 socket.on("history", (data) => {
   if (normalizeName(data.with) !== normalizeName(activeFriend)) return;
+  cacheCallLogMessages(data.messages || []);
   renderMessages(data.messages || []);
 });
 
@@ -3758,6 +4537,9 @@ socket.on("private_message", (message) => {
     applyMessageSearch();
     return;
   }
+
+  const cachedLog = cacheCallLogMessage(message);
+  if (cachedLog) renderCallHistory();
 
   const other =
     normalizeName(message.from) === normalizeName(me) ? message.to : message.from;
@@ -3967,6 +4749,7 @@ socket.on("profile_updated", (data) => {
   window._novynProfile  = myProfile;
   renderMyName();
   applyMyAvatar();
+  syncSettingsPanel();
   syncInfoPanel();
   showToast("Profile updated ✨", "success");
 });
@@ -4022,6 +4805,8 @@ window._novynMessageWindow = {
   showLatest: showLatestMessages,
   loadOlder: loadOlderMessages,
 };
+window._novynOpenSettingsPanel = () => setSettingsOpen(true);
+window._novynCloseSettingsPanel = () => setSettingsOpen(false);
 window._novynUpdateSession = (nextUsername, nextPassword) => {
   const stored = readStoredSession() || {};
   const username = nextUsername || stored.username || me;
@@ -4030,9 +4815,12 @@ window._novynUpdateSession = (nextUsername, nextPassword) => {
   writeStoredSession({ username, password });
 };
 renderMyName();
+setSidebarView("messages", { silent: true });
+syncSettingsPanel();
 setTimeout(applyMyAvatar, 200);
 
 if (!socketAvailable) {
   setNetworkState("Realtime unavailable", "offline");
   showToast("Realtime client failed to load. Open Novyn from your server URL.", "error");
 }
+
