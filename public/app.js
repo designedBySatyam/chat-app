@@ -137,6 +137,16 @@ if (sidebarSearch) {
   sidebarSearch.setAttribute("value", "");
   friendSearchQuery = "";
 }
+window.addEventListener("pageshow", () => {
+  if (!sidebarSearch) return;
+  sidebarSearch.value = "";
+  sidebarSearch.setAttribute("value", "");
+  friendSearchQuery = "";
+  renderRequests();
+  renderFriends();
+  renderCallHistory();
+  renderDiscover();
+}, { passive: true });
 const sidebarBrandHTML = sidebarBrand ? sidebarBrand.innerHTML : "";
 const searchState = {
   hits: [],
@@ -896,9 +906,19 @@ document.addEventListener("keydown", handleUserGesture, { passive: true });
 function scrollToBottom(skipAnimation = false) {
   if (!messagesEl) return;
   const maxTop = Math.max(0, messagesEl.scrollHeight - messagesEl.clientHeight);
+  if (skipAnimation) {
+    messagesEl.scrollTop = maxTop;
+    const snap = () => {
+      const nextTop = Math.max(0, messagesEl.scrollHeight - messagesEl.clientHeight);
+      messagesEl.scrollTop = nextTop;
+    };
+    requestAnimationFrame(snap);
+    setTimeout(snap, 80);
+    return;
+  }
   messagesEl.scrollTo({
     top:      maxTop,
-    behavior: skipAnimation ? "auto" : "smooth",
+    behavior: "smooth",
   });
 }
 

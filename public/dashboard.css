@@ -834,6 +834,7 @@ body.friend-selected .chat-window {
 #messageSearchClear { font-size:12px; font-weight:500; color:var(--text3); background:none; border:none; padding:3px 6px; transition:color .15s; }
 #messageSearchClear:hover { color:var(--danger); }
 .search-count { font-size:12px; color:var(--text2); }
+html.preclear-search #sidebarSearchInput { visibility:hidden; }
 
 /* ── Messages area ── */
 .messages-wrap { flex:1; min-height:0; position:relative; }
