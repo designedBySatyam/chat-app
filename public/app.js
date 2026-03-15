@@ -113,6 +113,7 @@ const mobileSidebar     = document.getElementById("mobileSidebar");
 const mobileChat        = document.getElementById("mobileChat");
 const mobBackBtn        = document.getElementById("mobBackBtn");
 const SESSION_KEY       = "novyn-session";
+const REMEMBER_KEY      = "novyn-remember";
 const LOGIN_PATH        = "/";
 const isDashboardPage   = Boolean(chatLayout) && !document.body.classList.contains("auth-page");
 const MOBILE_BP         = 768;
@@ -561,29 +562,38 @@ function getFriendSearchBlob(friend) {
   );
 }
 
-function readStoredSession() {
+function getStoredSessionFrom(storage) {
   try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
+    const raw = storage.getItem(SESSION_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw);
+    const email = String(parsed?.email || "").trim();
     const username = String(parsed?.username || "").trim();
     const password = String(parsed?.password || "");
-    if (!username || !password) return null;
-    return { username, password };
+    if ((!email && !username) || !password) return null;
+    return { email, username, password };
   } catch (_) {
     return null;
   }
 }
 
+function readStoredSession() {
+  return getStoredSessionFrom(sessionStorage) || getStoredSessionFrom(localStorage);
+}
+
 function writeStoredSession(session) {
+  const email = String(session?.email || "").trim();
   const username = String(session?.username || "").trim();
   const password = String(session?.password || "");
-  if (!username || !password) return;
+  if ((!email && !username) || !password) return;
   try {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ username, password }));
-  } catch (_) {
-    // Ignore storage failures.
-  }
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ email, username, password }));
+  } catch (_) {}
+  try {
+    if (localStorage.getItem(REMEMBER_KEY) === "1") {
+      localStorage.setItem(SESSION_KEY, JSON.stringify({ email, username, password }));
+    }
+  } catch (_) {}
 }
 
 function clearStoredSession() {
@@ -592,6 +602,10 @@ function clearStoredSession() {
   } catch (_) {
     // Ignore storage failures.
   }
+  try {
+    localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
+  } catch (_) {}
 }
 
 function redirectToLogin() {
@@ -609,7 +623,10 @@ function authenticateStoredSession(force = false) {
   if (!socket.connected) return;
   if (authenticateStoredSession._pending && !force) return;
   authenticateStoredSession._pending = true;
-  socket.emit("register", session);
+  const payload = session.email
+    ? { email: session.email, password: session.password, mode: "signin" }
+    : { username: session.username, password: session.password };
+  socket.emit("register", payload);
 }
 
 authenticateStoredSession._pending = false;
@@ -1017,6 +1034,21 @@ function formatAudioTime(seconds) {
   const mins = Math.floor(safe / 60);
   const secs = Math.floor(safe % 60);
   return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function getAudioDuration(audio) {
+  if (!audio) return 0;
+  const dur = audio.duration;
+  if (Number.isFinite(dur) && dur > 0) return dur;
+  if (audio.seekable && audio.seekable.length) {
+    try {
+      const end = audio.seekable.end(audio.seekable.length - 1);
+      if (Number.isFinite(end) && end > 0) return end;
+    } catch (_) {
+      // Ignore seekable errors.
+    }
+  }
+  return 0;
 }
 
 const WAVE_BAR_COUNT = 28;
@@ -2186,13 +2218,16 @@ function buildMessageElement(message, skipAnimation = false) {
 
       const syncUI = () => {
         const cur = audio.currentTime || 0;
-        const dur = audio.duration || 0;
+        const dur = getAudioDuration(audio);
         time.textContent = `${formatAudioTime(cur)} / ${formatAudioTime(dur)}`;
         const pct = dur > 0 ? (cur / dur) : 0;
         updateWaveformProgress(waveform, pct);
       };
 
       audio.addEventListener("loadedmetadata", syncUI);
+      audio.addEventListener("loadeddata", syncUI);
+      audio.addEventListener("durationchange", syncUI);
+      audio.addEventListener("canplay", syncUI);
       audio.addEventListener("timeupdate", syncUI);
       updateWaveformProgress(waveform, 0);
       audio.addEventListener("ended", () => {
@@ -2217,15 +2252,17 @@ function buildMessageElement(message, skipAnimation = false) {
       });
 
       waveform.addEventListener("pointerdown", (e) => {
-        if (!Number.isFinite(audio.duration) || audio.duration <= 0) return;
+        const dur = getAudioDuration(audio);
+        if (!Number.isFinite(dur) || dur <= 0) return;
         const rect = waveform.getBoundingClientRect();
         const pct = (e.clientX - rect.left) / rect.width;
-        audio.currentTime = Math.max(0, Math.min(audio.duration, pct * audio.duration));
+        audio.currentTime = Math.max(0, Math.min(dur, pct * dur));
         syncUI();
       });
 
       audioCard.append(playBtn, waveform, time, audio);
       body.appendChild(audioCard);
+      try { audio.load(); } catch (_) {}
     } else {
       appendMessageTextWithLinks(body, message.text);
       body.dataset.rawText = message.text;
@@ -3040,6 +3077,7 @@ if (navRailButtons.length) {
       const view = btn.dataset.rail || "";
       if (!view) return;
       if (view === "settings") {
+        if (e) e.stopPropagation();
         setSettingsOpen(!settingsOpen);
         return;
       }
@@ -4329,7 +4367,11 @@ socket.on("register_success", (data) => {
   syncSettingsPanel();
   clearSidebarSearch();
   if (storedSession?.password) {
-    writeStoredSession({ username: data.username, password: storedSession.password });
+    writeStoredSession({
+      email: data.email || storedSession.email || "",
+      username: data.username,
+      password: storedSession.password,
+    });
   }
   if (passwordInput) passwordInput.value = "";
   if (activeFriendLabel) activeFriendLabel.textContent = "Select a friend";
@@ -4657,8 +4699,9 @@ socket.on("private_message", (message) => {
     notifyIncomingMessage(message);
   }
 
+  const wasAtLatest = !hasNewerMessages();
   conversationMessages.push(message);
-  if (!hasNewerMessages()) {
+  if (wasAtLatest) {
     messageWindowEnd = conversationMessages.length;
     appendMessage(message);
     if (messagesEl && messagesEl.querySelectorAll("article.message").length > MAX_VISIBLE_MESSAGES) {
@@ -4889,12 +4932,19 @@ window._novynMessageWindow = {
 };
 window._novynOpenSettingsPanel = () => setSettingsOpen(true);
 window._novynCloseSettingsPanel = () => setSettingsOpen(false);
-window._novynUpdateSession = (nextUsername, nextPassword) => {
+window._novynUpdateSession = (nextIdentifier, nextPassword) => {
   const stored = readStoredSession() || {};
-  const username = nextUsername || stored.username || me;
   const password = nextPassword || stored.password || "";
-  if (!username || !password) return;
-  writeStoredSession({ username, password });
+  const email = stored.email || "";
+  const username = stored.username || me;
+  if (!password) return;
+  if (email) {
+    writeStoredSession({ email, username, password });
+    return;
+  }
+  if (username) {
+    writeStoredSession({ username, password });
+  }
 };
 renderMyName();
 setSidebarView("messages", { silent: true });

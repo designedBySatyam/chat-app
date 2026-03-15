@@ -3,6 +3,7 @@
     {
       "key": "satyam",
       "username": "satyam",
+      "email": "",
       "friends": [],
       "requests": [
         "test11"
@@ -22,6 +23,7 @@
     {
       "key": "test",
       "username": "test",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -39,6 +41,7 @@
     {
       "key": "sdas",
       "username": "sdas",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -56,6 +59,7 @@
     {
       "key": "rewewe",
       "username": "rewewe",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -73,6 +77,7 @@
     {
       "key": "test1",
       "username": "test1",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -90,15 +95,19 @@
     {
       "key": "test11",
       "username": "test11",
+      "email": "",
       "friends": [
-        "test2"
-      ],
-      "requests": [
+        "test2",
         "testing"
       ],
+      "requests": [],
       "unread": [
         [
           "test2",
+          0
+        ],
+        [
+          "testing",
           0
         ]
       ],
@@ -136,11 +145,12 @@
       "gender": "",
       "displayName": "",
       "bio": "",
-      "lastSeenAt": "2026-03-15T04:18:44.879Z"
+      "lastSeenAt": ""
     },
     {
       "key": "teat",
       "username": "teat",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -158,6 +168,7 @@
     {
       "key": "test2",
       "username": "test2",
+      "email": "",
       "friends": [
         "test11"
       ],
@@ -177,11 +188,12 @@
       "gender": "Non-binary",
       "displayName": "lolll",
       "bio": "huhlhlhlhl",
-      "lastSeenAt": "2026-03-14T14:15:21.755Z"
+      "lastSeenAt": ""
     },
     {
       "key": "bunnyjii",
       "username": "bunnyJii",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -199,6 +211,7 @@
     {
       "key": "tset11",
       "username": "tset11",
+      "email": "",
       "friends": [],
       "requests": [],
       "unread": [],
@@ -216,9 +229,17 @@
     {
       "key": "testing",
       "username": "testing",
-      "friends": [],
+      "email": "",
+      "friends": [
+        "test11"
+      ],
       "requests": [],
-      "unread": [],
+      "unread": [
+        [
+          "test11",
+          0
+        ]
+      ],
       "pushSubs": [],
       "isRegistered": true,
       "passwordSalt": "ea56f249db21b63f9438b6f9e9501764",
@@ -229,6 +250,42 @@
       "displayName": "",
       "bio": "",
       "lastSeenAt": "2026-03-14T13:37:47.776Z"
+    },
+    {
+      "key": "qwertyuiop",
+      "username": "qwertyuiop",
+      "email": "",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "pushSubs": [],
+      "isRegistered": true,
+      "passwordSalt": "eeeb77674a40e5433dbd56eaecc4f59f",
+      "passwordHash": "2d70df187519a5a05b9ce592ce6529ee2a48d3d4474c98de9af0a4201774f78745f289ed18183e8ea1d91be38d11d4e9a289d0c28d30da5623fc08587e13a428",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-03-15T09:16:01.219Z"
+    },
+    {
+      "key": "asdfghj",
+      "username": "asdfghj",
+      "email": "",
+      "friends": [],
+      "requests": [],
+      "unread": [],
+      "pushSubs": [],
+      "isRegistered": true,
+      "passwordSalt": "1a6f049980ae4ebebbf1effac4aa797a",
+      "passwordHash": "a67e6f9ca8291d4247ecf2af44d5bc1ec2e7cdc745abbaf0a92dde51a914ae45933f4637219383c8f4ac94701af6f57cc3059d3670e057e30751b6e382da7fde",
+      "avatarId": "",
+      "age": "",
+      "gender": "",
+      "displayName": "",
+      "bio": "",
+      "lastSeenAt": "2026-03-15T09:30:09.142Z"
     }
   ],
   "conversations": [
@@ -941,7 +998,7 @@
           "toKey": "test2",
           "text": "/uploads/voice-1773497885840-ba67ba.webm?token=8664f3a71381f6c2a633021f9034c2b6431801fee678c6d74dc30ca8017d9f0d",
           "timestamp": "2026-03-14T14:18:05.855Z",
-          "deliveredAt": null,
+          "deliveredAt": "2026-03-15T10:20:58.393Z",
           "seenAt": null,
           "deletedAt": null,
           "reactions": {}
@@ -954,7 +1011,7 @@
           "toKey": "test2",
           "text": "google.com",
           "timestamp": "2026-03-14T14:32:19.019Z",
-          "deliveredAt": null,
+          "deliveredAt": "2026-03-15T10:20:58.394Z",
           "seenAt": null,
           "deletedAt": null,
           "reactions": {}
@@ -967,7 +1024,7 @@
           "toKey": "test2",
           "text": "hii",
           "timestamp": "2026-03-14T14:45:02.205Z",
-          "deliveredAt": null,
+          "deliveredAt": "2026-03-15T10:20:58.394Z",
           "seenAt": null,
           "deletedAt": null,
           "reactions": {}

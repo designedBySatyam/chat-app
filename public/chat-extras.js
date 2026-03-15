@@ -119,9 +119,11 @@
 (function () {
   var btn = document.getElementById('logoutBtn');
   var SESSION_KEY = 'novyn-session';
+  var REMEMBER_KEY = 'novyn-remember';
   if (!btn) return;
   btn.addEventListener('click', function () {
     try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+    try { localStorage.removeItem(SESSION_KEY); localStorage.removeItem(REMEMBER_KEY); } catch (e) {}
     window.location.replace('/');
   });
 })();
@@ -300,6 +302,7 @@
     }
     if (action === 'logout') {
       try { sessionStorage.removeItem('novyn-session'); } catch (e) {}
+      try { localStorage.removeItem('novyn-session'); localStorage.removeItem('novyn-remember'); } catch (e) {}
       window.location.replace('/');
     }
   }

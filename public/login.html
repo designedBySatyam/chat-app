@@ -16,8 +16,85 @@
   <!-- Background -->
   <div class="brand" aria-hidden="true"></div>
 
-  <!-- Auth card -->
-  <div class="form-side">
+  <div class="auth-shell">
+    <section class="hero-pane" aria-label="Novyn highlights">
+      <div class="hero-inner">
+        <div class="hero-brand">
+          <span class="hero-mark">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+          </span>
+          <div>
+            <div class="hero-kicker">Novyn</div>
+            <div class="hero-subkicker">Private by default</div>
+          </div>
+        </div>
+
+        <h1 class="hero-title">Chat that feels alive.</h1>
+        <p class="hero-copy">
+          Move fast with real-time messaging, crystal clear calls, and presence that actually feels human.
+          End-to-end encrypted, always on, and designed to stay out of your way.
+        </p>
+
+        <div class="hero-pills">
+          <span>End-to-end encrypted</span>
+          <span>Voice &amp; video</span>
+          <span>Smart presence</span>
+        </div>
+
+        <div class="hero-live">
+          <span class="live-dot" aria-hidden="true"></span>
+          Live stats
+        </div>
+
+        <div class="hero-stats" aria-live="polite">
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="statUsers">—</div>
+            <div class="hero-stat-label">Registered users</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="statOnline">—</div>
+            <div class="hero-stat-label">Online now</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="statMessages">—</div>
+            <div class="hero-stat-label">Messages sent</div>
+          </div>
+          <div class="hero-stat">
+            <div class="hero-stat-num" id="statNewUsers">—</div>
+            <div class="hero-stat-label">New users today</div>
+          </div>
+        </div>
+
+        <div class="hero-features">
+          <div class="hero-feature">
+            <span class="feature-dot"></span>
+            <div>
+              <div class="feature-title">Instant sync</div>
+              <div class="feature-sub">Your chats update everywhere in milliseconds.</div>
+            </div>
+          </div>
+          <div class="hero-feature">
+            <span class="feature-dot"></span>
+            <div>
+              <div class="feature-title">Built for focus</div>
+              <div class="feature-sub">Clean UI, quick actions, and fewer distractions.</div>
+            </div>
+          </div>
+          <div class="hero-feature">
+            <span class="feature-dot"></span>
+            <div>
+              <div class="feature-title">Own your handle</div>
+              <div class="feature-sub">Create a username that's uniquely yours.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auth card -->
+    <div class="form-side">
     <div class="form-inner">
 
       <!-- Logo -->
@@ -59,9 +136,8 @@
                     <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/>
                   </svg>
                 </span>
-                <input id="loginIdentifier" name="identifier" type="text"
-                  placeholder="you@example.com or @username"
-                  autocomplete="username email">
+                <input id="loginIdentifier" name="identifier" type="text" placeholder=" " autocomplete="username">
+                <label class="float-label" for="loginIdentifier">Email or username</label>
               </div>
             </div>
 
@@ -73,8 +149,9 @@
                     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </span>
-                <input type="password" id="pw1" placeholder="••••••••" autocomplete="current-password">
-                <button class="eye" onclick="togglePw('pw1',this)" tabindex="-1" type="button">
+                <input type="password" id="loginPassword" placeholder=" " autocomplete="current-password">
+                <label class="float-label" for="loginPassword">Password</label>
+                <button class="eye" onclick="togglePw('loginPassword',this)" tabindex="-1" type="button">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ei">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
@@ -83,51 +160,40 @@
             </div>
 
             <div class="meta">
-              <label><input type="checkbox"> Remember me</label>
-              <a href="#">Forgot password?</a>
+              <label><input type="checkbox" id="rememberMe" name="remember"> Remember me</label>
+              <a href="#" id="forgotPasswordLink">Forgot password?</a>
             </div>
 
             <button class="btn-primary" id="signInBtn" type="button" onclick="ripple(event,this)">
               Sign in
             </button>
-
-            <div class="divider"><div class="div-line"></div><span>or continue with</span><div class="div-line"></div></div>
-
-            <button class="btn-google" type="button">
-              <svg width="16" height="16" viewBox="0 0 24 24">
-                <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Google
-            </button>
           </div>
 
           <!-- SIGN UP -->
           <div class="slide">
-            <div class="row2">
-              <div class="field">
-                <label>First name</label>
-                <div class="input-wrap">
-                  <span class="ico">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
-                  </span>
-                  <input type="text" placeholder="Alex" autocomplete="given-name">
-                </div>
+            <div class="field">
+              <label>Full name</label>
+              <div class="input-wrap">
+                <span class="ico">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </span>
+                <input id="signupName" type="text" placeholder=" " autocomplete="name">
+                <label class="float-label" for="signupName">Full name</label>
               </div>
-              <div class="field">
-                <label>Last name</label>
-                <div class="input-wrap">
-                  <span class="ico">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-                    </svg>
-                  </span>
-                  <input type="text" placeholder="Rivera" autocomplete="family-name">
-                </div>
+            </div>
+
+            <div class="field">
+              <label>Username</label>
+              <div class="input-wrap">
+                <span class="ico">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                  </svg>
+                </span>
+                <input id="signupHandle" type="text" placeholder=" " autocomplete="username">
+                <label class="float-label" for="signupHandle">Username</label>
               </div>
             </div>
 
@@ -139,7 +205,8 @@
                     <rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/>
                   </svg>
                 </span>
-                <input id="signupEmail" name="identifier" type="email" placeholder="you@example.com" autocomplete="email">
+                <input id="signupEmail" name="email" type="email" placeholder=" " autocomplete="email">
+                <label class="float-label" for="signupEmail">Email address</label>
               </div>
             </div>
 
@@ -151,9 +218,9 @@
                     <rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
                   </svg>
                 </span>
-                <input type="password" id="pw2" placeholder="Create a password"
-                  autocomplete="new-password" oninput="checkStrength(this)">
-                <button class="eye" onclick="togglePw('pw2',this)" tabindex="-1" type="button">
+                <input type="password" id="signupPassword" placeholder=" " autocomplete="new-password" oninput="checkStrength(this)">
+                <label class="float-label" for="signupPassword">Password</label>
+                <button class="eye" onclick="togglePw('signupPassword',this)" tabindex="-1" type="button">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ei">
                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
@@ -172,18 +239,6 @@
               Create account
             </button>
 
-            <div class="divider"><div class="div-line"></div><span>or</span><div class="div-line"></div></div>
-
-            <button class="btn-google" type="button">
-              <svg width="16" height="16" viewBox="0 0 24 24">
-                <path fill="#4285f4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34a853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#fbbc05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                <path fill="#ea4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-              </svg>
-              Sign up with Google
-            </button>
-
             <div class="terms">By signing up you agree to our <a href="#">Terms</a> &amp; <a href="#">Privacy Policy</a></div>
           </div>
 
@@ -194,13 +249,44 @@
 
       <div class="card-footer">
         <span class="card-footer-dot"></span>
-        End-to-end encrypted · 2,400+ people on the network
+        End-to-end encrypted - 2,400+ people on the network
       </div>
 
+    </div>
     </div>
   </div>
 
 </div>
+
+  <!-- Reset password modal -->
+  <div id="resetModal" class="reset-modal hidden" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+    <div class="reset-backdrop" data-reset-close></div>
+    <div class="reset-card" role="document">
+      <div class="reset-header">
+        <span id="resetTitle">Reset password</span>
+        <button class="reset-close" type="button" data-reset-close aria-label="Close">✕</button>
+      </div>
+      <div class="reset-body">
+        <div class="reset-step" data-reset-step="request">
+          <label for="resetEmail">Email or username</label>
+          <input id="resetEmail" type="text" autocomplete="username" placeholder="you@example.com">
+          <button class="btn-primary reset-action" id="resetRequestBtn" type="button">Send reset code</button>
+          <div class="reset-hint">We'll send a one-time code to verify it's you.</div>
+        </div>
+        <div class="reset-step hidden" data-reset-step="confirm">
+          <label for="resetCode">Reset code</label>
+          <input id="resetCode" type="text" inputmode="numeric" placeholder="6-digit code">
+          <label for="resetNewPassword">New password</label>
+          <input id="resetNewPassword" type="password" autocomplete="new-password" placeholder="New password">
+          <label for="resetConfirmPassword">Confirm password</label>
+          <input id="resetConfirmPassword" type="password" autocomplete="new-password" placeholder="Confirm password">
+          <button class="btn-primary reset-action" id="resetConfirmBtn" type="button">Update password</button>
+          <div id="resetDevToken" class="reset-token hidden"></div>
+        </div>
+        <div id="resetMessage" class="reset-message" aria-live="polite"></div>
+      </div>
+    </div>
+  </div>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>

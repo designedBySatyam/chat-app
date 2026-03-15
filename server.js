@@ -157,6 +157,31 @@ app.get("/", (req, res) => {
   res.sendFile(path.join(__dirname, "public", "login.html"));
 });
 
+app.get("/api/stats", (req, res) => {
+  const totalUsers = Array.from(users.values()).filter((user) => user?.isRegistered).length;
+  const onlineCount = onlineUsers.size;
+  const now = Date.now();
+  const newUsersToday = Array.from(users.values()).filter((user) => {
+    if (!user?.isRegistered) return false;
+    if (!user.createdAt) return false;
+    const created = Date.parse(user.createdAt);
+    if (!Number.isFinite(created)) return false;
+    return now - created <= 24 * 60 * 60 * 1000;
+  }).length;
+  let messageCount = 0;
+  conversations.forEach((messages) => {
+    if (Array.isArray(messages)) {
+      messageCount += messages.length;
+    }
+  });
+  res.json({
+    users: totalUsers,
+    online: onlineCount,
+    messages: messageCount,
+    newUsersToday,
+  });
+});
+
 
 const DATA_DIR = path.join(__dirname, "data");
 const DATA_FILE = path.join(DATA_DIR, "chat-state.json");
@@ -179,6 +204,8 @@ const users = new Map();
 const onlineUsers = new Map();
 const conversations = new Map();
 const activeCalls = new Map();
+const passwordResetTokens = new Map();
+const passwordResetByUser = new Map();
 
 let mongoClient = null;
 let mongoCollection = null;
@@ -192,6 +219,15 @@ function normalizeName(name) {
 
 function toDisplayName(name) {
   return String(name || "").trim();
+}
+
+function normalizeEmail(email) {
+  return String(email || "").trim().toLowerCase();
+}
+
+function normalizeHandleInput(handle) {
+  const cleaned = normalizeName(handle).replace(/[^a-z0-9_]/g, "");
+  return cleaned.slice(0, 24);
 }
 
 function createPasswordSecret(password) {
@@ -236,6 +272,7 @@ function createMessageId() {
 function createUserRecord(username) {
   return {
     username: toDisplayName(username),
+    email: "",
     friends: new Set(),
     requests: new Set(),
     unread: new Map(),
@@ -248,6 +285,7 @@ function createUserRecord(username) {
     gender: "",
     displayName: "",
     bio: "",
+    createdAt: "",
     lastSeenAt: "",
   };
 }
@@ -257,6 +295,7 @@ function serializeState() {
     users: Array.from(users.entries()).map(([key, user]) => ({
       key,
       username: user.username,
+      email: toDisplayName(user.email),
       friends: Array.from(user.friends),
       requests: Array.from(user.requests),
       unread: Array.from(user.unread.entries()),
@@ -269,6 +308,7 @@ function serializeState() {
       gender: toDisplayName(user.gender),
       displayName: toDisplayName(user.displayName),
       bio: toDisplayName(user.bio),
+      createdAt: toDisplayName(user.createdAt),
       lastSeenAt: toDisplayName(user.lastSeenAt),
     })),
     conversations: Array.from(conversations.entries()).map(([key, messages]) => ({
@@ -325,6 +365,11 @@ function schedulePersist() {
         console.error("Failed to persist chat state:", err);
       });
   }, 180);
+}
+
+function createResetToken() {
+  const value = Math.floor(100000 + Math.random() * 900000);
+  return String(value);
 }
 
 function normalizePushSubscription(raw) {
@@ -460,11 +505,13 @@ function applyLoadedState(parsed) {
     user.isRegistered = Boolean(entry.isRegistered);
     user.passwordSalt = toDisplayName(entry.passwordSalt);
     user.passwordHash = toDisplayName(entry.passwordHash);
+    user.email = normalizeEmail(entry.email);
     user.avatarId = toDisplayName(entry.avatarId);
     user.age = toDisplayName(entry.age);
     user.gender = toDisplayName(entry.gender);
     user.displayName = toDisplayName(entry.displayName);
     user.bio = toDisplayName(entry.bio);
+    user.createdAt = toDisplayName(entry.createdAt);
     user.lastSeenAt = toDisplayName(entry.lastSeenAt);
     user.pushSubs = Array.isArray(entry.pushSubs)
       ? entry.pushSubs.filter((sub) => sub && sub.endpoint && sub.keys)
@@ -574,6 +621,28 @@ function getOrCreateUser(username) {
 function isUsernameTaken(username) {
   const existing = users.get(normalizeName(username));
   return Boolean(existing?.isRegistered);
+}
+
+function findUserByEmail(email) {
+  const key = normalizeEmail(email);
+  if (!key) return null;
+  for (const user of users.values()) {
+    if (normalizeEmail(user?.email) === key) return user;
+  }
+  return null;
+}
+
+function isEmailTaken(email) {
+  const existing = findUserByEmail(email);
+  return Boolean(existing?.isRegistered);
+}
+
+function pickAvailableUsername(seed) {
+  const base = normalizeHandleInput(seed);
+  if (base && !isUsernameTaken(base)) return base;
+  const suggestions = buildUsernameSuggestions(base || "user", 1);
+  if (suggestions.length) return suggestions[0];
+  return `user${Date.now().toString().slice(-4)}`;
 }
 
 function buildUsernameSuggestions(requestedName, count = 5) {
@@ -1113,26 +1182,103 @@ function removeFriendship(userAKey, userBKey) {
 
 io.on("connection", (socket) => {
   socket.on("register", (payload) => {
-    const username =
-      typeof payload === "string" ? toDisplayName(payload) : toDisplayName(payload?.username);
-    const password = toDisplayName(typeof payload === "string" ? "" : payload?.password);
-    const userKey = normalizeName(username);
+    const isStringPayload = typeof payload === "string";
+    const raw = payload || {};
+    const mode = isStringPayload ? "" : toDisplayName(raw?.mode || "").toLowerCase();
+    const modeNormalized = mode === "signup" ? "signup" : "signin";
+    const email = isStringPayload ? "" : normalizeEmail(raw?.email || "");
+    const displayName = isStringPayload ? "" : toDisplayName(raw?.name || raw?.displayName || "");
+    const usernameInput = isStringPayload ? toDisplayName(payload) : toDisplayName(raw?.username);
+    const password = toDisplayName(isStringPayload ? "" : raw?.password);
 
-    if (!username) {
-      socket.emit("error_message", { message: "Username is required." });
-      return;
-    }
+    let user = null;
 
-    const existing = users.get(userKey);
-    const usernameExists = Boolean(existing?.isRegistered);
-    const suggestions = buildUsernameSuggestions(username);
+    if (email) {
+      const existingByEmail = findUserByEmail(email);
+      const wantsSignup = modeNormalized === "signup";
+      const wantsSignin = !wantsSignup;
 
-    let user = existing;
+      if (wantsSignin) {
+        if (!existingByEmail || !existingByEmail.isRegistered) {
+          socket.emit("auth_failed", { message: "Email doesn't exist. Sign up." });
+          return;
+        }
+        if (!password) {
+          socket.emit("auth_failed", { message: "Password is required." });
+          return;
+        }
+        if (!verifyPassword(password, existingByEmail.passwordSalt, existingByEmail.passwordHash)) {
+          socket.emit("auth_failed", { message: "Incorrect password." });
+          return;
+        }
+        user = existingByEmail;
+      } else {
+        if (isEmailTaken(email)) {
+          socket.emit("auth_failed", { message: "Email already registered. Sign in." });
+          return;
+        }
+        if (!displayName) {
+          socket.emit("auth_failed", { message: "Name is required to sign up." });
+          return;
+        }
+        const requestedHandle = normalizeHandleInput(usernameInput);
+        if (!requestedHandle) {
+          socket.emit("auth_failed", { message: "Username is required." });
+          return;
+        }
+        if (isUsernameTaken(requestedHandle)) {
+          socket.emit("auth_failed", { message: "This username is taken." });
+          return;
+        }
+        if (password.length < MIN_PASSWORD_LENGTH) {
+          socket.emit("auth_failed", {
+            message: `Use at least ${MIN_PASSWORD_LENGTH} characters in password.`,
+          });
+          return;
+        }
+        const username = requestedHandle;
+        user = getOrCreateUser(username);
+        const secret = createPasswordSecret(password);
+        user.passwordSalt = secret.passwordSalt;
+        user.passwordHash = secret.passwordHash;
+        user.isRegistered = true;
+        user.email = email;
+        user.displayName = displayName;
+        if (!user.createdAt) {
+          user.createdAt = nowIso();
+        }
+      }
+    } else {
+      const wantsSignup = modeNormalized === "signup";
+      const wantsSignin = !wantsSignup;
+      const username = usernameInput;
+      const userKey = normalizeName(username);
 
-    if (usernameExists) {
+      if (wantsSignup) {
+        socket.emit("auth_failed", { message: "Email is required to sign up." });
+        return;
+      }
+
+      if (!username) {
+        socket.emit("auth_failed", { message: "Username is required." });
+        return;
+      }
+
+      const existing = users.get(userKey);
+      const usernameExists = Boolean(existing?.isRegistered);
+      const suggestions = buildUsernameSuggestions(username);
+
+      if (!usernameExists) {
+        socket.emit("auth_failed", {
+          message: "Username doesn't exist. Sign up.",
+          suggestions,
+        });
+        return;
+      }
+
       if (!password) {
         socket.emit("auth_failed", {
-          message: "This username already exists. Enter the password to sign in.",
+          message: "Password is required.",
           suggestions,
         });
         return;
@@ -1144,28 +1290,24 @@ io.on("connection", (socket) => {
         existing.passwordHash = secret.passwordHash;
       } else if (!verifyPassword(password, existing.passwordSalt, existing.passwordHash)) {
         socket.emit("auth_failed", {
-          message: "Incorrect password for this username.",
+          message: "Incorrect password.",
           suggestions,
         });
         return;
       }
-    } else {
-      if (password.length < MIN_PASSWORD_LENGTH) {
-        socket.emit("auth_failed", {
-          message: `Use at least ${MIN_PASSWORD_LENGTH} characters in password.`,
-        });
-        return;
-      }
 
-      user = getOrCreateUser(username);
-      const secret = createPasswordSecret(password);
-      user.passwordSalt = secret.passwordSalt;
-      user.passwordHash = secret.passwordHash;
-      user.isRegistered = true;
+      existing.username = username;
+      existing.lastSeenAt = "";
+      user = existing;
     }
 
-    user.username = username;
+    if (!user) {
+      socket.emit("error_message", { message: "Unable to authenticate." });
+      return;
+    }
+
     user.lastSeenAt = "";
+    const userKey = normalizeName(user.username);
 
     socket.data.userKey = userKey;
     socket.data.activeChatWith = null;
@@ -1187,6 +1329,7 @@ io.on("connection", (socket) => {
 
     socket.emit("register_success", {
       username: user.username,
+      email: user.email || "",
       friends: buildFriendList(userKey),
       requests: Array.from(user.requests).map((requesterKey) => {
         const requester = users.get(requesterKey);
@@ -1204,6 +1347,76 @@ io.on("connection", (socket) => {
     emitStatusToFriends(userKey, true);
     emitFriendList(userKey);
     schedulePersist();
+  });
+
+  socket.on("request_password_reset", (payload) => {
+    const identifier = toDisplayName(payload?.identifier || payload?.email || payload);
+    if (!identifier) {
+      socket.emit("password_reset_failed", { message: "Email or username is required." });
+      return;
+    }
+    const isEmail = identifier.includes("@");
+    const user = isEmail ? findUserByEmail(identifier) : users.get(normalizeName(identifier));
+    if (!user || !user.isRegistered) {
+      socket.emit("password_reset_failed", { message: "Account not found." });
+      return;
+    }
+
+    const userKey = normalizeName(user.username);
+    const existingToken = passwordResetByUser.get(userKey);
+    if (existingToken) passwordResetTokens.delete(existingToken);
+
+    const token = createResetToken();
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    passwordResetTokens.set(token, { userKey, expiresAt });
+    passwordResetByUser.set(userKey, token);
+
+    socket.emit("password_reset_sent", {
+      message: "Reset code sent. Check your email.",
+      token,
+    });
+  });
+
+  socket.on("reset_password", (payload) => {
+    const token = toDisplayName(payload?.token || "");
+    const newPassword = toDisplayName(payload?.newPassword || "");
+    if (!token || !newPassword) {
+      socket.emit("password_reset_failed", { message: "Reset code and new password are required." });
+      return;
+    }
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      socket.emit("password_reset_failed", {
+        message: `Use at least ${MIN_PASSWORD_LENGTH} characters in password.`,
+      });
+      return;
+    }
+    const entry = passwordResetTokens.get(token);
+    if (!entry) {
+      socket.emit("password_reset_failed", { message: "Invalid or expired reset code." });
+      return;
+    }
+    if (Date.now() > entry.expiresAt) {
+      passwordResetTokens.delete(token);
+      socket.emit("password_reset_failed", { message: "Reset code expired. Request a new one." });
+      return;
+    }
+    const user = users.get(entry.userKey);
+    if (!user || !user.isRegistered) {
+      passwordResetTokens.delete(token);
+      socket.emit("password_reset_failed", { message: "Account not found." });
+      return;
+    }
+
+    const secret = createPasswordSecret(newPassword);
+    user.passwordSalt = secret.passwordSalt;
+    user.passwordHash = secret.passwordHash;
+    user.isRegistered = true;
+
+    passwordResetTokens.delete(token);
+    passwordResetByUser.delete(entry.userKey);
+    schedulePersist();
+
+    socket.emit("password_reset_success", { message: "Password updated. Please sign in." });
   });
 
   socket.on("push_subscribe", (payload) => {
