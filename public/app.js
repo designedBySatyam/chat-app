@@ -147,6 +147,14 @@ window.addEventListener("pageshow", () => {
   renderCallHistory();
   renderDiscover();
 }, { passive: true });
+
+setTimeout(() => {
+  if (sidebarSearch) {
+    sidebarSearch.value = "";
+    sidebarSearch.setAttribute("value", "");
+    friendSearchQuery = "";
+  }
+}, 0);
 const sidebarBrandHTML = sidebarBrand ? sidebarBrand.innerHTML : "";
 const searchState = {
   hits: [],
