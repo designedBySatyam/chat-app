@@ -179,6 +179,45 @@ function normalizeSearchText(value) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isNativePlatform() {
+  try {
+    return Boolean(
+      window.Capacitor &&
+      typeof window.Capacitor.isNativePlatform === "function" &&
+      window.Capacitor.isNativePlatform()
+    );
+  } catch (_) {
+    return false;
+  }
+}
+
+function openExternalLink(href) {
+  const url = String(href || "").trim();
+  if (!url) return;
+  const cap = window.Capacitor;
+  const browser = cap && cap.Plugins && cap.Plugins.Browser;
+  if (browser && typeof browser.open === "function") {
+    browser.open({ url });
+    return;
+  }
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  if (!popup) {
+    if (!isNativePlatform()) {
+      window.location.href = url;
+      return;
+    }
+    try {
+      const base = window.location.origin;
+      const resolved = new URL(url, base);
+      if (resolved.origin !== base) {
+        window.location.href = resolved.href;
+      }
+    } catch (_) {
+      // Ignore URL parsing errors.
+    }
+  }
+}
+
 function setSidebarView(nextView, options = {}) {
   const allowed = ["messages", "calls", "contacts", "discover"];
   const view = allowed.includes(nextView) ? nextView : "messages";
@@ -275,6 +314,42 @@ function setSettingsOpen(nextState) {
     setSidebarView(sidebarView, { silent: true });
   }
 }
+
+function clearSidebarSearch() {
+  if (!sidebarSearch) return;
+  sidebarSearch.value = "";
+  friendSearchQuery = "";
+}
+
+function showSidebarListOnMobile(options = {}) {
+  const usePanels = window._novynPanels && typeof window._novynPanels.show === "function";
+  const isMobile = usePanels && typeof window._novynPanels.isMobile === "function"
+    ? window._novynPanels.isMobile()
+    : window.innerWidth <= MOBILE_BP;
+  if (!isMobile) return;
+  if (usePanels) {
+    window._novynPanels.show("friends", { silent: options.silent !== false });
+    return;
+  }
+  showSidebarOnMobile();
+}
+
+function switchRail(nextView, options = {}) {
+  const view = String(nextView || "").trim();
+  if (!view) return;
+  if (view === "settings") {
+    setSettingsOpen(true);
+    return;
+  }
+  if (settingsOpen) setSettingsOpen(false);
+  setSidebarView(view, options);
+  showSidebarListOnMobile({ silent: true });
+}
+
+window.switchRail = switchRail;
+window._novynOpenSettingsPanel = () => setSettingsOpen(true);
+window._novynCloseSettingsPanel = () => setSettingsOpen(false);
+window._novynToggleSettingsPanel = () => setSettingsOpen(!settingsOpen);
 
 function syncSettingsPanel() {
   if (!settingsPanel) return;
@@ -1946,6 +2021,11 @@ function appendMessageTextWithLinks(container, text) {
       link.target = "_blank";
       link.rel = "noopener noreferrer";
       link.textContent = matches[i];
+      link.addEventListener("click", (e) => {
+        if (e && e.preventDefault) e.preventDefault();
+        if (e && e.stopPropagation) e.stopPropagation();
+        openExternalLink(href);
+      });
       container.appendChild(link);
     }
   }
@@ -2963,13 +3043,10 @@ if (navRailButtons.length) {
         setSettingsOpen(!settingsOpen);
         return;
       }
-      if (settingsOpen) setSettingsOpen(false);
-      setSidebarView(view);
-      if (window.innerWidth <= MOBILE_BP) {
-        showSidebarOnMobile();
-      }
+      switchRail(view);
     });
   });
+  window.__novynNavBound = true;
 }
 
 if (callFilterButtons.length) {
@@ -4250,6 +4327,7 @@ socket.on("register_success", (data) => {
   renderMyName();
   applyMyAvatar();
   syncSettingsPanel();
+  clearSidebarSearch();
   if (storedSession?.password) {
     writeStoredSession({ username: data.username, password: storedSession.password });
   }
