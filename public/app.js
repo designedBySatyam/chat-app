@@ -16,7 +16,8 @@ const friendSuggestions = document.getElementById("friendSuggestions");
 const chatLists         = document.querySelectorAll(".chat-list");
 const requestList       = document.getElementById("requestList") || chatLists[0] || null;
 const friendList        = document.getElementById("friendList") || chatLists[1] || null;
-const sidebarSearch     = document.getElementById("sidebarSearch");
+const sidebarSearch     = document.getElementById("sidebarSearchInput")
+  || document.getElementById("sidebarSearch");
 const activeFriendLabel = document.getElementById("activeFriendLabel");
 const activeFriendPresenceLine = document.getElementById("activeFriendPresenceLine");
 const activePresence    = document.getElementById("activePresence");
