@@ -148,13 +148,16 @@ window.addEventListener("pageshow", () => {
   renderDiscover();
 }, { passive: true });
 
-setTimeout(() => {
-  if (sidebarSearch) {
+let _clearAttempts = 0;
+const _clearSearch = setInterval(() => {
+  if (sidebarSearch && sidebarSearch.value) {
     sidebarSearch.value = "";
     sidebarSearch.setAttribute("value", "");
     friendSearchQuery = "";
+    renderFriends();
   }
-}, 0);
+  if (++_clearAttempts >= 10) clearInterval(_clearSearch);
+}, 50);
 const sidebarBrandHTML = sidebarBrand ? sidebarBrand.innerHTML : "";
 const searchState = {
   hits: [],
