@@ -1,4 +1,4 @@
-const CACHE_NAME = "novyn-shell-v37";
+const CACHE_NAME = "novyn-shell-v38";
 const APP_SHELL = [
   "/",
   "/index.html",
@@ -71,6 +71,21 @@ self.addEventListener("fetch", (event) => {
         const cached = await caches.match(fallbackPath);
         return cached || Response.error();
       })
+    );
+    return;
+  }
+
+  if (APP_SHELL.includes(url.pathname)) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (response && response.ok && response.status !== 206) {
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => caches.match(request))
     );
     return;
   }

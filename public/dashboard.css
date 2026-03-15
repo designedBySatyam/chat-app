@@ -838,7 +838,7 @@ body.friend-selected .chat-window {
 /* ── Messages area ── */
 .messages-wrap { flex:1; min-height:0; position:relative; }
 .messages {
-  height:100%; padding:16px;
+  height:100%; padding:14px 16px 8px;
   overflow-y:auto; display:flex; flex-direction:column; gap:6px;
   scrollbar-width:thin; scrollbar-color:var(--surface3) transparent;
 }
@@ -1362,6 +1362,7 @@ body.settings-open::after {
   align-items:center;
   gap:6px;
 }
+.settings-presence-inline { margin-top:2px; }
 .settings-presence .presence-dot {
   width:6px; height:6px; border-radius:50%;
   background:var(--online);

@@ -132,6 +132,11 @@ let friendSearchQuery = "";
 let sidebarView = "messages";
 let settingsOpen = false;
 let callFilter = "all";
+if (sidebarSearch) {
+  sidebarSearch.value = "";
+  sidebarSearch.setAttribute("value", "");
+  friendSearchQuery = "";
+}
 const sidebarBrandHTML = sidebarBrand ? sidebarBrand.innerHTML : "";
 const searchState = {
   hits: [],
@@ -890,8 +895,9 @@ document.addEventListener("keydown", handleUserGesture, { passive: true });
  */
 function scrollToBottom(skipAnimation = false) {
   if (!messagesEl) return;
+  const maxTop = Math.max(0, messagesEl.scrollHeight - messagesEl.clientHeight);
   messagesEl.scrollTo({
-    top:      messagesEl.scrollHeight,
+    top:      maxTop,
     behavior: skipAnimation ? "auto" : "smooth",
   });
 }
@@ -1460,7 +1466,7 @@ function syncProfilePanel(friend) {
 
 function showTypingIndicator(username) {
   if (!typingIndicator || !typingText) return;
-  const typingFriend = findFriend(username); typingText.textContent = `${typingFriend ? getFriendDisplayName(typingFriend) : username} is typing`;
+  typingText.textContent = "typing…";
   typingIndicator.classList.remove("hidden");
   // If user is near bottom, scroll down to keep typing dots visible
   if (isNearBottom()) scrollToBottom();
@@ -1775,11 +1781,9 @@ const replyBanner = (() => {
 
 function setReply(message) {
   replyTo = { id: message.id, from: message.from, text: message.text };
-  const friend = findFriend(message.from);
-  const fromLabel = friend ? getFriendDisplayName(friend) : message.from;
   const raw = String(message.text || "").replace(/\s+/g, " ").trim();
   const snippet = raw.length > 70 ? `${raw.slice(0, 70)}…` : raw;
-  replyBanner.preview.textContent = `Replying to ${fromLabel}: "${snippet}"`;
+  replyBanner.preview.textContent = `Replying: "${snippet}"`;
   replyBanner.banner.dataset.replyId = message.id || "";
   replyBanner.banner.classList.remove("hidden");
   messageInput.focus();
@@ -2030,9 +2034,7 @@ function renderIncomingMessageMeta(metaEl, message) {
   metaEl.classList.remove("mine");
   metaEl.innerHTML = "";
   const time = prettyTime(message.timestamp);
-  const friend = findFriend(message.from);
-  const senderName = friend ? getFriendDisplayName(friend) : message.from;
-  metaEl.textContent = `${senderName} · ${time}`;
+  metaEl.textContent = time;
 }
 
 function appendMessageTextWithLinks(container, text) {
@@ -2132,19 +2134,13 @@ function buildMessageElement(message, skipAnimation = false) {
   if (message.replyTo && !isDeleted) {
     const rq      = document.createElement("div");
     rq.className  = "reply-quote";
-    const ra      = document.createElement("span");
-    ra.className  = "reply-quote-author";
-    const replyAuthor = findFriend(message.replyTo.from);
-    ra.textContent = replyAuthor
-      ? getFriendDisplayName(replyAuthor)
-      : message.replyTo.from;
     const rt      = document.createElement("span");
     rt.className  = "reply-quote-text";
     rt.textContent = message.replyTo.text.slice(0, 80) + (message.replyTo.text.length > 80 ? "…" : "");
     rq.addEventListener("click", () => {
       focusMessageById(message.replyTo.id);
     });
-    rq.append(ra, rt);
+    rq.append(rt);
     row.append(rq);
   }
 
@@ -4915,6 +4911,13 @@ if (messagesEl) {
   messagesEl.addEventListener("scroll", () => {
     scrollState.pinnedToBottom = isNearBottom();
   }, { passive: true });
+}
+if (messagesEl && typeof ResizeObserver !== "undefined") {
+  const messagesResizeObserver = new ResizeObserver(() => {
+    if (!activeFriend) return;
+    if (scrollState.pinnedToBottom) scrollToBottom(true);
+  });
+  messagesResizeObserver.observe(messagesEl);
 }
 window.addEventListener("resize", () => {
   if (!activeFriend) return;

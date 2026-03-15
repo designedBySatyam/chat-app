@@ -82,7 +82,16 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
             </svg>
-            <input type="text" placeholder="Search…" autocomplete="off" id="sidebarSearchInput" />
+            <input type="text" placeholder="Search…" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="search" id="sidebarSearchInput" />
+            <script>
+              (function() {
+                var searchInput = document.getElementById('sidebarSearchInput');
+                if (searchInput) {
+                  searchInput.value = '';
+                  searchInput.setAttribute('value', '');
+                }
+              })();
+            </script>
           </div>
 
           <div class="call-filters" aria-label="Call filters">
@@ -328,10 +337,9 @@
           <div class="settings-profile-meta">
             <div class="settings-name" id="settingsProfileName">You</div>
             <div class="settings-handle" id="settingsProfileHandle">@username</div>
-            <div class="settings-plan">Free plan</div>
+            <div class="settings-presence settings-presence-inline"><span class="presence-dot"></span>Active now</div>
           </div>
           <div class="settings-profile-actions">
-            <div class="settings-presence"><span class="presence-dot"></span>Active now</div>
             <div id="networkPill" class="network-pill" role="status" aria-live="polite">
               <span class="signal-dot"></span>
               <span id="connectionLabel">Connecting…</span>
